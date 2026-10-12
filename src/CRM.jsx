@@ -738,6 +738,30 @@ const impostaLingua = (l) => {
 let LOCALE = "it-IT";
 let VALUTA = "EUR";
 const impostaValuta = (c) => { VALUTA = VALUTE.includes(c) ? c : "EUR"; };
+/* La valuta di un cliente: la sua, altrimenti quella del cliente madre (risalendo),
+   altrimenti quella dell'agenzia. Un sottocliente senza valuta segue la madre. */
+const valutaCliente = (data, id) => {
+  const clienti = (data && data.clienti) || [];
+  const visti = new Set();
+  let z = clienti.find((x) => x.id === id);
+  while (z && !visti.has(z.id)) {
+    if (z.valuta) return z.valuta;
+    visti.add(z.id);
+    z = z.padreId ? clienti.find((x) => x.id === z.padreId) : null;
+  }
+  return (data && data.agenzia && data.agenzia.valuta) || "EUR";
+};
+/* Esegue fn con la valuta indicata e poi rimette quella di prima. Serve dove si
+   scrivono importi di un cliente preciso fuori dalla sua scheda: avvisi, semaforo,
+   elenchi di tutti i clienti. Vale per ciò che fn calcola subito, non per i
+   componenti che React disegna dopo: a quelli la valuta va passata. */
+const conValuta = (c, fn) => {
+  const prima = VALUTA;
+  impostaValuta(c);
+  try { return fn(); } finally { VALUTA = prima; }
+};
+/* Per i componenti che ricevono il formattatore (grafici): fissa la valuta di adesso */
+const fissaValuta = (f) => { const v = VALUTA; return (n) => conValuta(v, () => f(n)); };
 
 /* en-gb non ha un dizionario proprio: usa quello inglese */
 const base = (l) => (DIZ[l] ? l : String(l).split("-")[0]);
@@ -1643,9 +1667,9 @@ const GUIDA = [
       { h: "Dove si cambia", p: "In alto a destra c'è il blocchetto con l'etichetta della lingua — Lingua, Language, Idioma, Langue, Sprache — e il menu a tendina con i nomi delle lingue scritti nella loro lingua. L'etichetta stessa si traduce, così chi apre l'app in tedesco legge Sprache e capisce dove mettere le mani." },
       { h: "Cosa cambia", p: "Cambiano le voci di menu, i titoli delle sezioni, le etichette degli stati e delle fasi, i pulsanti ricorrenti e le intestazioni delle colonne. La scelta si salva con i dati dell'agenzia, quindi resta anche riaprendo l'app e viaggia nel backup." },
       { h: "Numeri, date e valuta", p: "Cambiando lingua cambiano anche i formati: in inglese 1.234,56 € diventa €1,234.56 e il 2 ottobre diventa Oct 02. Non è estetica — un anglofono che legge 1.234 capisce “uno virgola due”, cioè mille volte meno. Le date seguono la stessa regola." },
-      { h: "Una valuta per cliente", p: "Nella scheda di ogni cliente, accanto all'account pubblicitario, c'è il campo Valuta: lasciandolo su “quella dell'agenzia” segue il valore predefinito, impostandone uno quel cliente usa il suo. Vale anche per i singoli sottoclienti, che possono differire dal loro madre. È indipendente dalla lingua: puoi lavorare in italiano e seguire un cliente in dollari." },
-      { h: "Dove si vede", p: "Entrando nel cliente tutti i suoi importi sono nella sua valuta. Negli elenchi — Clienti, Sottoclienti, la scheda nel cruscotto — ogni riga è già formattata con la valuta propria, e accanto al nome compare la sigla quando differisce da quella dell'agenzia." },
-      { h: "Il limite dei totali d'agenzia", p: "Quando i clienti usano valute diverse, le somme a livello di agenzia le mettono insieme come se fossero la stessa cosa, e il numero che ne esce non corrisponde a niente. L'app non converte: servirebbe un tasso di cambio, e per farlo bene quello del giorno di ogni singola spesa. Per questo in Panoramica compare un avvertimento che elenca le valute in uso, e il consiglio di leggere gli importi dentro il singolo cliente. I conteggi — campagne, lead, demo, chiusure — restano attendibili ovunque, perché non dipendono dalla valuta." },
+      { h: "Una valuta per cliente", p: "Nella scheda di ogni cliente, accanto all'account pubblicitario, c'è il campo Valuta: lasciandolo su “quella dell'agenzia” segue il valore predefinito, impostandone uno quel cliente usa il suo. Vale anche per i singoli sottoclienti, che possono differire dalla madre; se lasci il campo vuoto, il sottocliente segue la valuta della madre. È indipendente dalla lingua: puoi lavorare in italiano e seguire un cliente in dollari." },
+      { h: "Dove si vede", p: "Entrando nel cliente tutti i suoi importi sono nella sua valuta, compresi avvisi, semaforo e grafici. Anche fuori dal cliente ogni importo che appartiene a lui resta nella sua valuta: le righe di Clienti, Sottoclienti, Panoramica, Advertising, Chiusure, Ciclo di vendita, Riepilogo mensile ed Economia, gli avvisi, il semaforo e il calendario. Quando una sezione mostra solo clienti con la stessa valuta, anche i suoi totali sono in quella valuta. Un sottocliente senza valuta propria usa quella del cliente madre." },
+      { h: "Il limite dei totali d'agenzia", p: "Quando i clienti usano valute diverse, le somme a livello di agenzia le mettono insieme come se fossero la stessa cosa, e il numero che ne esce non corrisponde a niente. L'app non converte: servirebbe un tasso di cambio, e per farlo bene quello del giorno di ogni singola spesa. Per questo in Panoramica compare un avvertimento che elenca le valute in uso, e il consiglio di leggere gli importi dentro il singolo cliente. Le righe dei singoli clienti restano invece sempre nella loro valuta: solo i totali che li sommano usano quella dell'agenzia. I conteggi — campagne, lead, demo, chiusure — restano attendibili ovunque, perché non dipendono dalla valuta." },
       { h: "Le due lingue inglesi", p: "Inglese americano e inglese britannico sono voci distinte, perché differiscono in tutto ciò che conta qui: la data, il separatore delle migliaia e la valuta attesa — dollaro per il primo, sterlina per il secondo. Canada e Australia usano la voce americana scegliendo poi CAD o AUD, che si mostrano come CA$ e A$ per distinguerli dal dollaro statunitense. Le due varianti condividono lo stesso dizionario di parole." },
       { h: "Il simbolo lo sceglie la combinazione", p: "Il simbolo e la sua posizione non sono scritti da nessuna parte: nascono dall'incontro fra lingua e valuta. Lo stesso importo in euro è 1.234,56 € in italiano e €1,234.56 in inglese; in sterline diventa £1,234.56, in franchi 1.234,56 CHF." },
       { h: "Cambiando lingua", p: "Scegliendo una lingua la cui valuta abituale è diversa da quella in uso, l'app chiede se cambiare anche quella, senza farlo da sola. Il motivo è che non converte: cambierebbe il simbolo davanti a numeri rimasti identici, e mille euro diventerebbero mille dollari per finta. I clienti con una valuta propria restano come sono." },
@@ -2237,7 +2261,9 @@ const Campanella = ({ k, size = 13 }) => {
   );
 };
 
-const semaforo = (data, k) => {
+/* Il giudizio scrive importi nei suoi testi: sempre nella valuta del cliente della campagna */
+const semaforo = (data, k) => conValuta(valutaCliente(data, k.clienteId), () => semaforoBase(data, k));
+const semaforoBase = (data, k) => {
   const b = k.bmk || {};
   const F = faseCampagna(k);
   const { d: v, dove } = datiSemaforo(data, k);
@@ -2385,7 +2411,9 @@ const campagneCalcolate = (data) => {
      prima della data in scheda, vince la spesa. "inizioMeta" conserva quella scritta. */
   const conInizio = (k) => { const vero = inizioReale(data, k); return vero === k.inizio ? k : { ...k, inizio: vero, inizioMeta: k.inizio }; };
   const idArch = new Set(data.clienti.filter((z) => z.archiviato === "si").map((z) => z.id));
-  return data.campagne.filter((k) => !idArch.has(k.clienteId)).map(conFasi).map(conInizio).map((k) => ({ ...k, d: calc(k),
+  /* I testi degli avvisi contengono importi: si scrivono nella valuta del cliente della campagna,
+     qualunque sia il cliente aperto quando vengono calcolati. */
+  return data.campagne.filter((k) => !idArch.has(k.clienteId)).map(conFasi).map(conInizio).map((k) => conValuta(valutaCliente(data, k.clienteId), () => ({ ...k, d: calc(k),
     al: k.archiviata === "si" ? [] : avvisi(k, {
       cliente: data.clienti.find((z) => z.id === k.clienteId),
       prec: ultimaRilevazione(data, k),
@@ -2393,7 +2421,7 @@ const campagneCalcolate = (data) => {
       serie: (data.rilevazioni || []).filter((r) => r.campagnaId === k.id).sort((a, b) => (a.data < b.data ? -1 : 1)),
       finestra: finestraAnalisi(data, k),
       erogazione: erogazioneAttesa(data, k),
-    }) }));
+    }) })));
 };
 
 function valutaAutomazioni(data, campagne) {
@@ -2438,7 +2466,7 @@ function valutaAutomazioni(data, campagne) {
         const q = k.d.usato * 100;
         if (q < a.valore) return;
         push(`${a.id}|${k.id}|${g}`, `Budget al ${fmt(q, 1)}% · ${k.nome}`,
-          `Speso ${eur(k.d.sp)} su un budget di ${eur(k.budget)}.`,
+          conValuta(valutaCliente(data, k.clienteId), () => `Speso ${eur(k.d.sp)} su un budget di ${eur(k.budget)}.`),
           { cliente: nomeC(k.clienteId), campagna: k.nome, quota: q, spesa: k.d.sp, budget: k.budget }, k.clienteId);
       });
     }
@@ -2453,7 +2481,7 @@ function valutaAutomazioni(data, campagne) {
     if (a.trigger === "chiusura") {
       (data.chiusure || []).filter((c) => suo(c.clienteId)).forEach((c) => {
         push(`${a.id}|${c.id}`, `Chiusura registrata: ${c.nome}`,
-          `${eur(c.valoreContratto)} di contratto, ${eur(c.incassato)} già incassati.`,
+          conValuta(valutaCliente(data, c.clienteId), () => `${eur(c.valoreContratto)} di contratto, ${eur(c.incassato)} già incassati.`),
           { cliente: nomeC(c.clienteId), chiuso: c.nome, azienda: c.azienda, funnel: c.funnel, adset: c.adset, annuncio: c.annuncio, contratto: c.valoreContratto, incassato: c.incassato }, c.clienteId);
       });
     }
@@ -3563,9 +3591,8 @@ export default function CRM({ onEsci, utente = "" } = {}) {
   /* I dati arrivano dopo il primo disegno: prima di allora la lingua è l'italiano */
   const lingua = (data && data.agenzia && data.agenzia.lingua) || "it";
   impostaLingua(lingua);
-  /* La valuta è quella del cliente aperto, o quella dell'agenzia se non ne ha una propria */
-  const cliValuta = data && data.clienti ? (data.clienti.find((z) => z.id === cliAtt) || {}).valuta : "";
-  impostaValuta(cliValuta || (data && data.agenzia && data.agenzia.valuta) || "EUR");
+  /* La valuta è quella del cliente aperto (o della madre), o quella dell'agenzia se non ne ha una propria */
+  impostaValuta(cliAtt ? valutaCliente(data, cliAtt) : ((data && data.agenzia && data.agenzia.valuta) || "EUR"));
   const t = (chiave, prede) => (DIZ[base(lingua)] && DIZ[base(lingua)][chiave]) || DIZ.it[chiave] || prede || chiave;
   const [cruOrd, setCruOrd] = useState("recenti");
   const [cruStato, setCruStato] = useState("");
@@ -3981,7 +4008,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         });
       }
     });
-    const portafoglio = data.clienti.filter((z) => z.stato !== "chiuso" && z.archiviato !== "si").map((z) => {
+    const portafoglio = data.clienti.filter((z) => z.stato !== "chiuso" && z.archiviato !== "si").map((z) => conValuta(valutaCliente(data, z.id), () => {
       const ks = attive.filter((k) => k.clienteId === z.id);
       const sp = ks.reduce((s, k) => s + k.d.sp, 0), rc = ks.reduce((s, k) => s + k.d.rc, 0), cv = ks.reduce((s, k) => s + k.d.cv, 0);
       const ld = ks.reduce((s, k) => s + k.d.ld, 0);
@@ -3995,7 +4022,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
       else if (cv > 0 && oC > 0) { modo = "cpa"; perf = oC / (sp / cv); testo = `CPA ${eur(sp / cv)}`; obiettivo = `tetto ${eur(oC)}`; }
       else if (sp > 0) { testo = `${eur(sp)} spesi`; obiettivo = cv ? `${int(cv)} conversioni` : "nessuna conversione"; }
       return { ...z, sp, rc, cv, modo, perf, testo, obiettivo, nCamp: ks.length, nAvvisi: ks.reduce((s, k) => s + veri(k.al).length, 0) };
-    });
+    }));
     return {
       campagne, archiviate, attive, portafoglio, avvisi: tutti,
       spesa: attive.reduce((s, k) => s + k.d.sp, 0),
@@ -4008,6 +4035,15 @@ export default function CRM({ onEsci, utente = "" } = {}) {
   if (!data || !m) return <div className="crm"><style>{CSS}</style><div className="empty" style={{ padding: 60 }}>Carico i tuoi dati…</div></div>;
 
   const cliente = (id) => data.clienti.find((z) => z.id === id);
+  /* Valute negli elenchi con più clienti.
+     valutaComune: la valuta condivisa da tutti quei clienti, o quella attiva se sono diverse
+     (in quel caso i totali restano nella valuta dell'agenzia, come spiega la Guida).
+     mapValuta: come .map(), ma ogni riga è scritta nella valuta del suo cliente. */
+  const valutaComune = (ids) => {
+    const v = [...new Set(ids.filter(Boolean).map((id) => valutaCliente(data, id)))];
+    return v.length === 1 ? v[0] : VALUTA;
+  };
+  const mapValuta = (lista, cliDi, fn) => lista.map((x, i) => conValuta(valutaCliente(data, cliDi(x)), () => fn(x, i)));
   const nomeCli = (id) => (cliente(id) || {}).nome || "Agenzia";
   const nomeArea = (id) => (data.aree.find((a) => a.id === id) || {}).nome || "senza area";
   const attivo = cliAtt ? cliente(cliAtt) : null;
@@ -4319,7 +4355,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
       { k: "dataContratto", label: "Data contratto", type: "date", hint: "quando è stato firmato" },
       { k: "accountAdv", label: "Account pubblicitario", w2: true, hint: "l'ID di Meta, quello che inizia per act_" },
       { k: "valuta", label: "Valuta", type: "select", w2: true,
-        opts: [{ v: "", l: "— quella dell'agenzia —" }, ...VALUTE.map((c) => ({ v: c, l: c }))],
+        opts: [{ v: "", l: "— quella dell'agenzia (o del cliente madre) —" }, ...VALUTE.map((c) => ({ v: c, l: c }))],
         hint: "se questo cliente fattura in un'altra valuta" },
       { k: "fee", label: "Compenso mensile", type: "num" },
       { k: "budgetMese", label: "Budget adv mensile", type: "num" },
@@ -4404,7 +4440,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
           : "esito a valle del lead: appuntamenti, vendite" },
       { k: "ricavi", label: "Ricavi tracciati", type: "num",
         hint: fasiDellaScheda
-          ? `le finestre sommano ${eur(fasiDellaScheda.ricavi || 0)}; se scrivi un numero diverso vale il tuo`
+          ? `le finestre sommano ${conValuta(valutaCliente(data, ed.draft.clienteId), () => eur(fasiDellaScheda.ricavi || 0))}; se scrivi un numero diverso vale il tuo`
           : "quelli dichiarati dalla piattaforma" },
       { k: "valoreContratto", label: "Valore contratto", type: "num", hint: "firmato" },
       { k: "incassato", label: "Incassato", type: "num", hint: "entrato davvero" },
@@ -5022,7 +5058,8 @@ export default function CRM({ onEsci, utente = "" } = {}) {
     </tr></thead>
   );
 
-  const RigaCampagna = ({ k }) => (
+  /* Riga di campagna: nella valuta del suo cliente (un sottocliente può averne una diversa dalla madre) */
+  const RigaCampagna = ({ k }) => conValuta(valutaCliente(data, k.clienteId), () => (
     <tr className="clic" onClick={() => apri("campagne", data.campagne.find((x) => x.id === k.id))}>
       <td style={{ paddingRight: 0, width: 22 }}>
         {(() => {
@@ -5059,7 +5096,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
       <td className={"r " + (k.d.rc ? (k.bmk.roasMin && k.d.roas < k.bmk.roasMin ? "neg" : "pos") : "")}>{k.d.rc ? `${fmt(k.d.roas)}×` : "—"}</td>
       <td className="r">{veri(k.al).length ? <span className="tag" data-k={k.al.some((a) => a.gravita === "critica") ? "late" : ""}>{veri(k.al).length}</span> : <span className="sub">ok</span>}</td>
     </tr>
-  );
+  ));
 
   const CartaTask = ({ t }) => {
     const done = (t.checklist || []).filter((r) => r.fatto).length, tot = (t.checklist || []).length;
@@ -5132,7 +5169,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
     chiusureVista.forEach((c) => mf.set(et(FUNNEL_PROV, c.funnel), (mf.get(et(FUNNEL_PROV, c.funnel)) || 0) + (c.valoreContratto || 0)));
     const perFunnel = [...mf.entries()].map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v);
 
-    return (
+    return conValuta(valutaComune(attivo ? ambito : baseCamp.map((k) => k.clienteId)), () => (
       <>
         <section className="card">
           <header>
@@ -5153,7 +5190,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
             </div>
           </header>
           <div className="gruppo">{G.titolo}</div>
-          {torta ? <Torta dati={G.dati} fmtv={G.fmtv} /> : <Barre dati={G.dati} fmtv={G.fmtv} />}
+          {torta ? <Torta dati={G.dati} fmtv={fissaValuta(G.fmtv)} /> : <Barre dati={G.dati} fmtv={fissaValuta(G.fmtv)} />}
           {graf.tipo === "torta" && G.rap && (
             <div className="nota">
               Questa metrica è un rapporto, non una quantità: le fette non possono sommare al totale, quindi la mostro a barre.
@@ -5165,7 +5202,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         <div className="two">
           <section className="card">
             <header><h2>Dove va la spesa</h2><span className="sp eyebrow">{attivo ? "per piattaforma" : "per cliente"}</span></header>
-            <Torta dati={quota} fmtv={eur} />
+            <Torta dati={quota} fmtv={fissaValuta(eur)} />
           </section>
           <section className="card">
             <header><h2>Percorso commerciale</h2><span className="sp eyebrow">totale del periodo caricato</span></header>
@@ -5178,11 +5215,11 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         <section className="card">
           <header><h2>Da dove arriva il fatturato chiuso</h2><span className="sp eyebrow">valore contratto per funnel</span></header>
           {chiusureVista.length
-            ? <Barre dati={perFunnel} fmtv={eur} />
+            ? <Barre dati={perFunnel} fmtv={fissaValuta(eur)} />
             : <div className="empty"><b>Nessuna chiusura registrata</b>Le schede della sezione Chiusure riempiono questo riquadro.</div>}
         </section>
       </>
-    );
+    ));
   };
 
   /* ---------- sistema a semaforo ---------- */
@@ -5201,7 +5238,8 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         style={{ width: size, height: size, borderRadius: "50%", background: segna(v).c, flex: "none", display: "inline-block" }} />
     );
 
-    return (
+    /* Fuori dal cliente si guarda un cliente scelto: tutta la sezione parla nella sua valuta */
+    return conValuta(cid ? valutaCliente(data, cid) : VALUTA, () => (
       <>
         <section className="card">
           <header>
@@ -5547,6 +5585,8 @@ export default function CRM({ onEsci, utente = "" } = {}) {
                 return "La campagna non è ancora giudicabile, e nemmeno i suoi elementi.";
               };
 
+              /* Riga è un componente: React la disegna dopo, quando la valuta è già tornata quella di prima */
+              const vRiga = VALUTA;
               const Riga = ({ x, liv }) => (
                 <tr>
                   <td style={{ paddingLeft: 14 + liv * 20 }}>
@@ -5561,10 +5601,10 @@ export default function CRM({ onEsci, utente = "" } = {}) {
                     </div>
                   </td>
                   <td className="sub">{et(TIPI_CREATIVO, x.c.tipo)}</td>
-                  <td className="r">{eur0(x.f.sp)}</td>
+                  <td className="r">{eurDi0(x.f.sp, vRiga)}</td>
                   <td className="r sub">{x.f.quota ? pctv(x.f.quota * 100, 0) : "—"}</td>
                   <td className="r">{x.f.conv ? int(x.f.conv) : "—"}</td>
-                  <td className="r">{x.f.costo ? eur(x.f.costo) : "—"}</td>
+                  <td className="r">{x.f.costo ? eurDi(x.f.costo, vRiga) : "—"}</td>
                   <td className={"r " + (x.f.rapporto > 150 ? "neg" : x.f.rapporto && x.f.rapporto <= 100 ? "pos" : "")}>
                     {x.f.rapporto ? `${fmt(x.f.rapporto, 0)}%` : "—"}
                   </td>
@@ -5666,7 +5706,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
           </div>
         </section>
       </>
-    );
+    ));
   };
 
   /* ---------- Pixel facile ---------- */
@@ -5855,7 +5895,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
       });
       if (calFonti.chiusure) data.chiusure.filter(dentro).forEach((c) => {
         out.push({ data: c.data, titolo: `Chiuso · ${c.nome || c.azienda || "cliente"}`, tipo: "chiusure", colore: "#3FA45C",
-          clienteId: c.clienteId, nota: c.valoreContratto ? eur0(c.valoreContratto) : "" });
+          clienteId: c.clienteId, nota: c.valoreContratto ? conValuta(valutaCliente(data, c.clienteId), () => eur0(c.valoreContratto)) : "" });
       });
       return out.filter((x) => x.data);
     })();
@@ -6206,7 +6246,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
       </section>
     );
 
-    return (
+    return conValuta(valutaComune(attivo ? ambito : attivi.filter((z) => !z.padreId).map((z) => z.id)), () => (
       <>
         <div className="kpis">
           <div className="kpi"><IcoKpi t="Spesa nel periodo" /><div className="eyebrow">Spesa nel periodo</div><div className="v">{eur0(T.spesa)}</div><div className="s">{righe.length} mesi</div></div>
@@ -6294,7 +6334,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
                 <table className="tbl">
                   <thead><tr><th>Cliente</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Chiusure</th><th className="r">Valore contratti</th><th className="r">Incassato</th><th className="r">Ritorno</th></tr></thead>
                   <tbody>
-                    {perCli.map((x) => (
+                    {mapValuta(perCli, (x) => x.z.id, (x) => (
                       <tr key={x.z.id} className="clic" onClick={() => cambiaAccount(x.z.id)}>
                         <td><div className="riga"><Logo src={x.z.logo} nome={x.z.nome} size={26} /><div><b>{x.z.nome}</b>{x.z.padreId && <div className="sub">sottocliente di {nomeCli(x.z.padreId)}</div>}</div></div></td>
                         <td className="r">{x.sp ? eur0(x.sp) : "—"}</td>
@@ -6315,7 +6355,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
           );
         })()}
       </>
-    );
+    ));
   };
 
   /* ---------- piano di messaggio e Core 4 ---------- */
@@ -6644,33 +6684,35 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         r.push(`Semaforo sulle attive: ${perSem}.`);
       }
       cls.forEach((z) => {
+        /* Gli importi al consulente vanno con la valuta del cliente, non sempre in euro */
+        const vz = valutaCliente(data, z.id);
         const camp = m.campagne.filter((k) => k.clienteId === z.id);
         const vend = data.vendite.filter((v) => v.clienteId === z.id).map(conChiusure);
         const chius = data.chiusure.filter((c) => c.clienteId === z.id);
         const tot = sommaVendite(vend);
         const rp = roasPareggio(z);
         r.push(`\n### CLIENTE: ${z.nome} (id "${z.id}", ${z.settore || "settore non indicato"}, stato ${z.stato})`);
-        r.push(`Compenso ${z.fee || 0} €/mese, budget adv ${z.budgetMese || 0} €/mese, margine lordo ${z.margineLordo || 0}%, resi ${z.resi || 0}%${rp ? `, ROAS di pareggio ${fmt(rp)}` : ""}.`);
+        r.push(`Compenso ${z.fee || 0} ${vz}/mese, budget adv ${z.budgetMese || 0} ${vz}/mese, margine lordo ${z.margineLordo || 0}%, resi ${z.resi || 0}%${rp ? `, ROAS di pareggio ${fmt(rp)}` : ""}.`);
         if (z.note) r.push(`Note: ${z.note}`);
         if (camp.length) {
           r.push("CAMPAGNE (nome | piattaforma | obiettivo | stato | speso/budget | CTR | CPC | CPA | ROAS | frequenza):");
-          camp.slice(0, 12).forEach((k) => r.push(`- ${k.nome} | ${et(PIATTAFORME, k.piattaforma)} | ${et(OBIETTIVI, k.obiettivo)} | ${k.stato} | ${fmt(k.d.sp)}/${fmt(k.budget)} € | ${fmt(k.d.ctr)}% | ${fmt(k.d.cpc)} € | ${k.d.cv ? fmt(k.d.cpa) + " €" : "n.d."} | ${k.d.rc ? fmt(k.d.roas) + "x" : "n.d."} | ${fmt(k.d.freq)}`));
+          camp.slice(0, 12).forEach((k) => r.push(`- ${k.nome} | ${et(PIATTAFORME, k.piattaforma)} | ${et(OBIETTIVI, k.obiettivo)} | ${k.stato} | ${fmt(k.d.sp)}/${fmt(k.budget)} ${vz} | ${fmt(k.d.ctr)}% | ${fmt(k.d.cpc)} ${vz} | ${k.d.cv ? fmt(k.d.cpa) + " " + vz : "n.d."} | ${k.d.rc ? fmt(k.d.roas) + "x" : "n.d."} | ${fmt(k.d.freq)}`));
           const al = camp.flatMap((k) => k.al.map((a) => `- [${a.gravita}] ${k.nome}: ${a.titolo} (${a.metrica} ${a.valore}, obiettivo ${a.soglia})`));
           if (al.length) r.push("AVVISI ATTIVI:\n" + al.join("\n"));
         }
         const cre = data.creativi.filter((c) => camp.some((k) => k.id === c.campagnaId)).map((c) => ({ ...c, d: calc(c) })).sort((a, b) => b.d.sp - a.d.sp).slice(0, 6);
         if (cre.length) {
           r.push("AD SET E ANNUNCI (nome | speso | CTR | CPA | frequenza):");
-          cre.forEach((c) => r.push(`- ${c.nome} | ${fmt(c.d.sp)} € | ${fmt(c.d.ctr)}% | ${c.d.cv ? fmt(c.d.cpa) + " €" : "n.d."} | ${fmt(c.d.freq)}`));
+          cre.forEach((c) => r.push(`- ${c.nome} | ${fmt(c.d.sp)} ${vz} | ${fmt(c.d.ctr)}% | ${c.d.cv ? fmt(c.d.cpa) + " " + vz : "n.d."} | ${fmt(c.d.freq)}`));
         }
         if (vend.length) {
-          r.push(`CICLO DI VENDITA (totali sui periodi caricati): lead ${tot.lead}, chiamate ${tot.chiamate}, discovery fissate ${tot.discoveryFissate} e svolte ${tot.discoverySvolte}, demo fissate ${tot.demoFissate} e svolte ${tot.demoSvolte}, chiusure ${tot.chiusure}, contratto ${fmt(tot.valoreContratto)} €, incassato ${fmt(tot.incassato)} €, spesa ${fmt(tot.spesa)} €.`);
+          r.push(`CICLO DI VENDITA (totali sui periodi caricati): lead ${tot.lead}, chiamate ${tot.chiamate}, discovery fissate ${tot.discoveryFissate} e svolte ${tot.discoverySvolte}, demo fissate ${tot.demoFissate} e svolte ${tot.demoSvolte}, chiusure ${tot.chiusure}, contratto ${fmt(tot.valoreContratto)} ${vz}, incassato ${fmt(tot.incassato)} ${vz}, spesa ${fmt(tot.spesa)} ${vz}.`);
           if (tot.slot) r.push(`Capacità: ${tot.slot} slot disponibili; tempo medio al primo contatto ${fmt(tot.oreContatto / vend.length, 1)} ore.`);
         }
         if (chius.length) {
           const perF = {};
           chius.forEach((c) => { perF[et(FUNNEL_PROV, c.funnel)] = (perF[et(FUNNEL_PROV, c.funnel)] || 0) + (c.valoreContratto || 0); });
-          r.push(`CHIUSURE: ${chius.length}, contratto per funnel: ${Object.entries(perF).map(([k, v]) => `${k} ${fmt(v)} €`).join(", ")}.`);
+          r.push(`CHIUSURE: ${chius.length}, contratto per funnel: ${Object.entries(perF).map(([k, v]) => `${k} ${fmt(v)} ${vz}`).join(", ")}.`);
         }
         const fn = data.funnel.filter((f) => f.clienteId === z.id);
         fn.forEach((f) => {
@@ -7995,7 +8037,7 @@ Regole:
     const ricavo = finali * (f.valoreMedio || 0);
     const diag = peggiore ? DIAGNOSI_PASSO[peggiore.tipo] || DIAGNOSI_PASSO.pagina : null;
 
-    return (
+    return conValuta(valutaCliente(data, f.clienteId), () => (
       <>
         {lista.length > 1 && (
           <section className="card">
@@ -8197,7 +8239,7 @@ Regole:
           </div>
         </section>
       </>
-    );
+    ));
   };
 
   /* ---------- 4. pianificatore a ritroso ---------- */
@@ -8233,7 +8275,7 @@ Regole:
       { l: "Chiusure", v: ob, n: "l'obiettivo che hai messo" },
     ];
 
-    return (
+    return conValuta(valutaComune(venditeVista.map((v) => v.clienteId)), () => (
       <>
         <section className="card">
           <header><h2>Obiettivo</h2><span className="sp eyebrow">i tassi arrivano dal tuo storico</span></header>
@@ -8292,7 +8334,7 @@ Regole:
           </>
         )}
       </>
-    );
+    ));
   };
 
   /* ---------- 6 e 7. diario ed esperimenti ---------- */
@@ -8475,7 +8517,7 @@ Regole:
     const conc = feeTot ? Math.max(...righe.map((z) => (z.fee || 0) / feeTot), 0) : 0;
     const primo = righe.slice().sort((a, b) => (b.fee || 0) - (a.fee || 0))[0];
 
-    return (
+    return conValuta(valutaComune(righe.map((z) => z.id)), () => (
       <>
         <div className="kpis">
           <div className="kpi"><IcoKpi t="Ricorrente mensile" /><div className="eyebrow">Ricorrente mensile</div><div className="v">{eur0(feeTot)}</div><div className="s">{righe.length} clienti attivi</div></div>
@@ -8502,7 +8544,7 @@ Regole:
             <table className="tbl">
               <thead><tr><th>Cliente</th><th className="r">Compenso</th><th className="r">Ore</th><th className="r">Costo tempo</th><th className="r">Margine</th><th className="r">Margine %</th><th className="r">Quota</th></tr></thead>
               <tbody>
-                {righe.sort((a, b) => b.margine - a.margine).map((z) => (
+                {mapValuta(righe.sort((a, b) => b.margine - a.margine), (z) => z.id, (z) => (
                   <tr key={z.id} className="clic" onClick={() => cambiaAccount(z.id)}>
                     <td><div className="riga"><Logo src={z.logo} nome={z.nome} size={28} /><div><b>{z.nome}</b><div className="sub">{z.padreId ? `sottocliente di ${nomeCli(z.padreId)} · ` : ""}{z.aperti} task aperti</div></div></div></td>
                     <td className="r">{eur(z.fee)}</td>
@@ -8522,7 +8564,7 @@ Regole:
           </div>
         </section>
       </>
-    );
+    ));
   };
 
   const SezioneAdv = () => {
@@ -8678,7 +8720,7 @@ Regole:
       .sort((a, b) => b.d.sp - a.d.sp);
     const nomeCampagna = (id) => (data.campagne.find((k) => k.id === id) || {}).nome || "—";
 
-    return (
+    return conValuta(valutaComune(base.map((k) => k.clienteId)), () => (
       <>
         <div className="kpis">
           <div className="kpi"><IcoKpi t="Spesa del periodo" /><div className="eyebrow">Spesa del periodo</div><div className="v">{eur0(T.sp)}</div><div className="s">{base.length} campagne · budget {eur0(T.bg)}{mescolate && !fAdv.linea ? " · più linee insieme" : ""}</div></div>
@@ -8901,7 +8943,7 @@ Regole:
               <th /><th>Campagna</th><th>Funnel</th><th>Fase</th><th className="r">Speso</th><th className="r">CTR link</th><th className="r">CPC link</th><th className="r">Lead</th><th className="r">CPL</th>
               <th className="r">Conv.</th><th className="r">CPA</th><th className="r">ROAS</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Andamento</th><th className="r">Avvisi</th><th />
             </tr></thead>
-            <tbody>{(fase === "totale" ? base.map((k) => ({ k, f: { d: k.d, quando: "" } })) : conFase).map(({ k, f }) => {
+            <tbody>{mapValuta(fase === "totale" ? base.map((k) => ({ k, f: { d: k.d, quando: "" } })) : conFase, (x) => x.k.clienteId, ({ k, f }) => {
               const iv = intervallo(k, ultimaRilevazione(data, k));
               const D = f.d;
               return (
@@ -9028,7 +9070,7 @@ Regole:
           <section className="card">
             <header><h2>Ritmo di erogazione</h2><span className="sp eyebrow">spesa reale al giorno contro budget impostato</span></header>
             <div className="port">
-              {inCorso.map((k) => {
+              {mapValuta(inCorso, (k) => k.clienteId, (k) => {
                 const E = erogazioneAttesa(data, k);
                 const bgOggi = budgetDelGiorno(k, oggi());
                 const attesoGiorno = E.giorni && E.atteso > 0 ? E.atteso / E.giorni : bgOggi;
@@ -9123,7 +9165,7 @@ Regole:
             });
           };
 
-          return (
+          return conValuta(valutaCliente(data, k.clienteId), () => (
             <section className="card">
               <header>
                 <h2>Fasi di {k.nome}</h2>
@@ -9195,7 +9237,7 @@ Regole:
                 </div>
               )}
             </section>
-          );
+          ));
         })()}
 
         {(() => {
@@ -9237,7 +9279,7 @@ Regole:
                       <th className="r">Lead</th><th className="r">CPL</th><th />
                     </tr></thead>
                     <tbody>
-                      {depAdv.map((v2) => {
+                      {mapValuta(depAdv, (v2) => v2.clienteId || (v2.ids || [])[0], (v2) => {
                         const ks = v2.dati.campagne || [];
                         const pz = v2.dati.periodi || [];
                         const sp = ks.reduce((s2, k) => s2 + (k.spesa || 0), 0) + pz.reduce((s2, x) => s2 + (x.spesa || 0), 0);
@@ -9285,7 +9327,7 @@ Regole:
                       <th className="r">Conv.</th><th className="r">CPA</th><th className="r">ROAS</th><th />
                     </tr></thead>
                     <tbody>
-                      {arch.map((k) => (
+                      {mapValuta(arch, (k) => k.clienteId, (k) => (
                         <tr key={k.id} className="clic" onClick={() => apri("campagne", data.campagne.find((x) => x.id === k.id))}>
                           <td><b>{k.nome}</b><div className="sub">{et(PIATTAFORME, k.piattaforma)}{attivo ? "" : ` · ${nomeCli(k.clienteId)}`}</div></td>
                           <td className="sub">{dataIt(k.inizio)}–{dataIt(k.fine)}</td>
@@ -9445,7 +9487,7 @@ Regole:
             if (!attivi.length) return <div className="empty"><b>Nessun ad set attivo</b>Carica ad set e annunci per vedere quali fasi del percorso stai coprendo.</div>;
             return (
               <>
-                <Barre dati={perStadio.map((x) => ({ k: `${x.b}${x.n ? ` · ${x.n}` : ""}`, v: x.sp }))} fmtv={eur} />
+                <Barre dati={perStadio.map((x) => ({ k: `${x.b}${x.n ? ` · ${x.n}` : ""}`, v: x.sp }))} fmtv={fissaValuta(eur)} />
                 {senza.length > 0 && (
                   <div className="nota">{senza.length} tra ad set e annunci non hanno una fase assegnata: aprili e indica a quale momento del percorso parlano, altrimenti questo quadro resta parziale.</div>
                 )}
@@ -9539,7 +9581,7 @@ Regole:
           )}
         </section>
       </>
-    );
+    ));
   };
 
   const SezioneAutomazioni = () => {
@@ -9714,7 +9756,7 @@ Regole:
     const contratto = righe.reduce((s, c) => s + (c.valoreContratto || 0), 0);
     const incassato = righe.reduce((s, c) => s + (c.incassato || 0), 0);
     const nomeCampagna = (id) => (data.campagne.find((k) => k.id === id) || {}).nome || "—";
-    return (
+    return conValuta(valutaComune(righe.map((c) => c.clienteId)), () => (
       <>
         <div className="kpis">
           <div className="kpi"><IcoKpi t="Clienti chiusi" /><div className="eyebrow">Clienti chiusi</div><div className="v">{int(righe.length)}</div><div className="s">contratto medio {righe.length ? eur(contratto / righe.length) : "—"}</div></div>
@@ -9733,7 +9775,7 @@ Regole:
                 <th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Residuo</th><th className="r">Data</th>
               </tr></thead>
               <tbody>
-                {righe.map((c) => {
+                {mapValuta(righe, (c) => c.clienteId, (c) => {
                   const res = (c.valoreContratto || 0) - (c.incassato || 0);
                   return (
                     <tr key={c.id} className="clic" onClick={() => apri("chiusure", c)}>
@@ -9756,13 +9798,13 @@ Regole:
           )}
         </section>
       </>
-    );
+    ));
   };
 
   const SezioneVendite = () => {
     const righe = [...venditeVista].sort((a, b) => (a.periodo < b.periodo ? 1 : -1));
     const t = sommaVendite(venditeVista);
-    return (
+    return conValuta(valutaComune(venditeVista.map((v) => v.clienteId)), () => (
       <>
         <div className="kpis">
           <div className="kpi"><IcoKpi t="Chiusure" /><div className="eyebrow">Chiusure</div><div className="v">{int(t.chiusure)}</div><div className="s">su {int(t.demoSvolte)} demo svolte</div></div>
@@ -10088,7 +10130,7 @@ Regole:
                 <th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Costo/chiusura</th>
               </tr></thead>
               <tbody>
-                {righe.map((r) => (
+                {mapValuta(righe, (r) => r.clienteId, (r) => (
                   <tr key={r.id} className="clic" onClick={() => apri("vendite", data.vendite.find((x) => x.id === r.id))}>
                     <td>
                       <b>{meseIt(r.periodo)}</b>
@@ -10117,7 +10159,7 @@ Regole:
           )}
         </section>
       </>
-    );
+    ));
   };
 
   const SezioneTask = () => (
@@ -10321,7 +10363,7 @@ Regole:
               const principali = attivi.filter((z) => !z.padreId);
               const idsPrinc = principali.map((z) => z.id);
               /* Valute diverse nello stesso totale: la somma non corrisponde a nulla */
-              const valuteUsate = [...new Set(attivi.map((z) => z.valuta || data.agenzia.valuta || "EUR"))];
+              const valuteUsate = [...new Set(attivi.map((z) => valutaCliente(data, z.id)))];
               const mesi = righeMensili(idsPrinc);
               const ora = mesi[mesi.length - 1] || { spesa: 0, lead: 0, chiusure: 0, contratto: 0, incassato: 0, cpl: 0, ritorno: 0 };
               const prima = mesi[mesi.length - 2] || null;
@@ -10364,7 +10406,7 @@ Regole:
               const colore = { ottimo: "var(--ok)", buono: "var(--ok)", attenzione: "var(--warn)", critico: "var(--acc-t)", nd: "var(--ink3)" };
               const testoStato = { ottimo: "Ottimo", buono: "Buono", attenzione: "Attenzione", critico: "Critico", nd: "Senza obiettivo" };
 
-              return (
+              return conValuta(valutaComune(idsPrinc), () => (
                 <>
                   {valuteUsate.length > 1 && (
                     <article className="al" data-g="attenzione">
@@ -10440,7 +10482,7 @@ Regole:
                           <th className="r">Sforzo/Resa</th><th className="r">Resa ads</th><th>Stato</th>
                         </tr></thead>
                         <tbody>
-                          {perf.map((p) => (
+                          {mapValuta(perf, (p) => p.id, (p) => (
                             <tr key={p.id} className="clic" onClick={() => cambiaAccount(p.id)}>
                               <td><div className="riga"><Logo src={p.logo} nome={p.nome} size={26} /><div>
                                 <b>{p.nome}</b>
@@ -10492,7 +10534,7 @@ Regole:
                   </section>
                 </div>
                 </>
-              );
+              ));
             })()}
 
             {!attivo && vista === "clienti" && (
@@ -10502,7 +10544,7 @@ Regole:
                   <table className="tbl">
                     <thead><tr><th>Cliente</th><th>Stato</th><th className="r">Compenso</th><th className="r">Campagne</th><th className="r">Speso</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Sforzo/Resa</th><th className="r">Resa ads</th><th className="r">Task</th><th className="r">Avvisi</th><th /></tr></thead>
                     <tbody>
-                      {ordinaGerarchia().filter(({ z, liv }) => liv === 0 && cerca(z.nome + " " + z.settore)).map(({ z, liv }) => {
+                      {mapValuta(ordinaGerarchia().filter(({ z, liv }) => liv === 0 && cerca(z.nome + " " + z.settore)), (x) => x.z.id, ({ z, liv }) => {
                         const p = m.portafoglio.find((x) => x.id === z.id) || { sp: 0, nCamp: 0, nAvvisi: 0, testo: "—", modo: "nd", perf: 0 };
                         const nt = data.task.filter((t) => t.clienteId === z.id && t.stato !== "fatto").length;
                         const nf = figli(z.id).length;
@@ -10581,7 +10623,7 @@ Regole:
                             <th className="r">Ultima spesa</th><th className="r">Contratti</th><th />
                           </tr></thead>
                           <tbody>
-                            {data.clienti.filter((z) => z.archiviato === "si").map((z) => {
+                            {mapValuta(data.clienti.filter((z) => z.archiviato === "si"), (z) => z.id, (z) => {
                               const voci = data.deposito.filter((v2) => v2.clienteId === z.id || (v2.ids || []).includes(z.id));
                               const suoi = (c) => voci.flatMap((v2) => (v2.dati[c] || [])).filter((x) => x.clienteId === z.id);
                               const n = COLL_CLI.reduce((s2, c) => s2 + suoi(c).length, 0);
@@ -10644,7 +10686,7 @@ Regole:
               }, 0);
               const avvisiTot = m.avvisi.filter((a) => tutti.some((z) => z.id === a.clienteId)).length;
 
-              return (
+              return conValuta(valutaComune(tutti.map((z) => z.id)), () => (
                 <>
                   <div className="kpis">
                     <div className="kpi"><IcoKpi t="Clienti" /><div className="eyebrow">Sottoclienti attivi</div>
@@ -10661,7 +10703,7 @@ Regole:
                       <div className="s">su tutti i sottoclienti</div></div>
                   </div>
 
-                  {madri.map((z) => {
+                  {mapValuta(madri, (z) => z.id, (z) => {
                     const suoi = figli(z.id);
                     return (
                       <section className="card" key={z.id}>
@@ -10678,7 +10720,7 @@ Regole:
                               <th className="r">Lead</th><th className="r">CPL</th><th className="r">Resa</th><th className="r">Avvisi</th><th />
                             </tr></thead>
                             <tbody>
-                              {suoi.map((f) => {
+                              {mapValuta(suoi, (f) => f.id, (f) => {
                                 const p = m.portafoglio.find((x) => x.id === f.id) || { sp: 0, nCamp: 0, nAvvisi: 0, testo: "—", modo: "nd", perf: 0 };
                                 const r = righeMensili([f.id]);
                                 const u = r[r.length - 1] || { lead: 0, cpl: 0 };
@@ -10726,7 +10768,7 @@ Regole:
                     );
                   })}
                 </>
-              );
+              ));
             })()}
 
             {!attivo && vista === "avvisi" && (
@@ -11151,9 +11193,9 @@ Regole:
                     <tr>
                       <td className="sub">Valuta</td>
                       <td>
-                        {attivo.valuta || (data.agenzia.valuta || "EUR")}
-                        {!attivo.valuta && <span className="sub" style={{ marginLeft: 8 }}>dall'agenzia</span>}
-                        <span className="sub" style={{ marginLeft: 8 }}>{eurDi(1234.56, attivo.valuta)}</span>
+                        {valutaCliente(data, attivo.id)}
+                        {!attivo.valuta && <span className="sub" style={{ marginLeft: 8 }}>{attivo.padreId && valutaCliente(data, attivo.padreId) !== (data.agenzia.valuta || "EUR") ? "dal cliente madre" : "dall'agenzia"}</span>}
+                        <span className="sub" style={{ marginLeft: 8 }}>{eurDi(1234.56, valutaCliente(data, attivo.id))}</span>
                       </td>
                     </tr>
                     <tr>
