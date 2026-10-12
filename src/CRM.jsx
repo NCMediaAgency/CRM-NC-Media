@@ -720,7 +720,8 @@ const perInput = (n) => (n === 0 || n ? String(n).replace(".", ",") : "");
 const fmt = (n, d = 2) => new Intl.NumberFormat(LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true }).format(n || 0);
 const int = (n) => new Intl.NumberFormat(LOCALE, { useGrouping: true }).format(Math.round(n || 0));
 const eur = (n, d = 2) => new Intl.NumberFormat(LOCALE, { style: "currency", currency: VALUTA, minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true }).format(n || 0);
-const eur0 = (n) => eur(n, 0);
+/* Importi sempre con due decimali, anche nei totali: scelta del proprietario per uniformità */
+const eur0 = (n) => eur(n, 2);
 const pctv = (n, d = 2) => `${fmt(n, d)}%`;
 const dataItA = (s) => (s ? new Date(s + "T00:00:00").toLocaleDateString(LOCALE, { day: "2-digit", month: "short", year: "numeric" }) : "—");
 const dataIt = (s) => (s ? new Date(s + "T00:00:00").toLocaleDateString(LOCALE, { day: "2-digit", month: "short" }) : "—");
@@ -774,7 +775,7 @@ const eurDi = (n, valuta, d = 2) => new Intl.NumberFormat(LOCALE, {
   style: "currency", currency: VALUTE.includes(valuta) ? valuta : VALUTA,
   minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true,
 }).format(n || 0);
-const eurDi0 = (n, valuta) => eurDi(n, valuta, 0);
+const eurDi0 = (n, valuta) => eurDi(n, valuta, 2);
 
 const T = (s) => {
   if (LINGUA === "it" || !s) return s;
@@ -2758,11 +2759,12 @@ position:sticky;top:0;z-index:20}
 .card>header .sp{margin-left:auto}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px}
-.kpi{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden;container-type:inline-size}
 .kpi .ic{width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
 margin-bottom:11px}
 .kpi .ic svg{display:block}
-.kpi .v{font-family:var(--ui);font-size:25px;font-weight:600;font-variant-numeric:tabular-nums lining-nums;
+/* Con i decimali ovunque gli importi si allungano: il numero si stringe con il riquadro, mai oltre 25px */
+.kpi .v{font-family:var(--ui);font-size:clamp(15px,11.5cqi,25px);white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums lining-nums;
 letter-spacing:-.035em;line-height:1.15;margin-top:6px;color:#fff}
 .kpi .s{font-size:11.5px;color:var(--ink2);margin-top:4px}
 
@@ -2960,6 +2962,7 @@ border:1px solid var(--line);border-radius:10px;padding:18px 20px}
  .al dd{margin-bottom:7px}
  .body,.top{padding-left:14px;padding-right:14px}
 }
+@media (max-width:560px){.kpis{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.crm *{transition:none!important}}
 /* Calendario */
 .cal-legenda{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 16px;border-bottom:1px solid var(--line)}
