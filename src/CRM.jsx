@@ -715,9 +715,11 @@ const parseNum = (s) => {
   return isFinite(n) ? n : 0;
 };
 const perInput = (n) => (n === 0 || n ? String(n).replace(".", ",") : "");
-const fmt = (n, d = 2) => new Intl.NumberFormat(LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d }).format(n || 0);
-const int = (n) => new Intl.NumberFormat(LOCALE).format(Math.round(n || 0));
-const eur = (n, d = 2) => new Intl.NumberFormat(LOCALE, { style: "currency", currency: VALUTA, minimumFractionDigits: d, maximumFractionDigits: d }).format(n || 0);
+/* useGrouping: true mette sempre il separatore delle migliaia. Senza, l'italiano
+   (come lo spagnolo) lo omette sotto le cinque cifre: 7217 invece di 7.217. */
+const fmt = (n, d = 2) => new Intl.NumberFormat(LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true }).format(n || 0);
+const int = (n) => new Intl.NumberFormat(LOCALE, { useGrouping: true }).format(Math.round(n || 0));
+const eur = (n, d = 2) => new Intl.NumberFormat(LOCALE, { style: "currency", currency: VALUTA, minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true }).format(n || 0);
 const eur0 = (n) => eur(n, 0);
 const pctv = (n, d = 2) => `${fmt(n, d)}%`;
 const dataItA = (s) => (s ? new Date(s + "T00:00:00").toLocaleDateString(LOCALE, { day: "2-digit", month: "short", year: "numeric" }) : "—");
@@ -770,7 +772,7 @@ const base = (l) => (DIZ[l] ? l : String(l).split("-")[0]);
    serve negli elenchi dove convivono clienti con valute diverse. */
 const eurDi = (n, valuta, d = 2) => new Intl.NumberFormat(LOCALE, {
   style: "currency", currency: VALUTE.includes(valuta) ? valuta : VALUTA,
-  minimumFractionDigits: d, maximumFractionDigits: d,
+  minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: true,
 }).format(n || 0);
 const eurDi0 = (n, valuta) => eurDi(n, valuta, 0);
 
