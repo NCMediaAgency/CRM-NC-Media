@@ -10,7 +10,7 @@ CRM per agenzie di media buying (clienti, campagne, funnel, vendite, task). Oggi
   - `crm:data:v6`: tutti i dati del CRM in un unico JSON;
   - `crm:snap:AAAA-MM-GG`: copie automatiche giornaliere (ne tiene 6).
 - **Database**: Supabase (progetto `cggxgzazjyeayfhynhhd`, regione UE). Lo schema è in `supabase/migrations/`, numerate in ordine; si applicano a mano dallo SQL Editor di Supabase. Ogni tabella con dati ha `workspace_id` e la RLS che passa da `public.is_member()`.
-- **Pubblicazione**: Cloudflare Pages, build `npm run build`, cartella `dist`. Il branch `main` è la versione definitiva; ogni altro branch genera un link di anteprima.
+- **Pubblicazione**: Cloudflare Workers (progetto `crm-nc-media`, configurazione in `wrangler.jsonc`, sito statico servito da `dist`). Build `npm run build`; deploy `npx wrangler deploy` per `main` (versione definitiva), `npx wrangler versions upload` per gli altri branch (link di anteprima).
 
 ## Regole di lavoro
 
