@@ -3,6 +3,9 @@
 {
   "name": "crm-nc-media",
   "compatibility_date": "2026-10-01",
+  // Indirizzo *.workers.dev e link di anteprima per i branch diversi da main
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"

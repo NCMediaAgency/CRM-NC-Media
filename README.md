@@ -16,6 +16,6 @@ Le migrazioni sono in `supabase/migrations/`. Si eseguono in ordine dallo SQL Ed
 
 ## Pubblicazione
 
-Cloudflare Workers, configurazione in `wrangler.jsonc`. Build `npm run build`, deploy `npx wrangler deploy`; per i branch diversi da `main`, `npx wrangler versions upload`, che crea un link di anteprima. Il branch `main` è la versione definitiva.
+Cloudflare Workers, configurazione in `wrangler.jsonc`. Build `npm run build`, deploy `npx wrangler deploy`; per i branch diversi da `main`, `npx wrangler preview`, che crea un link di anteprima. Il branch `main` è la versione definitiva.
 
 Dettagli sull'architettura e sulle regole di lavoro in `CLAUDE.md`.
