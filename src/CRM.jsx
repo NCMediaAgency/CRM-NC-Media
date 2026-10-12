@@ -658,7 +658,7 @@ const migra = (v) => ({
 const normalizza = (d) => ({
   agenzia: { costoOrario: 0, lingua: "it", valuta: "EUR", ...(d.agenzia || { nome: "NC", sottotitolo: "Media buying", logo: "" }) },
   aree: d.aree && d.aree.length ? d.aree : AREE_DEFAULT,
-  clienti: (d.clienti || []).map((z) => ({ margineLordo: 0, resi: 0, aov: 0, aoa: {}, padreId: "", archiviato: "no", valuta: "", ...z })),
+  clienti: (d.clienti || []).map((z) => ({ margineLordo: 0, resi: 0, aov: 0, aoa: {}, padreId: "", archiviato: "no", valuta: "", valutaFee: "", ...z })),
   contatti: d.contatti || [], trattative: d.trattative || [],
   /* Il budget giornaliero non si deduce da un totale diviso la durata: o è quello
      impostato in piattaforma, o non c'è. Un numero inventato qui produce confronti falsi. */
@@ -753,6 +753,12 @@ const valutaCliente = (data, id) => {
     z = z.padreId ? clienti.find((x) => x.id === z.padreId) : null;
   }
   return (data && data.agenzia && data.agenzia.valuta) || "EUR";
+};
+/* La valuta del compenso: un cliente può pagarti in una valuta diversa da quella
+   delle sue campagne (campagne in USD, compenso in EUR). Se non è indicata, è la sua. */
+const valutaCompenso = (data, id) => {
+  const z = ((data && data.clienti) || []).find((x) => x.id === id);
+  return (z && z.valutaFee) || valutaCliente(data, id);
 };
 /* Esegue fn con la valuta indicata e poi rimette quella di prima. Serve dove si
    scrivono importi di un cliente preciso fuori dalla sua scheda: avvisi, semaforo,
@@ -1671,6 +1677,7 @@ const GUIDA = [
       { h: "Cosa cambia", p: "Cambiano le voci di menu, i titoli delle sezioni, le etichette degli stati e delle fasi, i pulsanti ricorrenti e le intestazioni delle colonne. La scelta si salva con i dati dell'agenzia, quindi resta anche riaprendo l'app e viaggia nel backup." },
       { h: "Numeri, date e valuta", p: "Cambiando lingua cambiano anche i formati: in inglese 1.234,56 € diventa €1,234.56 e il 2 ottobre diventa Oct 02. Non è estetica — un anglofono che legge 1.234 capisce “uno virgola due”, cioè mille volte meno. Le date seguono la stessa regola." },
       { h: "Una valuta per cliente", p: "Nella scheda di ogni cliente, accanto all'account pubblicitario, c'è il campo Valuta: lasciandolo su “quella dell'agenzia” segue il valore predefinito, impostandone uno quel cliente usa il suo. Vale anche per i singoli sottoclienti, che possono differire dalla madre; se lasci il campo vuoto, il sottocliente segue la valuta della madre. È indipendente dalla lingua: puoi lavorare in italiano e seguire un cliente in dollari." },
+      { h: "La valuta del compenso", p: "Sotto il compenso mensile c'è un campo a parte, Valuta del compenso, per il cliente che ha le campagne in una valuta ma ti paga in un'altra: per esempio campagne in USD e compenso in euro. Il compenso appare in quella valuta nella scheda, nel cruscotto del cliente, nell'elenco Clienti e in Economia. Lasciandolo vuoto, il compenso segue la valuta del cliente." },
       { h: "Dove si vede", p: "Entrando nel cliente tutti i suoi importi sono nella sua valuta, compresi avvisi, semaforo e grafici. Anche fuori dal cliente ogni importo che appartiene a lui resta nella sua valuta: le righe di Clienti, Sottoclienti, Panoramica, Advertising, Chiusure, Ciclo di vendita, Riepilogo mensile ed Economia, gli avvisi, il semaforo e il calendario. Quando una sezione mostra solo clienti con la stessa valuta, anche i suoi totali sono in quella valuta. Un sottocliente senza valuta propria usa quella del cliente madre." },
       { h: "Il limite dei totali d'agenzia", p: "Quando i clienti usano valute diverse, le somme a livello di agenzia le mettono insieme come se fossero la stessa cosa, e il numero che ne esce non corrisponde a niente. L'app non converte: servirebbe un tasso di cambio, e per farlo bene quello del giorno di ogni singola spesa. Per questo in Panoramica compare un avvertimento che elenca le valute in uso, e il consiglio di leggere gli importi dentro il singolo cliente. Le righe dei singoli clienti restano invece sempre nella loro valuta: solo i totali che li sommano usano quella dell'agenzia. I conteggi — campagne, lead, demo, chiusure — restano attendibili ovunque, perché non dipendono dalla valuta." },
       { h: "Le due lingue inglesi", p: "Inglese americano e inglese britannico sono voci distinte, perché differiscono in tutto ciò che conta qui: la data, il separatore delle migliaia e la valuta attesa — dollaro per il primo, sterlina per il secondo. Canada e Australia usano la voce americana scegliendo poi CAD o AUD, che si mostrano come CA$ e A$ per distinguerli dal dollaro statunitense. Le due varianti condividono lo stesso dizionario di parole." },
@@ -4048,7 +4055,8 @@ export default function CRM({ onEsci, utente = "" } = {}) {
     const v = [...new Set(ids.filter(Boolean).map((id) => valutaCliente(data, id)))];
     return v.length === 1 ? v[0] : VALUTA;
   };
-  const mapValuta = (lista, cliDi, fn) => lista.map((x, i) => conValuta(valutaCliente(data, cliDi(x)), () => fn(x, i)));
+  const mapCon = (lista, valutaDi, fn) => lista.map((x, i) => conValuta(valutaDi(x), () => fn(x, i)));
+  const mapValuta = (lista, cliDi, fn) => mapCon(lista, (x) => valutaCliente(data, cliDi(x)), fn);
   const nomeCli = (id) => (cliente(id) || {}).nome || "Agenzia";
   const nomeArea = (id) => (data.aree.find((a) => a.id === id) || {}).nome || "senza area";
   const attivo = cliAtt ? cliente(cliAtt) : null;
@@ -4363,6 +4371,9 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         opts: [{ v: "", l: "— quella dell'agenzia (o del cliente madre) —" }, ...VALUTE.map((c) => ({ v: c, l: c }))],
         hint: "se questo cliente fattura in un'altra valuta" },
       { k: "fee", label: "Compenso mensile", type: "num" },
+      { k: "valutaFee", label: "Valuta del compenso", type: "select",
+        opts: [{ v: "", l: "— come la valuta del cliente —" }, ...VALUTE.map((c) => ({ v: c, l: c }))],
+        hint: "se ti paga in una valuta diversa da quella delle campagne" },
       { k: "budgetMese", label: "Budget adv mensile", type: "num" },
       { grp: "Economia del cliente", hint: "servono al pareggio e alla soglia di valutazione" },
       { k: "margineLordo", label: "Margine lordo (%)", type: "num", ph: "42" },
@@ -6697,7 +6708,7 @@ export default function CRM({ onEsci, utente = "" } = {}) {
         const tot = sommaVendite(vend);
         const rp = roasPareggio(z);
         r.push(`\n### CLIENTE: ${z.nome} (id "${z.id}", ${z.settore || "settore non indicato"}, stato ${z.stato})`);
-        r.push(`Compenso ${z.fee || 0} ${vz}/mese, budget adv ${z.budgetMese || 0} ${vz}/mese, margine lordo ${z.margineLordo || 0}%, resi ${z.resi || 0}%${rp ? `, ROAS di pareggio ${fmt(rp)}` : ""}.`);
+        r.push(`Compenso ${z.fee || 0} ${valutaCompenso(data, z.id)}/mese, budget adv ${z.budgetMese || 0} ${vz}/mese, margine lordo ${z.margineLordo || 0}%, resi ${z.resi || 0}%${rp ? `, ROAS di pareggio ${fmt(rp)}` : ""}.`);
         if (z.note) r.push(`Note: ${z.note}`);
         if (camp.length) {
           r.push("CAMPAGNE (nome | piattaforma | obiettivo | stato | speso/budget | CTR | CPC | CPA | ROAS | frequenza):");
@@ -8522,7 +8533,9 @@ Regole:
     const conc = feeTot ? Math.max(...righe.map((z) => (z.fee || 0) / feeTot), 0) : 0;
     const primo = righe.slice().sort((a, b) => (b.fee || 0) - (a.fee || 0))[0];
 
-    return conValuta(valutaComune(righe.map((z) => z.id)), () => (
+    /* Qui si parla di compensi: valuta del compenso, non quella delle campagne */
+    const valuteFee = [...new Set(righe.map((z) => valutaCompenso(data, z.id)))];
+    return conValuta(valuteFee.length === 1 ? valuteFee[0] : VALUTA, () => (
       <>
         <div className="kpis">
           <div className="kpi"><IcoKpi t="Ricorrente mensile" /><div className="eyebrow">Ricorrente mensile</div><div className="v">{eur0(feeTot)}</div><div className="s">{righe.length} clienti attivi</div></div>
@@ -8549,7 +8562,7 @@ Regole:
             <table className="tbl">
               <thead><tr><th>Cliente</th><th className="r">Compenso</th><th className="r">Ore</th><th className="r">Costo tempo</th><th className="r">Margine</th><th className="r">Margine %</th><th className="r">Quota</th></tr></thead>
               <tbody>
-                {mapValuta(righe.sort((a, b) => b.margine - a.margine), (z) => z.id, (z) => (
+                {mapCon(righe.sort((a, b) => b.margine - a.margine), (z) => valutaCompenso(data, z.id), (z) => (
                   <tr key={z.id} className="clic" onClick={() => cambiaAccount(z.id)}>
                     <td><div className="riga"><Logo src={z.logo} nome={z.nome} size={28} /><div><b>{z.nome}</b><div className="sub">{z.padreId ? `sottocliente di ${nomeCli(z.padreId)} · ` : ""}{z.aperti} task aperti</div></div></div></td>
                     <td className="r">{eur(z.fee)}</td>
@@ -10571,7 +10584,7 @@ Regole:
                               </div>
                             </td>
                             <td><span className="tag" data-k={z.stato}>{et(STATI_CLIENTE, z.stato)}</span></td>
-                            <td className="r">{z.fee ? `${eurDi(z.fee, z.valuta)}/mese` : "—"}</td>
+                            <td className="r">{z.fee ? `${eurDi(z.fee, valutaCompenso(data, z.id))}/mese` : "—"}</td>
                             <td className="r">{p.nCamp}</td>
                             <td className="r">{p.sp ? eurDi(p.sp, z.valuta) : "—"}</td>
                             <td className="r">{uz.lead ? int(uz.lead) : "—"}</td>
@@ -10886,7 +10899,7 @@ Regole:
                     <span className="eyebrow">{et(STATI_CLIENTE, attivo.stato)}</span>
                     <h2>{attivo.nome}</h2>
                     <div className="sub" style={{ color: "#959092", marginTop: 6 }}>
-                      {attivo.fee ? `${eur(attivo.fee)} al mese` : "compenso non indicato"}
+                      {attivo.fee ? `${eurDi(attivo.fee, valutaCompenso(data, attivo.id))} al mese` : "compenso non indicato"}
                       {attivo.budgetMese ? ` · budget adv ${eur(attivo.budgetMese)}/mese` : ""}
                     </div>
                   </div>
@@ -11178,7 +11191,7 @@ Regole:
                     <tr><td className="sub">Settore</td><td>{attivo.settore || "—"}</td></tr>
                     <tr><td className="sub">Sede</td><td>{attivo.citta || "—"}</td></tr>
                     <tr><td className="sub">Stato</td><td><span className="tag" data-k={attivo.stato}>{et(STATI_CLIENTE, attivo.stato)}</span></td></tr>
-                    <tr><td className="sub">Compenso mensile</td><td className="mono">{attivo.fee ? eur(attivo.fee) : "—"}</td></tr>
+                    <tr><td className="sub">Compenso mensile</td><td className="mono">{attivo.fee ? eurDi(attivo.fee, valutaCompenso(data, attivo.id)) : "—"}</td></tr>
                     <tr><td className="sub">Budget adv mensile</td><td className="mono">{attivo.budgetMese ? eur(attivo.budgetMese) : "—"}</td></tr>
                     <tr>
                       <td className="sub">Margine e pareggio</td>
@@ -11272,7 +11285,7 @@ Regole:
                       <tr>
                         <td className="sub">Pagamento</td>
                         <td>{et(TERMINI_PAGAMENTO, attivo.termini)} · {et(METODI_PAGAMENTO, attivo.metodo)}
-                          {attivo.fee > 0 && <div className="sub">{eur(attivo.fee)} al mese ricorrenti</div>}</td>
+                          {attivo.fee > 0 && <div className="sub">{eurDi(attivo.fee, valutaCompenso(data, attivo.id))} al mese ricorrenti</div>}</td>
                       </tr>
                     </tbody></table>
                   </div>
