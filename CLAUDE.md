@@ -10,6 +10,9 @@ CRM per agenzie di media buying (clienti, campagne, funnel, vendite, task). Oggi
   - `crm:data:v6`: tutti i dati del CRM in un unico JSON;
   - `crm:snap:AAAA-MM-GG`: copie automatiche giornaliere (ne tiene 6).
 - **Database**: Supabase (progetto `cggxgzazjyeayfhynhhd`, regione UE). Lo schema è in `supabase/migrations/`, numerate in ordine; si applicano a mano dallo SQL Editor di Supabase. Ogni tabella con dati ha `workspace_id` e la RLS che passa da `public.is_member()`.
+- **Meta Ads**: la Edge Function `supabase/functions/meta-sync/index.ts` (file unico senza dipendenze, si incolla nell'editor di Supabase; "Verify JWT" spento perché la chiama anche il cron) scarica dagli account collegati campagne, ad set e annunci attivi o con spesa negli ultimi 90 giorni (totali da sempre) e le finestre Test/Matura/settimane via `time_ranges`. Scrive in `meta_account`, `meta_oggetti`, `meta_finestre`, `meta_sync` (migrazione 0002). Il cron delle 7 e 8 UTC la avvia, lavora solo alle 9 di Roma; risponde subito e lavora in sottofondo, a fine tempo si richiama. Token in segreto `META_TOKEN` (utente di sistema del Business Manager, `ads_read`), unico per tutta l'installazione: per il prodotto vendibile va reso per spazio di lavoro.
+- **Dati Meta nel CRM**: il CRM legge le tabelle all'apertura e dopo "Aggiorna ora" (`src/lib/metaApi.js`) e le applica con `applicaMeta` (`src/lib/meta.js`, funzione pura): campagne per `metaId` o per nome alla prima volta, creativi, finestre (`origine: "meta"`), storico del budget, stato. Il browser resta l'unico a scrivere `crm:data:v6`. I collegamenti account → cliente stanno in `meta_collegamenti` e si gestiscono da Impostazioni e Scheda cliente. In prova locale `src/lib/metaFinta.js` simula Meta.
+- **Prove**: `npm test` (applicazione dei dati Meta e funzione meta-sync con Meta e database simulati).
 - **Pubblicazione**: Cloudflare Workers (progetto `crm-nc-media`, configurazione in `wrangler.jsonc`, sito statico servito da `dist`). Build `npm run build`; deploy `npx wrangler deploy` per `main` (versione definitiva), `npx wrangler preview` per gli altri branch (link di anteprima).
 
 ## Regole di lavoro
@@ -22,6 +25,6 @@ CRM per agenzie di media buying (clienti, campagne, funnel, vendite, task). Oggi
 
 ## Prossimi passi previsti
 
-- **Fase 2, sincronizzazione Meta**: una funzione di Supabase avviata ogni giorno alle 9:00 (Europe/Rome) scarica per ogni cliente con `accountAdv` (`act_…`) gli ultimi 7 giorni, giorno per giorno, a livello di campagna, ad set e annuncio. Va salvata in tabelle dedicate, non dentro `crm:data:v6`: il browser riscrive quel JSON intero a ogni modifica e cancellerebbe i dati arrivati dal server.
+- **Fase 2, Meta**: fatta (vedi sopra). Da rifinire con l'uso: lead dai moduli (serve `leads_retrieval`), ritmo di spesa giornaliero dai dati per giorno.
 - **Fase 3, prodotto vendibile**: collegamento Facebook per ogni utente (OAuth e verifica dell'app da parte di Meta), abbonamenti con Stripe, registrazione pubblica, chiave dell'assistente AI spostata sul server (oggi `aiKey` sta nei dati e la chiamata ad Anthropic parte dal browser), dati normalizzati in tabelle al posto del JSON unico.
 - `xlsx` 0.18.5 da npm ha vulnerabilità note sui file non fidati: passare alla versione distribuita da cdn.sheetjs.com.

@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { archivioCloud, archivioLocale } from "./lib/storage";
+import { apiMetaCloud } from "./lib/metaApi";
+import { apiMetaFinta } from "./lib/metaFinta";
 /* Il CRM è il pezzo pesante: si scarica solo dopo l'accesso, così il login appare subito */
 const CRM = lazy(() => import("./CRM.jsx"));
 
@@ -62,6 +64,7 @@ export default function App() {
   const [sessione, setSessione] = useState(undefined);
   const [pronto, setPronto] = useState(LOCALE);
   const [errore, setErrore] = useState("");
+  const [meta, setMeta] = useState(() => (LOCALE ? apiMetaFinta() : null));
 
   useEffect(() => {
     if (LOCALE) { window.storage = archivioLocale(); return; }
@@ -81,6 +84,7 @@ export default function App() {
       if (!vivo) return;
       if (error || !data) { setErrore("Non riesco a aprire il tuo spazio di lavoro. Ricarica la pagina; se il problema resta, controlla la configurazione del database."); return; }
       window.storage = archivioCloud(data);
+      setMeta(apiMetaCloud(data));
       setPronto(true);
     });
     return () => { vivo = false; };
@@ -88,7 +92,7 @@ export default function App() {
 
   const caricamento = <Schermo><div className="box"><p>Carico il CRM…</p></div></Schermo>;
 
-  if (LOCALE) return <Suspense fallback={caricamento}><CRM /></Suspense>;
+  if (LOCALE) return <Suspense fallback={caricamento}><CRM meta={meta} /></Suspense>;
   if (sessione === undefined) return <Schermo><div className="box"><p>Caricamento…</p></div></Schermo>;
   if (!sessione) return <Accesso />;
   if (errore) return <Schermo><div className="box"><p className="err">{errore}</p><button onClick={() => supabase.auth.signOut()}>Esci</button></div></Schermo>;
@@ -98,7 +102,7 @@ export default function App() {
     <>
       <style>{STILE}</style>
       {/* key: cambiando utente il CRM riparte da zero e rilegge il suo archivio */}
-      <Suspense fallback={caricamento}><CRM key={utente} onEsci={() => supabase.auth.signOut()} utente={sessione.user.email || ""} /></Suspense>
+      <Suspense fallback={caricamento}><CRM key={utente} onEsci={() => supabase.auth.signOut()} utente={sessione.user.email || ""} meta={meta} /></Suspense>
     </>
   );
 }

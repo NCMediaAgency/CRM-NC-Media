@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
+import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
   AlertTriangle, Clock, BarChart3, Percent, Layers, Briefcase, Gauge,
@@ -1649,13 +1650,15 @@ const GUIDA = [
   },
   {
     id: "aggiornare", t: "Aggiornare i dati da Meta",
-    intro: "L'app non può parlare con Meta da sola, ma può preparare la richiesta al posto tuo: account, periodo mancante, elenco delle campagne e formato atteso.",
+    intro: "Ogni mattina alle 9 il CRM scarica da Meta Ads i dati fino a ieri per tutti gli account collegati ai clienti: campagne, ad set, annunci e finestre di valutazione. Non serve importare file.",
     blocchi: [
-      { h: "Una volta sola: l'account", p: "Nella scheda del cliente compila \"Account pubblicitario\" con l'ID di Meta, quello che inizia per act_ e che trovi in Gestione inserzioni accanto al nome dell'account. Si importa anche da foglio, con una colonna Account." },
-      { h: "Il pulsante", p: "In Advertising, dentro un cliente, c'è \"Chiedi i dati aggiornati\". Nelle tabelle dei sottoclienti — nel cruscotto del cliente madre e nella sezione Sottoclienti — lo stesso comando è il pulsante \"Dati\" su ogni riga, così prepari più clienti di fila." },
-      { h: "Cosa contiene la richiesta", p: "Il nome del cliente, l'account, il periodo che manca — calcolato dall'ultima finestra che hai caricato, così non riscarichi quello che hai già — l'elenco delle campagne già presenti con i nomi esatti a cui agganciarsi, e la specifica di cosa serve: totali per le chiuse, dettaglio a finestre solo per le attive." },
-      { h: "Come si usa", p: "Premi Copia, incolla nella chat con il consulente, e ricevi i file già pronti per Importa dati. Resta un passaggio manuale, ma non devi più spiegare ogni volta di che cliente si tratta, che periodo serve e come vanno tagliate le finestre." },
-      { h: "Il limite, detto chiaro", p: "Perché il pulsante scarichi davvero i dati da solo servirebbe un piccolo server che custodisca le chiavi di accesso e che giri anche quando questa pagina è chiusa. Finché il software vive nel browser, l'ultimo passo resta un tuo click." },
+      { h: "Una volta sola: collegare gli account", p: "In Impostazioni, nel riquadro Collegamento con Meta Ads, premi Aggiorna l'elenco degli account: compaiono tutti gli account a cui il token ha accesso. Accanto a ogni cliente il CRM propone quello che gli somiglia per nome (anche per iniziali: BDF per Boutique Del Fitness); controlli e premi Collega. Lo stesso si fa dalla Scheda cliente. Un cliente può avere più account; un account appartiene a un solo cliente." },
+      { h: "Cosa arriva", p: "Le campagne attive o che hanno speso negli ultimi 90 giorni, con stato, budget giornaliero, date, spesa, impression, clic, clic sul link, lead, acquisti e ricavi. Sotto ogni campagna i suoi ad set e annunci con i totali. Le finestre Test, Matura e le settimane Attive sono già sommate da Meta, con la frequenza vera di ciascuna." },
+      { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
+      { h: "Cosa resta tuo", p: "Lo stato In test, le soglie, la linea, il funnel, le note, lo stadio dei creativi e, se l'hai segnato come scritto a mano, l'esito commerciale (conversioni e ricavi). Il budget giornaliero cambiato su Meta entra nello storico con la data del giorno, come quando lo cambi dalla scheda." },
+      { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
+      { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento." },
+      { h: "Il pulsante Chiedi i dati aggiornati", p: "Resta per i clienti che non hai collegato o per le piattaforme diverse da Meta: prepara la richiesta da incollare in chat, come prima." },
     ],
   },
   {
@@ -2759,6 +2762,15 @@ position:sticky;top:0;z-index:20}
 .btn.ghost[data-on="1"]{background:var(--acc);color:#fff;border-color:var(--acc)}
 .btn.danger{background:none;color:var(--acc);border:1px solid var(--acc-b)}
 .btn.mini{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.55;cursor:default}
+.meta-riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.meta-riga select{width:auto;min-width:0;max-width:340px;flex:1 1 220px;font-size:12.5px;padding:6px 8px}
+.meta-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--line);border-radius:7px;padding:3px 4px 3px 8px;font-size:12.5px;margin:2px 6px 2px 0}
+.meta-chip button{background:none;color:var(--ink3);padding:0 5px;font-size:14px;line-height:1}
+.meta-chip button:hover{color:var(--acc-t)}
+.meta-msg{padding:10px 18px;font-size:13px;border-bottom:1px solid var(--line)}
+.meta-msg[data-tipo="errore"]{color:var(--acc-t)}
+.meta-msg[data-tipo="ok"]{color:var(--ok)}
 
 .card{background:var(--surf);border:1px solid var(--line);border-radius:12px}
 .card>header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -3572,7 +3584,8 @@ const NUMERICI = {
 /* ================================================================== */
 
 /* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
-export default function CRM({ onEsci, utente = "" } = {}) {
+/* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
+export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   const [data, setData] = useState(null);
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
@@ -3761,6 +3774,92 @@ export default function CRM({ onEsci, utente = "" } = {}) {
       });
     });
   }, [data]);
+
+  /* ---------- Meta Ads ----------
+     I numeri arrivano dalla funzione meta-sync (tabelle meta_*): qui li leggo all'apertura e
+     dopo ogni aggiornamento, e li applico a campagne, ad set, annunci e finestre.
+     Quale account appartiene a quale cliente lo decidi tu, dalla scheda o dalle Impostazioni. */
+  const [metaInfo, setMetaInfo] = useState(null);
+  const [metaStato, setMetaStato] = useState({ attesa: "", errore: "", esito: "" });
+  const [metaScelta, setMetaScelta] = useState({});
+  const metaAvviato = useRef(false);
+  const caricaMeta = useCallback(async (conDati = true) => {
+    if (!meta) return null;
+    try {
+      const info = await meta.stato();
+      setMetaInfo(info);
+      if (conDati && info.collegamenti.length && !bloccaSalvataggio.current) {
+        const dati = await meta.dati();
+        setData((d) => {
+          if (!d) return d;
+          const r = applicaMeta(d, { ...info, ...dati }, {
+            oggi: oggi(), uid, bmkDi: (o) => BMK_DEFAULT[o] || BMK_VUOTO, valutaAgenzia: (d.agenzia && d.agenzia.valuta) || "EUR",
+          });
+          return r.cambiato ? r.data : d;
+        });
+      }
+      return info;
+    } catch (e) {
+      setMetaStato((x) => ({ ...x, errore: `Non riesco a leggere i dati di Meta: ${e.message || e}` }));
+      return null;
+    }
+  }, [meta]);
+  useEffect(() => {
+    if (!meta || !data || metaAvviato.current) return;
+    metaAvviato.current = true;
+    (async () => {
+      const info = await caricaMeta(true);
+      if (!info) return;
+      /* Il vecchio campo "Account pubblicitario": se l'avevi compilato diventa un collegamento */
+      const presi = new Set(info.collegamenti.map((c) => String(c.account_id)));
+      const daFare = data.clienti.filter((z) => z.accountAdv && z.archiviato !== "si")
+        .map((z) => ({ z, id: String(z.accountAdv).replace(/^act_/i, "").trim() }))
+        .filter((x) => /^\d+$/.test(x.id) && !presi.has(x.id));
+      if (!daFare.length) return;
+      try { for (const x of daFare) await meta.collega(x.id, x.z.id); } catch (e) { /* resta da collegare a mano */ }
+      caricaMeta(false);
+    })();
+  }, [meta, data, caricaMeta]);
+
+  const aggiornaMeta = async (azione) => {
+    if (!meta || metaStato.attesa) return;
+    setMetaStato({ attesa: azione === "account" ? "account" : "sync", errore: "", esito: "" });
+    try {
+      await meta.sincronizza(azione);
+      if (azione === "account") {
+        const info = await caricaMeta(false);
+        setMetaStato({ attesa: "", errore: "", esito: `Elenco aggiornato: ${(info && info.account.length) || 0} account visibili.` });
+        return;
+      }
+      /* La funzione lavora in sottofondo: aspetto che il registro dica che ha finito (al massimo 5 minuti) */
+      for (let i = 0; i < 100; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const info = await meta.stato();
+        setMetaInfo(info);
+        if (info.ultimaSync && info.ultimaSync.esito !== "in_corso") break;
+      }
+      const info = await caricaMeta(true);
+      const u = info && info.ultimaSync;
+      if (!u || u.esito === "in_corso") setMetaStato({ attesa: "", errore: "", esito: "L'aggiornamento continua in sottofondo: i numeri arrivano alla prossima apertura." });
+      else setMetaStato({ attesa: "", errore: u.esito === "errore" ? u.messaggio : "", esito: u.esito !== "errore" ? u.messaggio : "" });
+    } catch (e) {
+      setMetaStato({ attesa: "", errore: e.message || String(e), esito: "" });
+    }
+  };
+  const collegaMeta = async (accountId, clienteId) => {
+    if (!meta || !accountId) return;
+    try {
+      await meta.collega(accountId, clienteId);
+      setMetaScelta((x) => ({ ...x, [clienteId]: "" }));
+      await caricaMeta(false);
+      setMetaStato({ attesa: "", errore: "", esito: "Account collegato: premi Aggiorna ora per scaricare i suoi dati." });
+    } catch (e) { setMetaStato({ attesa: "", errore: e.message || String(e), esito: "" }); }
+  };
+  const scollegaMeta = async (accountId) => {
+    if (!meta) return;
+    try { await meta.scollega(accountId); await caricaMeta(false); }
+    catch (e) { setMetaStato({ attesa: "", errore: e.message || String(e), esito: "" }); }
+  };
 
   const esportaBackup = () => {
     /* La chiave API personale non entra nel file: un backup si inoltra, si archivia, si perde */
@@ -4047,6 +4146,158 @@ export default function CRM({ onEsci, utente = "" } = {}) {
   if (!data || !m) return <div className="crm"><style>{CSS}</style><div className="empty" style={{ padding: 60 }}>Carico i tuoi dati…</div></div>;
 
   const cliente = (id) => data.clienti.find((z) => z.id === id);
+
+  /* ---------- Meta Ads: pannelli (scheda cliente e Impostazioni) ---------- */
+  const metaAccount = (metaInfo && metaInfo.account) || [];
+  const metaColl = (metaInfo && metaInfo.collegamenti) || [];
+  const metaDiChi = new Map(metaColl.map((c) => [String(c.account_id), c.cliente_id]));
+  const metaQuando = (s2) => (s2 ? new Date(s2).toLocaleString(LOCALE, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "mai");
+  const metaStatoAcc = (a) => ACCOUNT_STATI[Number(a.stato)] || (a.stato == null ? "—" : `stato ${a.stato}`);
+  const metaEtichetta = (a) => `${a.nome || a.account_id} · act_${a.account_id}${a.valuta ? ` · ${a.valuta}` : ""}${accountUtilizzabile(a) ? "" : ` · ${metaStatoAcc(a)}`}`;
+  const metaSuggeriti = (z) => suggerisciAccount(z, metaAccount.filter((a) => !metaDiChi.has(String(a.account_id)) && accountUtilizzabile(a))).slice(0, 5);
+  const metaDelCliente = (id) => metaColl.filter((c) => c.cliente_id === id)
+    .map((c) => metaAccount.find((a) => String(a.account_id) === String(c.account_id)) || { account_id: String(c.account_id), nome: "", stato: null });
+
+  const metaMessaggi = () => (
+    <>
+      {metaStato.errore && <div className="meta-msg" data-tipo="errore">{metaStato.errore}</div>}
+      {metaStato.esito && <div className="meta-msg" data-tipo="ok">{metaStato.esito}</div>}
+      {metaStato.attesa === "sync" && <div className="meta-msg">Sto scaricando i dati da Meta: può volerci qualche minuto se gli account sono tanti.</div>}
+    </>
+  );
+  const metaPulsanti = () => (
+    <>
+      <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={() => aggiornaMeta("account")}>
+        {metaStato.attesa === "account" ? "Leggo gli account…" : "Aggiorna l'elenco degli account"}</button>
+      <button className="btn ghost mini" disabled={!!metaStato.attesa || !metaColl.length} onClick={() => aggiornaMeta()}
+        title={metaColl.length ? "Scarica adesso da Meta i dati fino a ieri" : "Collega prima almeno un account"}>
+        {metaStato.attesa === "sync" ? "Aggiornamento in corso…" : "Aggiorna ora"}</button>
+    </>
+  );
+  /* Menu per collegare un account: prima i suggeriti per nome, poi tutti; quelli già di un altro cliente non si scelgono */
+  const metaCollega = (z) => {
+    const sugg = metaSuggeriti(z);
+    const scelto = metaScelta[z.id] !== undefined ? metaScelta[z.id] : (sugg[0] ? sugg[0].account_id : "");
+    const tutti = [...metaAccount].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    return (
+      <div className="meta-riga">
+        <select value={scelto} onChange={(e) => setMetaScelta((x) => ({ ...x, [z.id]: e.target.value }))} aria-label={`Account Meta per ${z.nome}`}>
+          <option value="">— scegli un account —</option>
+          {sugg.length > 0 && (
+            <optgroup label="Suggeriti per nome">
+              {sugg.map((a) => <option key={"s" + a.account_id} value={a.account_id}>{metaEtichetta(a)}</option>)}
+            </optgroup>
+          )}
+          <optgroup label="Tutti gli account">
+            {tutti.map((a) => {
+              const altro = metaDiChi.get(String(a.account_id));
+              return <option key={a.account_id} value={a.account_id} disabled={!!altro}>{metaEtichetta(a)}{altro ? ` — collegato a ${(cliente(altro) || {}).nome || "un altro cliente"}` : ""}</option>;
+            })}
+          </optgroup>
+        </select>
+        <button className="btn ghost mini" disabled={!scelto} onClick={() => collegaMeta(scelto, z.id)}>Collega</button>
+      </div>
+    );
+  };
+  const metaChip = (a) => (
+    <span className="meta-chip" key={a.account_id} title={`act_${a.account_id}${a.ultimo_errore ? ` · ultimo errore: ${a.ultimo_errore}` : ""}`}>
+      {a.nome || `act_${a.account_id}`}{a.valuta ? <span className="sub">{a.valuta}</span> : null}
+      {a.ultimo_errore ? <span className="neg" aria-label="errore">!</span> : null}
+      <button onClick={() => scollegaMeta(a.account_id)} title="Scollega" aria-label={`Scollega ${a.nome || a.account_id}`}>×</button>
+    </span>
+  );
+
+  const PannelloMetaCliente = (z) => {
+    if (!meta) return (
+      <section className="card">
+        <header><h2>Meta Ads</h2></header>
+        <div className="empty" style={{ padding: 18 }}>Il collegamento con Meta funziona nella versione online del CRM.</div>
+      </section>
+    );
+    const miei = metaDelCliente(z.id);
+    return (
+      <section className="card">
+        <header>
+          <h2>Meta Ads</h2>
+          <span className="sp eyebrow">ultimo aggiornamento {metaQuando(metaInfo && metaInfo.ultimaSync && metaInfo.ultimaSync.fine)}</span>
+          {metaPulsanti()}
+        </header>
+        {metaMessaggi()}
+        {!metaAccount.length ? (
+          <div className="empty" style={{ padding: 18 }}>
+            <b>Nessun account letto da Meta</b>
+            Premi "Aggiorna l'elenco degli account": il CRM legge gli account a cui il token ha accesso e ti propone quelli che somigliano a {z.nome}.
+          </div>
+        ) : (
+          <table className="tbl"><tbody>
+            {miei.map((a) => (
+              <tr key={a.account_id}>
+                <td><b>{a.nome || `act_${a.account_id}`}</b><div className="sub mono">act_{a.account_id}{a.business ? ` · ${a.business}` : ""}</div></td>
+                <td className="sub">{a.valuta || "—"} · {metaStatoAcc(a)}</td>
+                <td className="sub">{a.ultimo_errore ? <span className="neg">{a.ultimo_errore}</span> : `dati del ${metaQuando(a.ultimo_sync)}`}</td>
+                <td className="r"><button className="btn danger mini" onClick={() => scollegaMeta(a.account_id)}>Scollega</button></td>
+              </tr>
+            ))}
+            <tr>
+              <td colSpan={4}>
+                <div className="sub" style={{ marginBottom: 6 }}>{miei.length ? "Collega un altro account a questo cliente" : "Collega l'account pubblicitario di questo cliente"}</div>
+                {metaCollega(z)}
+              </td>
+            </tr>
+          </tbody></table>
+        )}
+      </section>
+    );
+  };
+
+  const PannelloMetaAgenzia = () => {
+    if (!meta) return null;
+    const u = metaInfo && metaInfo.ultimaSync;
+    const righe = ordinaGerarchia().filter(({ z }) => z.archiviato !== "si" && z.stato !== "chiuso");
+    const collegati = righe.filter(({ z }) => metaColl.some((c) => c.cliente_id === z.id)).length;
+    const conErrori = metaAccount.filter((a) => metaDiChi.has(String(a.account_id)) && a.ultimo_errore);
+    return (
+      <section className="card">
+        <header>
+          <h2>Collegamento con Meta Ads</h2>
+          <span className="sp eyebrow">{collegati} di {righe.length} clienti collegati · {metaAccount.length} account visibili</span>
+          {metaPulsanti()}
+        </header>
+        <div className="meta-msg sub">
+          Ogni mattina alle 9 il CRM scarica da Meta i dati fino a ieri per tutti gli account collegati.
+          {" "}Ultimo aggiornamento: <b>{u ? `${metaQuando(u.fine || u.avvio)} · ${u.esito === "in_corso" ? "in corso" : u.esito}` : "mai"}</b>{u && u.messaggio ? ` — ${u.messaggio}` : ""}
+        </div>
+        {metaMessaggi()}
+        {conErrori.length > 0 && (
+          <div className="meta-msg" data-tipo="errore">
+            {conErrori.map((a) => <div key={a.account_id}><b>{a.nome}</b> ({(cliente(metaDiChi.get(String(a.account_id))) || {}).nome || "—"}): {a.ultimo_errore}</div>)}
+          </div>
+        )}
+        {!metaAccount.length ? (
+          <div className="empty" style={{ padding: 18 }}>
+            <b>Nessun account letto da Meta</b>
+            Premi "Aggiorna l'elenco degli account". Se resta vuoto, controlla che il segreto META_TOKEN sia impostato in Supabase e che l'utente di sistema abbia gli account assegnati.
+          </div>
+        ) : (
+          <div className="wrap"><table className="tbl">
+            <thead><tr><th>Cliente</th><th>Account collegati</th><th>Collega</th></tr></thead>
+            <tbody>
+              {righe.map(({ z, liv }) => {
+                const miei = metaDelCliente(z.id);
+                return (
+                  <tr key={z.id}>
+                    <td style={{ paddingLeft: 14 + liv * 18 }}>{liv ? <span className="sub">↳ </span> : null}<b>{z.nome}</b></td>
+                    <td>{miei.length ? miei.map(metaChip) : <span className="sub">nessuno</span>}</td>
+                    <td style={{ minWidth: 260 }}>{metaCollega(z)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table></div>
+        )}
+      </section>
+    );
+  };
   /* Valute negli elenchi con più clienti.
      valutaComune: la valuta condivisa da tutti quei clienti, o quella attiva se sono diverse
      (in quel caso i totali restano nella valuta dell'agenzia, come spiega la Guida).
@@ -10800,6 +11051,7 @@ Regole:
 
             {!attivo && vista === "impostazioni" && (
               <>
+                {PannelloMetaAgenzia()}
                 <section className="card">
                   <header><h2>Identità dell'agenzia</h2><span className="sp" /><button className="btn ghost mini" onClick={() => apri("agenzia")}>Modifica</button></header>
                   <div style={{ padding: 18, display: "flex", alignItems: "center", gap: 16 }}>
@@ -11178,6 +11430,7 @@ Regole:
 
             {attivo && vista === "scheda" && (
               <>
+                {PannelloMetaCliente(attivo)}
                 <section className="card">
                   <header><h2>Dati dell'account</h2></header>
                   <div style={{ padding: 18, display: "flex", alignItems: "center", gap: 16, borderBottom: "1px solid var(--line)" }}>
