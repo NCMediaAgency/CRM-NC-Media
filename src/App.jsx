@@ -24,9 +24,6 @@ body{margin:0;background:#0B0B0E}
 .accesso button{background:#8E2039;color:#fff;border:0;border-radius:8px;padding:12px;font:inherit;font-weight:600;cursor:pointer}
 .accesso button:disabled{opacity:.6;cursor:default}
 .accesso .err{color:#D8455F}
-.esci{position:fixed;right:12px;bottom:12px;z-index:50;background:#191920;color:#A0A0AC;border:1px solid #26262E;
-  border-radius:8px;padding:6px 10px;font:12px "Inter",system-ui,sans-serif;cursor:pointer;opacity:.75}
-.esci:hover{opacity:1;color:#F2F2F5}
 `;
 
 function Schermo({ children }) {
@@ -101,8 +98,7 @@ export default function App() {
     <>
       <style>{STILE}</style>
       {/* key: cambiando utente il CRM riparte da zero e rilegge il suo archivio */}
-      <Suspense fallback={caricamento}><CRM key={utente} /></Suspense>
-      <button className="esci" onClick={() => supabase.auth.signOut()} title={sessione.user.email}>Esci</button>
+      <Suspense fallback={caricamento}><CRM key={utente} onEsci={() => supabase.auth.signOut()} utente={sessione.user.email || ""} /></Suspense>
     </>
   );
 }

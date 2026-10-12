@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Building2, Megaphone, CalendarRange, PieChart, PhoneCall,
   Handshake, Calculator, Filter, NotebookPen, FolderOpen, Sparkles, ListChecks,
   Zap, Upload, DownloadCloud, HelpCircle, Settings, FileText, PenLine, Contact,
-  KanbanSquare, Receipt, Code2, BellRing,
+  KanbanSquare, Receipt, Code2, BellRing, LogOut,
 } from "lucide-react";
 
 /* Logo dell'agenzia, incorporato: nessun file esterno da caricare */
@@ -81,7 +81,7 @@ const DIZ = {
     "nav.pianificatore": "Pianificatore", "nav.funnel": "Funnel", "nav.diario": "Diario",
     "nav.file": "File", "nav.economia": "Economia", "nav.ai": "Consulente", "nav.task": "Task",
     "nav.automazioni": "Automazioni", "nav.importa": "Importa dati", "nav.backup": "Backup",
-    "nav.guida": "Guida", "nav.impostazioni": "Impostazioni", "nav.contatti": "Contatti",
+    "nav.guida": "Guida", "nav.impostazioni": "Impostazioni", "nav.esci": "Esci", "nav.contatti": "Contatti",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Messaggio", "nav.report": "Report",
     "nav.scheda": "Scheda cliente", "nav.campagne": "Advertising",
     /* azioni ricorrenti */
@@ -123,7 +123,7 @@ const DIZ = {
     "nav.pianificatore": "Planner", "nav.funnel": "Funnel", "nav.diario": "Journal",
     "nav.file": "Files", "nav.economia": "Finances", "nav.ai": "Advisor", "nav.task": "Tasks",
     "nav.automazioni": "Automations", "nav.importa": "Import data", "nav.backup": "Backup",
-    "nav.guida": "Guide", "nav.impostazioni": "Settings", "nav.contatti": "Contacts",
+    "nav.guida": "Guide", "nav.impostazioni": "Settings", "nav.esci": "Log out", "nav.contatti": "Contacts",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Messaging", "nav.report": "Report",
     "nav.scheda": "Client record", "nav.campagne": "Advertising",
     "a.salva": "Save", "a.annulla": "Cancel", "a.elimina": "Delete", "a.aggiungi": "Add",
@@ -161,7 +161,7 @@ const DIZ = {
     "nav.pianificatore": "Planificador", "nav.funnel": "Embudo", "nav.diario": "Diario",
     "nav.file": "Archivos", "nav.economia": "Economía", "nav.ai": "Asesor", "nav.task": "Tareas",
     "nav.automazioni": "Automatizaciones", "nav.importa": "Importar datos", "nav.backup": "Copia de seguridad",
-    "nav.guida": "Guía", "nav.impostazioni": "Ajustes", "nav.contatti": "Contactos",
+    "nav.guida": "Guía", "nav.impostazioni": "Ajustes", "nav.esci": "Cerrar sesión", "nav.contatti": "Contactos",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Mensaje", "nav.report": "Informe",
     "nav.scheda": "Ficha del cliente", "nav.campagne": "Publicidad",
     "a.salva": "Guardar", "a.annulla": "Cancelar", "a.elimina": "Eliminar", "a.aggiungi": "Añadir",
@@ -199,7 +199,7 @@ const DIZ = {
     "nav.pianificatore": "Planificateur", "nav.funnel": "Tunnel", "nav.diario": "Journal",
     "nav.file": "Fichiers", "nav.economia": "Finances", "nav.ai": "Conseiller", "nav.task": "Tâches",
     "nav.automazioni": "Automatisations", "nav.importa": "Importer", "nav.backup": "Sauvegarde",
-    "nav.guida": "Guide", "nav.impostazioni": "Réglages", "nav.contatti": "Contacts",
+    "nav.guida": "Guide", "nav.impostazioni": "Réglages", "nav.esci": "Déconnexion", "nav.contatti": "Contacts",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Message", "nav.report": "Rapport",
     "nav.scheda": "Fiche client", "nav.campagne": "Publicité",
     "a.salva": "Enregistrer", "a.annulla": "Annuler", "a.elimina": "Supprimer", "a.aggiungi": "Ajouter",
@@ -237,7 +237,7 @@ const DIZ = {
     "nav.pianificatore": "Planer", "nav.funnel": "Funnel", "nav.diario": "Journal",
     "nav.file": "Dateien", "nav.economia": "Finanzen", "nav.ai": "Berater", "nav.task": "Aufgaben",
     "nav.automazioni": "Automatisierungen", "nav.importa": "Daten importieren", "nav.backup": "Sicherung",
-    "nav.guida": "Handbuch", "nav.impostazioni": "Einstellungen", "nav.contatti": "Kontakte",
+    "nav.guida": "Handbuch", "nav.impostazioni": "Einstellungen", "nav.esci": "Abmelden", "nav.contatti": "Kontakte",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Botschaft", "nav.report": "Bericht",
     "nav.scheda": "Kundenblatt", "nav.campagne": "Werbung",
     "a.salva": "Speichern", "a.annulla": "Abbrechen", "a.elimina": "Löschen", "a.aggiungi": "Hinzufügen",
@@ -2542,7 +2542,7 @@ const ICONE_NAV = {
   mesi: CalendarRange, avvisi: AlertTriangle, grafici: PieChart, vendite: PhoneCall,
   chiusure: Handshake, pianificatore: Calculator, funnel: Filter, diario: NotebookPen,
   file: FolderOpen, economia: Euro, ai: Sparkles, task: ListChecks, automazioni: Zap,
-  importa: Upload, backup: DownloadCloud, guida: HelpCircle, impostazioni: Settings,
+  importa: Upload, backup: DownloadCloud, guida: HelpCircle, impostazioni: Settings, esci: LogOut,
   contatti: Contact, pipeline: KanbanSquare, messaggio: PenLine, report: FileText,
   scheda: Receipt,
 };
@@ -2677,7 +2677,12 @@ color:var(--ink3);transition:color .12s ease}
 .navb u{margin-left:auto;text-decoration:none;font-family:var(--mono);font-size:11px;opacity:.55}
 .navb u[data-al="1"]{background:var(--acc);color:#fff;opacity:1;border-radius:9px;padding:1px 6px}
 .navb[data-on="1"] u[data-al="1"]{background:#fff;color:var(--acc)}
-.railfoot{margin-top:auto;padding:10px;font-size:11px;color:#5F5F6B;display:flex;flex-direction:column;gap:8px}
+.railfine{margin-top:auto;display:flex;flex-direction:column;gap:2px;width:100%}
+.rail[data-compatto="1"] .railfine{align-items:center}
+/* Esci resta sempre visibile in fondo al menu, anche mentre le voci scorrono */
+.esci-fisso{position:sticky;bottom:-16px;margin:6px -12px -16px;padding:6px 12px 16px;background:var(--nero);border-top:1px solid var(--line);width:calc(100% + 24px)}
+.rail[data-compatto="1"] .esci-fisso{bottom:-14px;margin:6px -8px -14px;padding:6px 8px 14px;width:calc(100% + 16px);display:flex;justify-content:center}
+.railfoot{padding:10px;font-size:11px;color:#5F5F6B;display:flex;flex-direction:column;gap:8px}
 
 .tgl{margin-left:auto;color:#8A8A96;font-size:15px;line-height:1;padding:5px 6px;border-radius:6px;flex:none}
 .tgl:hover{background:rgba(255,255,255,.07);color:#fff}
@@ -3526,7 +3531,8 @@ const NUMERICI = {
 /* App                                                                 */
 /* ================================================================== */
 
-export default function CRM() {
+/* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
+export default function CRM({ onEsci, utente = "" } = {}) {
   const [data, setData] = useState(null);
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
@@ -10222,10 +10228,20 @@ Regole:
               {n.n !== undefined && <u data-al={n.al ? "1" : "0"}>{n.n}</u>}
             </button>
           ))}
-          <div className="railfoot">
-            <span>I dati sono salvati nel cloud, nel tuo spazio di lavoro.</span>
-            <button className="navb" onClick={reset} style={{ padding: "6px 10px", fontSize: 12 }}>Riparti dai dati di esempio</button>
+          <div className="railfine">
+            <div className="railfoot">
+              <span>I dati sono salvati nel cloud, nel tuo spazio di lavoro.</span>
+              <button className="navb" onClick={reset} style={{ padding: "6px 10px", fontSize: 12 }}>Riparti dai dati di esempio</button>
+            </div>
           </div>
+          {onEsci && (
+            <div className="esci-fisso">
+              <button className="navb" onClick={onEsci} title={utente ? `${T(t("nav.esci"))} · ${utente}` : T(t("nav.esci"))}>
+                <i><IcoNav id="esci" /></i>
+                <span className="etichetta">{T(t("nav.esci"))}</span>
+              </button>
+            </div>
+          )}
         </nav>
 
         <div className="main">
