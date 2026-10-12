@@ -6,6 +6,8 @@
   // Indirizzo *.workers.dev e link di anteprima per i branch diversi da main
   "workers_dev": true,
   "preview_urls": true,
+  // Richiesto da `wrangler preview` (anteprime dei branch): vuoto, eredita tutto il resto
+  "previews": {},
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
