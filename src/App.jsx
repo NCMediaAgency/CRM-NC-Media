@@ -9,11 +9,14 @@ const LOCALE = import.meta.env.DEV && import.meta.env.VITE_LOCALE === "1";
 
 const STILE = `
 body{margin:0;background:#0B0B0E}
-.accesso{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:#0B0B0E;
+.accesso{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;padding:24px 16px;
+  box-sizing:border-box;background:#0B0B0E;
   color:#F2F2F5;font-family:"Inter",-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;font-size:14px}
 .accesso form,.accesso .box{width:100%;max-width:360px;background:#131317;border:1px solid #26262E;border-radius:14px;padding:28px;
   display:flex;flex-direction:column;gap:14px}
-.accesso h1{font-size:20px;margin:0}
+.accesso *{box-sizing:border-box}
+.accesso .logo{display:block;width:100%;max-width:360px;height:auto}
+.accesso h1{font-size:20px;margin:0;text-align:center}
 .accesso p{margin:0;color:#A0A0AC;line-height:1.5}
 .accesso label{display:flex;flex-direction:column;gap:6px;color:#A0A0AC;font-size:12px}
 .accesso input{background:#0B0B0E;border:1px solid #26262E;border-radius:8px;padding:11px 12px;color:#F2F2F5;font:inherit}
@@ -46,6 +49,7 @@ function Accesso() {
 
   return (
     <Schermo>
+      <img className="logo" src="/logo-nc-media.png" alt="NC Media" width="720" height="211" />
       <form onSubmit={entra}>
         <h1>Accedi al CRM</h1>
         <label>Email<input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
