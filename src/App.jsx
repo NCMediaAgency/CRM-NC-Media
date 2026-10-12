@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { archivioCloud, archivioLocale } from "./lib/storage";
-import CRM from "./CRM.jsx";
+/* Il CRM è il pezzo pesante: si scarica solo dopo l'accesso, così il login appare subito */
+const CRM = lazy(() => import("./CRM.jsx"));
 
 /* In sviluppo, con VITE_LOCALE=1, si salta il login e si salva nel browser */
 const LOCALE = import.meta.env.DEV && import.meta.env.VITE_LOCALE === "1";
@@ -84,7 +85,9 @@ export default function App() {
     return () => { vivo = false; };
   }, [utente]);
 
-  if (LOCALE) return <CRM />;
+  const caricamento = <Schermo><div className="box"><p>Carico il CRM…</p></div></Schermo>;
+
+  if (LOCALE) return <Suspense fallback={caricamento}><CRM /></Suspense>;
   if (sessione === undefined) return <Schermo><div className="box"><p>Caricamento…</p></div></Schermo>;
   if (!sessione) return <Accesso />;
   if (errore) return <Schermo><div className="box"><p className="err">{errore}</p><button onClick={() => supabase.auth.signOut()}>Esci</button></div></Schermo>;
@@ -94,7 +97,7 @@ export default function App() {
     <>
       <style>{STILE}</style>
       {/* key: cambiando utente il CRM riparte da zero e rilegge il suo archivio */}
-      <CRM key={utente} />
+      <Suspense fallback={caricamento}><CRM key={utente} /></Suspense>
       <button className="esci" onClick={() => supabase.auth.signOut()} title={sessione.user.email}>Esci</button>
     </>
   );
