@@ -75,7 +75,7 @@ export function apiMetaFinta() {
         s.finestre = (s.finestre || []).filter((f) => !tenute.has(f.account_id)).concat(nuovi.finestre);
         s.ultimaSync = { esito: "in_corso", avvio: new Date().toISOString(), origine: "manuale", messaggio: "" };
         scrivi(s);
-        setTimeout(() => { const t = leggi(); t.ultimaSync = { ...t.ultimaSync, esito: "ok", fine: new Date().toISOString(), messaggio: `${daFare.length} account aggiornati${daFare.length < (t.collegamenti || []).length && !extra.account ? `, ${(t.collegamenti || []).length - daFare.length} esclusi (solo a mano)` : ""}.` }; scrivi(t); }, 1500);
+        setTimeout(() => { const t = leggi(); t.ultimaSync = { ...t.ultimaSync, esito: "ok", fine: new Date().toISOString(), messaggio: `${daFare.length} account aggiornati${daFare.length < (t.collegamenti || []).length && !extra.account ? `, ${(t.collegamenti || []).length - daFare.length} esclus${(t.collegamenti || []).length - daFare.length === 1 ? "o" : "i"} (solo a mano)` : ""}.` }; scrivi(t); }, 1500);
         return { ok: true };
       }
       scrivi(s);
