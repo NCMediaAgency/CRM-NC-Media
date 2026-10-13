@@ -37,6 +37,14 @@ export function apiMetaCloud(ws) {
         .upsert({ workspace_id: ws, account_id: String(accountId), cliente_id: clienteId }, { onConflict: "workspace_id,account_id" });
       if (error) throw error;
     },
+    /* Regole dell'account (migrazione 0004): campagne_modo, campagne_scelte, automatico */
+    async regola(accountId, campi) {
+      const { error } = await supabase.from("meta_collegamenti").update(campi).eq("workspace_id", ws).eq("account_id", String(accountId));
+      if (error) throw new Error(/campagne_modo|automatico|campagne_scelte/.test(error.message || "")
+        ? "Manca la migrazione 0004 in Supabase: eseguila dallo SQL Editor." : error.message);
+    },
+    /* Le campagne di un account, lette da Meta al momento, per scegliere quali scaricare */
+    async campagne(accountId) { return (await this.sincronizza("campagne", { account: String(accountId) })).campagne || []; },
     async scollega(accountId) {
       const { error } = await supabase.from("meta_collegamenti").delete().eq("workspace_id", ws).eq("account_id", String(accountId));
       if (error) throw error;

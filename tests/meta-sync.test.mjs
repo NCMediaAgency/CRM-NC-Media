@@ -303,4 +303,50 @@ r = await chiama({ azione: "continua", sync: 1000 }, { Authorization: "Bearer ut
 assert.equal(r.corpo.inCorso, true);
 globalThis.fetch = fetch10; Date.now = dataVera2;
 
+// ---------- 11. regole per account: solo attive, campagne scelte, fuori dall'aggiornamento di tutti ----------
+const fetch11 = globalThis.fetch;
+let scaricate = null;
+globalThis.fetch = async (url, init = {}) => {
+  const u = new URL(String(url));
+  if (u.pathname.endsWith("/act_555/insights") && u.searchParams.get("date_preset") === "maximum" && u.searchParams.get("level") === "campaign") scaricate = JSON.parse(u.searchParams.get("filtering"))[0].value;
+  return fetch11(url, init);
+};
+const conRegola = async (regola, corpo = { account: ["555"] }) => {
+  tabelle.meta_collegamenti = [{ workspace_id: "ws1", account_id: "555", cliente_id: "z1", ...regola }];
+  tabelle.meta_sync.forEach((x) => { if (x.esito === "in_corso") x.esito = "errore"; });
+  scaricate = null;
+  const ris = await chiama(corpo, { Authorization: "Bearer utente" }); await finisci();
+  return tabelle.meta_sync.find((x) => x.id === ris.corpo.sync);
+};
+let s12 = await conRegola({ campagne_modo: "attive" });
+assert.equal(s12.esito, "ok", s12.messaggio);
+assert.deepEqual(scaricate, ["c1"], "solo la campagna accesa");
+assert.ok(!camp("c2") && camp("c1"), "la campagna spenta esce dalle tabelle");
+// c2 era accesa all'ultimo giro: la riprendo per registrarne la pausa
+tabelle.meta_oggetti.push({ workspace_id: "ws1", livello: "campaign", id: "c2", campagna_id: "c2", account_id: "555", nome: "Vendite corsi", stato: "ACTIVE" });
+s12 = await conRegola({ campagne_modo: "attive" });
+assert.deepEqual(scaricate.sort(), ["c1", "c2"]);
+assert.equal(camp("c2").stato, "PAUSED");
+tabelle.meta_oggetti = tabelle.meta_oggetti.filter((o) => o.id !== "c9");
+s12 = await conRegola({ campagne_modo: "scelte", campagne_scelte: ["c2", "c9", "c77"] });
+assert.equal(s12.esito, "ok", s12.messaggio);
+assert.deepEqual(scaricate.sort(), ["c2", "c77", "c9"]);
+assert.equal(camp("c9").nome, "Archiviata", "il nome dell'archiviata arriva dai totali");
+assert.ok(!camp("c77"), "scelta senza dati: lasciata fuori");
+assert.ok(!camp("c1") && !tabelle.meta_oggetti.some((o) => o.campagna_id === "c1") && !fin("c1").length, "le non scelte escono dalle tabelle");
+assert.ok(fin("c2").length, "le scelte tengono le finestre");
+// "solo a mano": fuori da Aggiorna ora e dalle 9, dentro con il pulsante del cliente
+s12 = await conRegola({ automatico: false }, {});
+assert.equal(scaricate, null, "Aggiorna ora non lo tocca");
+assert.match(s12.messaggio, /1 escluso/);
+s12 = await conRegola({ automatico: false });
+assert.ok(scaricate, "il pulsante del cliente lo aggiorna");
+// elenco delle campagne per la scelta
+r = await chiama({ azione: "campagne", account: "555" }, { Authorization: "Bearer utente" });
+assert.equal(r.stato, 200, JSON.stringify(r.corpo));
+assert.deepEqual(r.corpo.campagne.map((c) => c.id), ["c1", "c2", "c9", "c3"], "accese, poi per spesa");
+assert.equal(r.corpo.campagne.find((c) => c.id === "c9").stato, "ARCHIVED");
+assert.equal((await chiama({ azione: "campagne", account: "999" }, { Authorization: "Bearer utente" })).stato, 404, "account di un altro spazio");
+globalThis.fetch = fetch11;
+
 console.log("meta-sync: tutte le prove passate ✔", { chiamateMeta: chiamate.length, oggetti: tabelle.meta_oggetti.length, finestre: tabelle.meta_finestre.length, ultimo: ultimo.messaggio });

@@ -1658,6 +1658,8 @@ const GUIDA = [
       { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
       { h: "Cosa resta tuo", p: "Lo stato In test, le soglie, la linea, il funnel, le note, lo stadio dei creativi e, se l'hai segnato come scritto a mano, l'esito commerciale (conversioni e ricavi). Il budget giornaliero cambiato su Meta entra nello storico con la data del giorno, come quando lo cambi dalla scheda." },
       { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito tutti i clienti collegati. Per uno solo usa il pulsante Aggiorna sulla sua riga in Impostazioni, oppure Aggiorna questo cliente nella sua scheda (se ha sottoclienti, aggiorna anche loro): utile quando un account si è fermato o ti serve un dato fresco. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
+      { h: "Scegliere quali campagne scaricare", p: "Nella Scheda cliente, sotto ogni account collegato, c'è Campagne da scaricare. Normalmente il CRM prende le attive e quelle che hanno speso negli ultimi 90 giorni. Con Solo le attive prende solo quelle accese (quando una si spegne, la registra un'ultima volta in pausa e poi la lascia). Con Solo quelle che scelgo il CRM legge da Meta l'elenco delle campagne dell'account, accese prima e poi per spesa, e scarichi solo quelle che spunti; Cambia la scelta riapre l'elenco. Le campagne non scelte già presenti nel CRM restano dove sono: se non ti servono le elimini e non verranno ricaricate. La scelta vale dal prossimo aggiornamento; per vederla subito premi Aggiorna questo cliente." },
+      { h: "Account che si aggiornano solo a mano", p: "Sempre sotto l'account, togliendo la spunta Nell'aggiornamento automatico l'account resta fuori dall'aggiornamento delle 9 e da Aggiorna ora: si aggiorna solo quando premi Aggiorna sulla sua riga in Impostazioni o Aggiorna questo cliente nella sua scheda. Serve per gli account pesanti, quelli fermi o quelli che ti basta caricare una volta: scarichi i dati, togli la spunta, e l'aggiornamento di tutti diventa più veloce. In Impostazioni, accanto al nome dell'account, compare la sua regola (solo attive, campagne scelte, solo a mano)." },
       { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento." },
       { h: "Il pulsante Chiedi i dati aggiornati", p: "Resta per i clienti che non hai collegato o per le piattaforme diverse da Meta: prepara la richiesta da incollare in chat, come prima." },
     ],
@@ -2769,6 +2771,14 @@ position:sticky;top:0;z-index:20}
 .meta-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--line);border-radius:7px;padding:3px 4px 3px 8px;font-size:12.5px;margin:2px 6px 2px 0}
 .meta-chip button{background:none;color:var(--ink3);padding:0 5px;font-size:14px;line-height:1}
 .meta-chip button:hover{color:var(--acc-t)}
+.meta-regola{display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.meta-regola select{width:auto;font-size:12.5px;padding:5px 8px}
+.meta-regola label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.meta-regola input[type=checkbox],.meta-camp input[type=checkbox]{width:16px;height:16px;flex:none;accent-color:var(--acc)}
+.meta-camp{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:8px 0}
+.meta-camp label{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
+.meta-camp label:last-child{border-bottom:0}
+.meta-camp .nome{flex:1;min-width:0}
 .meta-msg{padding:10px 18px;font-size:13px;border-bottom:1px solid var(--line)}
 .meta-msg[data-tipo="errore"]{color:var(--acc-t)}
 .meta-msg[data-tipo="ok"]{color:var(--ok)}
@@ -3783,6 +3793,8 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   const [metaInfo, setMetaInfo] = useState(null);
   const [metaStato, setMetaStato] = useState({ attesa: "", errore: "", esito: "" });
   const [metaScelta, setMetaScelta] = useState({});
+  /* Scelta delle campagne di un account: { account, lista (da Meta), scelte, filtro, errore } */
+  const [metaRegola, setMetaRegola] = useState(null);
   const metaAvviato = useRef(false);
   const caricaMeta = useCallback(async (conDati = true) => {
     if (!meta) return null;
@@ -4201,6 +4213,103 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
     const ids = metaIdDi(z.id, conSotto);
     if (ids.length) aggiornaMeta(undefined, { account: ids }, z.id);
   };
+  /* Regole per account (quali campagne, se entra nell'aggiornamento di tutti): stanno nel collegamento */
+  const metaRegolaDi = (accId) => metaColl.find((c) => String(c.account_id) === String(accId)) || {};
+  const metaRegolaBreve = (accId) => {
+    const r = metaRegolaDi(accId), n = (r.campagne_scelte || []).length;
+    return [r.campagne_modo === "attive" ? "solo attive" : r.campagne_modo === "scelte" ? `${n} ${n === 1 ? "campagna scelta" : "campagne scelte"}` : "", r.automatico === false ? "solo a mano" : ""].filter(Boolean).join(" · ");
+  };
+  const META_STATO_CAMP = { ACTIVE: "attiva", PAUSED: "in pausa", CAMPAIGN_PAUSED: "in pausa", ARCHIVED: "archiviata", DELETED: "eliminata", IN_PROCESS: "in revisione", WITH_ISSUES: "con problemi" };
+  const salvaRegolaMeta = async (accId, campi, avviso = "Impostazione salvata: vale dal prossimo aggiornamento.") => {
+    try {
+      await meta.regola(accId, campi);
+      await caricaMeta(false);
+      setMetaStato({ attesa: "", errore: "", esito: avviso });
+      return true;
+    } catch (e) { setMetaStato({ attesa: "", errore: e.message || String(e), esito: "" }); return false; }
+  };
+  const apriSceltaCampagne = async (accId) => {
+    setMetaRegola({ account: accId, lista: null, scelte: (metaRegolaDi(accId).campagne_scelte || []).map(String), filtro: "", errore: "" });
+    try {
+      const lista = await meta.campagne(accId);
+      setMetaRegola((r) => (r && r.account === accId ? { ...r, lista } : r));
+    } catch (e) { setMetaRegola((r) => (r && r.account === accId ? { ...r, errore: e.message || String(e) } : r)); }
+  };
+  const salvaSceltaCampagne = async () => {
+    const r = metaRegola;
+    if (!r || !r.scelte.length) return;
+    const ok = await salvaRegolaMeta(r.account, { campagne_modo: "scelte", campagne_scelte: r.scelte },
+      `Salvato: per questo account il CRM scaricherà solo ${r.scelte.length === 1 ? "la campagna scelta" : `le ${r.scelte.length} campagne scelte`}. Premi Aggiorna questo cliente per caricarle subito.`);
+    if (ok) setMetaRegola(null);
+  };
+  /* Riga sotto l'account nella scheda cliente: campagne da scaricare e aggiornamento automatico */
+  const metaRegolaRiga = (a) => {
+    const r = metaRegolaDi(a.account_id), modo = r.campagne_modo || "recenti";
+    const aperta = metaRegola && metaRegola.account === a.account_id ? metaRegola : null;
+    const n = (r.campagne_scelte || []).length;
+    return (
+      <>
+        <div className="meta-regola">
+          <span className="sub">Campagne da scaricare</span>
+          <select value={aperta ? "scelte" : modo} aria-label={`Campagne da scaricare per ${a.nome || a.account_id}`}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "scelte") apriSceltaCampagne(a.account_id);
+              else { setMetaRegola(null); salvaRegolaMeta(a.account_id, { campagne_modo: v }); }
+            }}>
+            <option value="recenti">Attive o con spesa negli ultimi 90 giorni</option>
+            <option value="attive">Solo le attive</option>
+            <option value="scelte">Solo quelle che scelgo{modo === "scelte" ? ` (${n})` : ""}</option>
+          </select>
+          {modo === "scelte" && !aperta && <button className="btn ghost mini" onClick={() => apriSceltaCampagne(a.account_id)}>Cambia la scelta</button>}
+          <label title="Se lo togli, l'account si aggiorna solo con il pulsante di questo cliente">
+            <input type="checkbox" checked={r.automatico !== false}
+              onChange={(e) => salvaRegolaMeta(a.account_id, { automatico: e.target.checked }, e.target.checked
+                ? "L'account torna nell'aggiornamento delle 9 e in Aggiorna ora."
+                : "L'account resta fuori dall'aggiornamento delle 9 e da Aggiorna ora: si aggiorna solo con il pulsante di questo cliente.")} />
+            Nell'aggiornamento automatico (alle 9 e con Aggiorna ora)
+          </label>
+        </div>
+        {aperta && (() => {
+          const filtro = aperta.filtro.trim().toLowerCase();
+          const lista = (aperta.lista || []).filter((c) => !filtro || (c.nome || "").toLowerCase().includes(filtro) || c.id.includes(filtro));
+          const cambia = (id, si) => setMetaRegola((x) => ({ ...x, scelte: si ? [...new Set([...x.scelte, id])] : x.scelte.filter((y) => y !== id) }));
+          return (
+            <div style={{ marginTop: 10 }}>
+              {aperta.errore ? <div className="meta-msg" data-tipo="errore">{aperta.errore}</div>
+                : !aperta.lista ? <div className="sub">Leggo le campagne da Meta…</div>
+                : !aperta.lista.length ? <div className="sub">Meta non restituisce campagne per questo account.</div>
+                : (
+                  <>
+                    <div className="meta-riga">
+                      <input type="search" placeholder="Cerca per nome" value={aperta.filtro} style={{ maxWidth: 260 }}
+                        onChange={(e) => setMetaRegola((x) => ({ ...x, filtro: e.target.value }))} aria-label="Cerca campagna" />
+                      <button className="btn ghost mini" onClick={() => setMetaRegola((x) => ({ ...x, scelte: [...new Set([...x.scelte, ...x.lista.filter((c) => c.stato === "ACTIVE").map((c) => c.id)])] }))}>Aggiungi le attive</button>
+                      <button className="btn ghost mini" onClick={() => setMetaRegola((x) => ({ ...x, scelte: [] }))}>Togli tutte</button>
+                    </div>
+                    <div className="meta-camp">
+                      {lista.map((c) => (
+                        <label key={c.id}>
+                          <input type="checkbox" checked={aperta.scelte.includes(c.id)} onChange={(e) => cambia(c.id, e.target.checked)} />
+                          <span className="nome"><b>{c.nome || c.id}</b><span className="sub"> · {META_STATO_CAMP[c.stato] || (c.stato || "").toLowerCase()}{c.inizio ? ` · dal ${dataItA(c.inizio)}` : ""}</span></span>
+                          <span className="sub mono">{c.spesa90 ? `${Number(c.spesa90).toLocaleString(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true })} ${a.valuta || ""} in 90 gg` : "nessuna spesa in 90 gg"}</span>
+                        </label>
+                      ))}
+                      {!lista.length && <div className="sub" style={{ padding: 10 }}>Nessuna campagna con questo nome.</div>}
+                    </div>
+                  </>
+                )}
+              <div className="meta-riga">
+                <button className="btn ghost mini" disabled={!aperta.scelte.length} onClick={salvaSceltaCampagne}>Salva la scelta ({aperta.scelte.length})</button>
+                <button className="btn ghost mini" onClick={() => setMetaRegola(null)}>Annulla</button>
+                <span className="sub">Le campagne non scelte che sono già nel CRM restano: se non ti servono eliminale, non verranno ricaricate.</span>
+              </div>
+            </div>
+          );
+        })()}
+      </>
+    );
+  };
   const metaDelCliente = (id) => metaColl.filter((c) => c.cliente_id === id)
     .map((c) => metaAccount.find((a) => String(a.account_id) === String(c.account_id)) || { account_id: String(c.account_id), nome: "", stato: null });
 
@@ -4248,6 +4357,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   const metaChip = (a) => (
     <span className="meta-chip" key={a.account_id} title={`act_${a.account_id}${a.ultimo_errore ? ` · ultimo errore: ${a.ultimo_errore}` : ""}`}>
       {a.nome || `act_${a.account_id}`}{a.valuta ? <span className="sub">{a.valuta}</span> : null}
+      {metaRegolaBreve(a.account_id) ? <span className="sub" title="Si cambia dalla scheda del cliente">· {metaRegolaBreve(a.account_id)}</span> : null}
       {a.ultimo_errore ? <span className="neg" aria-label="errore">!</span> : null}
       <button onClick={() => scollegaMeta(a.account_id)} title="Scollega" aria-label={`Scollega ${a.nome || a.account_id}`}>×</button>
     </span>
@@ -4289,7 +4399,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
                 <td className="sub">{a.ultimo_errore ? <span className="neg">{a.ultimo_errore}</span> : `dati del ${metaQuando(a.ultimo_sync)}`}</td>
                 <td className="r"><button className="btn danger mini" onClick={() => scollegaMeta(a.account_id)}>Scollega</button></td>
               </tr>
-            ))}
+            )).flatMap((riga, i) => [riga, <tr key={"r" + miei[i].account_id}><td colSpan={4} style={{ borderTop: 0, paddingTop: 0 }}>{metaRegolaRiga(miei[i])}</td></tr>])}
             <tr>
               <td colSpan={4}>
                 <div className="sub" style={{ marginBottom: 6 }}>{miei.length ? "Collega un altro account a questo cliente" : "Collega l'account pubblicitario di questo cliente"}</div>
@@ -4339,7 +4449,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
           </div>
         )}
         <div className="meta-msg sub">
-          Ogni mattina alle 9 il CRM scarica da Meta i dati fino a ieri per tutti gli account collegati.
+          Ogni mattina alle 9 il CRM scarica da Meta i dati fino a ieri per tutti gli account collegati, tranne quelli segnati «solo a mano» nella scheda del cliente.
           {" "}Ultimo aggiornamento: <b>{u ? `${metaQuando(u.fine || u.avvio)} · ${u.esito === "in_corso" ? "in corso" : u.esito}` : "mai"}</b>{u && u.messaggio ? ` — ${u.messaggio}` : ""}
         </div>
         {metaMessaggi()}

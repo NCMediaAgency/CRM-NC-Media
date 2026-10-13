@@ -46,6 +46,18 @@ export function apiMetaFinta() {
     async collega(accountId, clienteId) {
       const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId).concat({ account_id: accountId, cliente_id: clienteId }); scrivi(s);
     },
+    async regola(accountId, campi) {
+      const s = leggi(); s.collegamenti = (s.collegamenti || []).map((c) => (c.account_id === accountId ? { ...c, ...campi } : c)); scrivi(s);
+    },
+    async campagne(accountId) {
+      const n = accountId.slice(-3);
+      return [
+        { id: `c${accountId}`, nome: `Lead · ${n}`, stato: "ACTIVE", inizio: giorno(-24), spesa90: 1380.5 },
+        { id: `p${accountId}`, nome: `Retargeting · ${n}`, stato: "PAUSED", inizio: giorno(-60), spesa90: 210 },
+        { id: `v${accountId}`, nome: `Black Friday 2025 · ${n}`, stato: "ARCHIVED", inizio: null, spesa90: 95 },
+        { id: `b${accountId}`, nome: `Bozza · ${n}`, stato: "PAUSED", inizio: giorno(-3), spesa90: 0 },
+      ];
+    },
     async scollega(accountId) { const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId); scrivi(s); },
     async sincronizza(azione, extra = {}) {
       const s = leggi();
@@ -56,10 +68,14 @@ export function apiMetaFinta() {
         ultimo_sync: tocca(a) ? new Date().toISOString() : (prima.get(a.account_id) || {}).ultimo_sync || null,
         ultimo_errore: tocca(a) && a.stato === 3 ? "Pagamento in sospeso sull'account" : (prima.get(a.account_id) || {}).ultimo_errore || "" }));
       if (!azione) {
-        Object.assign(s, generaDati(s.collegamenti || []));
+        const daFare = (s.collegamenti || []).filter((c) => (extra.account ? extra.account.includes(c.account_id) : c.automatico !== false));
+        const nuovi = generaDati(daFare);
+        const tenute = new Set(daFare.map((c) => c.account_id));
+        s.oggetti = (s.oggetti || []).filter((o) => !tenute.has(o.account_id)).concat(nuovi.oggetti);
+        s.finestre = (s.finestre || []).filter((f) => !tenute.has(f.account_id)).concat(nuovi.finestre);
         s.ultimaSync = { esito: "in_corso", avvio: new Date().toISOString(), origine: "manuale", messaggio: "" };
         scrivi(s);
-        setTimeout(() => { const t = leggi(); t.ultimaSync = { ...t.ultimaSync, esito: "ok", fine: new Date().toISOString(), messaggio: `${extra.account ? extra.account.length : (t.collegamenti || []).length} account aggiornati.` }; scrivi(t); }, 1500);
+        setTimeout(() => { const t = leggi(); t.ultimaSync = { ...t.ultimaSync, esito: "ok", fine: new Date().toISOString(), messaggio: `${daFare.length} account aggiornati${daFare.length < (t.collegamenti || []).length && !extra.account ? `, ${(t.collegamenti || []).length - daFare.length} esclusi (solo a mano)` : ""}.` }; scrivi(t); }, 1500);
         return { ok: true };
       }
       scrivi(s);

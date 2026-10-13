@@ -156,21 +156,47 @@ async function aggiornaAccount(ws, token) {
 }
 
 // ---------- un account ----------
-async function sincronizzaAccount(ws, acc, token, limiteMs = Infinity) {
+async function sincronizzaAccount(ws, acc, token, limiteMs = Infinity, regola = {}) {
   const g = (percorso, parametri) => graph(percorso, parametri, token);
   const id = acc.account_id, act = `act_${id}`, valuta = acc.valuta;
   const ieri = dataNelFuso(acc.fuso, -1);
   const ora = new Date().toISOString();
 
-  // Campagne da seguire: attive, o con spesa negli ultimi 90 giorni. Le vecchie restano fuori.
+  // Campagne da seguire, secondo la regola dell'account (meta_collegamenti, migrazione 0004):
+  //  · recenti (normale): attive, o con spesa negli ultimi 90 giorni. Le vecchie restano fuori;
+  //  · attive: solo quelle accese, più quelle che lo erano all'aggiornamento precedente (così se ne registra lo stop);
+  //  · scelte: solo quelle indicate nel CRM.
+  const modo = regola.campagne_modo || "recenti";
   const campagne = await g(`${act}/campaigns`, { fields: "id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time", limit: "500" });
-  const recenti = await g(`${act}/insights`, { level: "campaign", date_preset: "last_90d", fields: "campaign_id,campaign_name,spend", limit: "500" });
-  const conSpesa = new Map(recenti.filter((r) => num(r.spend) > 0).map((r) => [r.campaign_id, r.campaign_name]));
-  const seguite = campagne.filter((c) => c.effective_status === "ACTIVE" || conSpesa.has(c.id));
-  // Archiviate con spesa recente: non escono dall'elenco delle campagne, le ricostruisco dagli insights
-  conSpesa.forEach((nome, cid) => { if (!seguite.some((c) => c.id === cid)) seguite.push({ id: cid, name: nome, effective_status: "ARCHIVED" }); });
-  if (!seguite.length) return { campagne: 0, adset: 0, annunci: 0, finestre: 0 };
-  const ids = seguite.map((c) => c.id);
+  let seguite;
+  if (modo === "attive") {
+    const eranoAttive = new Set((await db(`meta_oggetti?select=id&workspace_id=eq.${ws}&livello=eq.campaign&account_id=eq.${id}&stato=eq.ACTIVE`)).map((o) => o.id));
+    seguite = campagne.filter((c) => c.effective_status === "ACTIVE" || eranoAttive.has(c.id));
+  } else if (modo === "scelte") {
+    const scelte = [...new Set((regola.campagne_scelte || []).map(String))];
+    seguite = campagne.filter((c) => scelte.includes(c.id));
+    // Le archiviate non escono dall'elenco delle campagne: il nome arriva dai totali più sotto
+    scelte.filter((cid) => !seguite.some((c) => c.id === cid)).forEach((cid) => seguite.push({ id: cid, name: "", effective_status: "ARCHIVED" }));
+  } else {
+    const recenti = await g(`${act}/insights`, { level: "campaign", date_preset: "last_90d", fields: "campaign_id,campaign_name,spend", limit: "500" });
+    const conSpesa = new Map(recenti.filter((r) => num(r.spend) > 0).map((r) => [r.campaign_id, r.campaign_name]));
+    seguite = campagne.filter((c) => c.effective_status === "ACTIVE" || conSpesa.has(c.id));
+    // Archiviate con spesa recente: non escono dall'elenco delle campagne, le ricostruisco dagli insights
+    conSpesa.forEach((nome, cid) => { if (!seguite.some((c) => c.id === cid)) seguite.push({ id: cid, name: nome, effective_status: "ARCHIVED" }); });
+  }
+  // Con "attive" o "scelte" tolgo dalle tabelle le campagne rimaste fuori: il CRM tiene la sua copia,
+  // ma se la si cancella dal CRM non ricompare al giro dopo
+  const pulisci = async (tenute) => {
+    if (modo === "recenti") return;
+    const salvate = await db(`meta_oggetti?select=campagna_id&workspace_id=eq.${ws}&account_id=eq.${id}&livello=eq.campaign`);
+    const via = salvate.map((o) => o.campagna_id).filter((cid) => cid && !tenute.includes(cid));
+    for (const blocco of pezzi(via, 50)) {
+      await db(`meta_oggetti?workspace_id=eq.${ws}&account_id=eq.${id}&campagna_id=in.${lista(blocco)}`, { metodo: "DELETE" });
+      await db(`meta_finestre?workspace_id=eq.${ws}&campagna_id=in.${lista(blocco)}`, { metodo: "DELETE" });
+    }
+  };
+  if (!seguite.length) { await pulisci([]); return { campagne: 0, adset: 0, annunci: 0, finestre: 0 }; }
+  let ids = seguite.map((c) => c.id);
 
   // Totali dall'inizio e stati, per campagna, ad set e annuncio
   const totali = { campaign: new Map(), adset: new Map(), ad: new Map() };
@@ -185,6 +211,13 @@ async function sincronizzaAccount(ws, acc, token, limiteMs = Infinity) {
     adsets.push(...await g(`${act}/adsets`, { fields: "id,name,campaign_id,effective_status,daily_budget,lifetime_budget,start_time,end_time", filtering: filtro, limit: "500" }));
     ads.push(...await g(`${act}/ads`, { fields: "id,name,campaign_id,adset_id,effective_status", filtering: filtro, limit: "500" }));
   }
+
+  // Scelte archiviate: il nome viene dai totali; senza totali (mai spesa o cancellata) la lascio fuori
+  seguite.filter((c) => !c.name && totali.campaign.has(c.id)).forEach((c) => { c.name = totali.campaign.get(c.id).campaign_name || ""; });
+  seguite = seguite.filter((c) => c.name);
+  ids = seguite.map((c) => c.id);
+  await pulisci(ids);
+  if (!seguite.length) return { campagne: 0, adset: 0, annunci: 0, finestre: 0 };
 
   const vuote = { spesa: 0, impression: 0, click: 0, click_link: 0, reach: 0, frequenza: 0, lead: 0, conversioni: 0, ricavi: 0 };
   const riga = (livello, o, extra) => ({
@@ -202,11 +235,12 @@ async function sincronizzaAccount(ws, acc, token, limiteMs = Infinity) {
     righe.push(riga("campaign", c, { campagna_id: c.id, obiettivo: c.objective || "", budget_giorno: giorno, budget_totale: totale,
       inizio: aData(c.start_time || c.created_time), fine: aData(c.stop_time) }));
   }
-  // Ad set e annunci: solo quelli che hanno speso o sono accesi
-  adsets.filter((a) => attivi(a) || totali.adset.has(a.id)).forEach((a) => righe.push(riga("adset", a, {
+  // Ad set e annunci: solo quelli delle campagne seguite che hanno speso o sono accesi
+  const dentro = (a) => ids.includes(a.campaign_id) && (attivi(a) || totali[a.adset_id ? "ad" : "adset"].has(a.id));
+  adsets.filter(dentro).forEach((a) => righe.push(riga("adset", a, {
     campagna_id: a.campaign_id, budget_giorno: aBudget(a.daily_budget, valuta), budget_totale: aBudget(a.lifetime_budget, valuta),
     inizio: aData(a.start_time), fine: aData(a.end_time) })));
-  ads.filter((a) => attivi(a) || totali.ad.has(a.id)).forEach((a) => righe.push(riga("ad", a, { campagna_id: a.campaign_id, adset_id: a.adset_id })));
+  ads.filter(dentro).forEach((a) => righe.push(riga("ad", a, { campagna_id: a.campaign_id, adset_id: a.adset_id })));
   await upsert("meta_oggetti", "workspace_id,livello,id", righe);
 
   // Finestre: le nuove, quelle che toccano gli ultimi giorni e quelle cambiate di confine
@@ -234,6 +268,17 @@ async function sincronizzaAccount(ws, acc, token, limiteMs = Infinity) {
     }
   }
   return { campagne: seguite.length, adset: righe.filter((r) => r.livello === "adset").length, annunci: righe.filter((r) => r.livello === "ad").length, finestre: nFinestre };
+}
+
+/* Tutte le campagne non archiviate, più le archiviate con spesa negli ultimi 90 giorni:
+   accese prima, poi per spesa recente */
+async function elencoCampagne(id, token) {
+  const campagne = await graph(`act_${id}/campaigns`, { fields: "id,name,effective_status,start_time,created_time", limit: "500" }, token);
+  const recenti = await graph(`act_${id}/insights`, { level: "campaign", date_preset: "last_90d", fields: "campaign_id,campaign_name,spend", limit: "500" }, token);
+  const spesa = new Map(recenti.map((r) => [r.campaign_id, r]));
+  const out = campagne.map((c) => ({ id: c.id, nome: c.name || "", stato: c.effective_status || "", inizio: aData(c.start_time || c.created_time), spesa90: num((spesa.get(c.id) || {}).spend) }));
+  spesa.forEach((r, cid) => { if (!out.some((c) => c.id === cid) && num(r.spend) > 0) out.push({ id: cid, nome: r.campaign_name || "", stato: "ARCHIVED", inizio: null, spesa90: num(r.spend) }); });
+  return out.sort((a, b) => (b.stato === "ACTIVE") - (a.stato === "ACTIVE") || b.spesa90 - a.spesa90 || (b.inizio || "").localeCompare(a.inizio || ""));
 }
 
 // ---------- uno spazio di lavoro, a tempo ----------
@@ -270,7 +315,11 @@ async function lavora(ws, syncId, inizioMs) {
     if (dettagli.giri === 1) dettagli.accountVisti = await aggiornaAccount(ws, token);
     // Aggiornamento di un solo cliente: dettagli.solo elenca i suoi account
     const solo = Array.isArray(dettagli.solo) ? dettagli.solo.map(String) : null;
-    const coll = (await db(`meta_collegamenti?select=account_id&workspace_id=eq.${ws}`)).filter((c) => !solo || solo.includes(String(c.account_id)));
+    // Nell'aggiornamento di tutti (le 9, "Aggiorna ora") restano fuori gli account segnati "solo a mano"
+    const tuttiColl = await db(`meta_collegamenti?select=*&workspace_id=eq.${ws}`);
+    const coll = tuttiColl.filter((c) => (solo ? solo.includes(String(c.account_id)) : c.automatico !== false));
+    const esclusi = solo ? 0 : tuttiColl.length - coll.length;
+    const regole = new Map(coll.map((c) => [String(c.account_id), c]));
     const accounts = coll.length
       ? await db(`meta_account?select=*&workspace_id=eq.${ws}&account_id=in.${lista(coll.map((c) => c.account_id))}`)
       : [];
@@ -293,7 +342,7 @@ async function lavora(ws, syncId, inizioMs) {
       dettagli.battito = new Date().toISOString();
       await salvaSync({});
       try {
-        dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a, token, inizioMs + TEMPO_LIMITE)) };
+        dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a, token, inizioMs + TEMPO_LIMITE, regole.get(String(a.account_id)) || {})) };
         await db(`meta_account?workspace_id=eq.${ws}&account_id=eq.${a.account_id}`, { metodo: "PATCH", corpo: { ultimo_sync: new Date().toISOString(), ultimo_errore: "" } });
       } catch (e) {
         dettagli.account[a.account_id] = { nome: a.nome, errore: e.message };
@@ -325,9 +374,10 @@ async function lavora(ws, syncId, inizioMs) {
     }
     const errori = Object.values(dettagli.account).filter((x) => x.errore).length;
     const esito = !accounts.length ? "ok" : errori === 0 && !mancano ? "ok" : errori + mancano < accounts.length ? "parziale" : "errore";
-    const messaggio = !accounts.length
+    const fuori = esclusi ? `${accounts.length ? ", " : ""}${esclusi} esclus${esclusi === 1 ? "o" : "i"} (si aggiorna${esclusi === 1 ? "" : "no"} solo a mano)` : "";
+    const messaggio = !accounts.length && !esclusi
       ? `Nessun account collegato. Account visibili con il token: ${dettagli.accountVisti ?? "—"}.`
-      : `${fatti - errori} account aggiornati${errori ? `, ${errori} con errori` : ""}${limite ? ". Meta ha limitato le richieste: riprovo al prossimo aggiornamento" : ""}${mancano && !limite ? `, ${mancano} non raggiunti` : ""}.`;
+      : `${accounts.length ? `${fatti - errori} account aggiornati` : "Nessun account da aggiornare"}${errori ? `, ${errori} con errori` : ""}${fuori}${limite ? ". Meta ha limitato le richieste: riprovo al prossimo aggiornamento" : ""}${mancano && !limite ? `, ${mancano} non raggiunti` : ""}.`;
     await salvaSync({ esito, messaggio, fine: new Date().toISOString() });
   } catch (e) {
     const msg = e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto o è stato revocato: ricollegalo dalle Impostazioni del CRM." : e.message;
@@ -464,6 +514,16 @@ async function gestisci(req) {
     const token = await tokenDi(ws);
     if (!token) return risposta({ errore: "Facebook non è collegato: premi \"Collega Facebook\"." }, 400);
     try { return risposta({ ok: true, account: await aggiornaAccount(ws, token) }); }
+    catch (e) { return risposta({ errore: e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto: ricollegalo." : e.message }, 502); }
+  }
+  /* Elenco delle campagne di un account, per scegliere nel CRM quali scaricare */
+  if (corpo.azione === "campagne") {
+    const idAcc = String(corpo.account || "").replace(/\D/g, "");
+    const [acc] = idAcc ? await db(`meta_account?select=account_id&workspace_id=eq.${ws}&account_id=eq.${idAcc}`) : [];
+    if (!acc) return risposta({ errore: "Account non trovato fra quelli di questo spazio." }, 404);
+    const token = await tokenDi(ws);
+    if (!token) return risposta({ errore: "Facebook non è collegato: premi \"Collega Facebook\"." }, 400);
+    try { return risposta({ ok: true, campagne: await elencoCampagne(idAcc, token) }); }
     catch (e) { return risposta({ errore: e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto: ricollegalo." : e.message }, 502); }
   }
   // "account": aggiorna solo questi (un cliente e i suoi sottoclienti); senza, tutti i collegati
