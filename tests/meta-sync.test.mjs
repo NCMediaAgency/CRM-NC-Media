@@ -289,6 +289,13 @@ assert.equal(giri10["601"] || 0, prima601, "l'account interrotto non si riprova 
 assert.match(interrotto.dettagli.account["601"].errore, /pesante/);
 assert.equal(interrotto.esito, "parziale", interrotto.messaggio);
 assert.ok(["602", "603", "604", "605"].every((k) => interrotto.dettagli.account[k] && !interrotto.dettagli.account[k].inLavorazione), "gli altri completati");
+// aggiornamento di un solo cliente: tocca solo i suoi account
+for (const k of Object.keys(giri10)) delete giri10[k];
+salto2 += 11 * 60e3;
+r = await chiama({ account: ["603", "act_604"] }, { Authorization: "Bearer utente" }); await finisci();
+const s11 = tabelle.meta_sync.find((x) => x.id === r.corpo.sync);
+assert.equal(s11.origine, "cliente"); assert.equal(s11.esito, "ok", s11.messaggio);
+assert.deepEqual(Object.keys(giri10).sort(), ["603", "604"], "solo gli account del cliente");
 // con battito recente non riparte (il lavoro sta già andando)
 const vivo = { id: 1000, workspace_id: "ws1", origine: "manuale", avvio: new Date(Date.now()).toISOString(), esito: "in_corso", messaggio: "", dettagli: { battito: new Date(Date.now()).toISOString() } };
 tabelle.meta_sync.push(vivo);

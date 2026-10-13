@@ -48,9 +48,10 @@ export function apiMetaCloud(ws) {
       window.location.href = r.url;
     },
     async scollegaFacebook() { await this.sincronizza("scollega"); },
-    /* azione "account": solo l'elenco degli account; senza azione l'aggiornamento completo */
+    /* azione "account": solo l'elenco degli account; senza azione l'aggiornamento
+       (di tutti i collegati, o solo di extra.account: gli account di un cliente) */
     async sincronizza(azione, extra = {}) {
-      const { data, error } = await supabase.functions.invoke("meta-sync", { body: azione ? { azione, ...extra } : {} });
+      const { data, error } = await supabase.functions.invoke("meta-sync", { body: azione ? { azione, ...extra } : { ...extra } });
       if (error) {
         let dettaglio = "";
         try { dettaglio = (await error.context.json()).errore || ""; } catch { /* risposta senza corpo */ }

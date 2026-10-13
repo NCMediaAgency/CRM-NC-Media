@@ -47,15 +47,19 @@ export function apiMetaFinta() {
       const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId).concat({ account_id: accountId, cliente_id: clienteId }); scrivi(s);
     },
     async scollega(accountId) { const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId); scrivi(s); },
-    async sincronizza(azione) {
+    async sincronizza(azione, extra = {}) {
       const s = leggi();
       if (!s.facebook) throw new Error("Facebook non è collegato: premi \"Collega Facebook\".");
-      s.account = ACCOUNT.map((a) => ({ ...a, ultimo_sync: azione ? null : new Date().toISOString(), ultimo_errore: a.stato === 3 && !azione ? "Pagamento in sospeso sull'account" : "" }));
+      const prima = new Map((s.account || []).map((a) => [a.account_id, a]));
+      const tocca = (a) => !azione && (!extra.account || extra.account.includes(a.account_id));
+      s.account = ACCOUNT.map((a) => ({ ...a,
+        ultimo_sync: tocca(a) ? new Date().toISOString() : (prima.get(a.account_id) || {}).ultimo_sync || null,
+        ultimo_errore: tocca(a) && a.stato === 3 ? "Pagamento in sospeso sull'account" : (prima.get(a.account_id) || {}).ultimo_errore || "" }));
       if (!azione) {
         Object.assign(s, generaDati(s.collegamenti || []));
         s.ultimaSync = { esito: "in_corso", avvio: new Date().toISOString(), origine: "manuale", messaggio: "" };
         scrivi(s);
-        setTimeout(() => { const t = leggi(); t.ultimaSync = { ...t.ultimaSync, esito: "ok", fine: new Date().toISOString(), messaggio: `${(t.collegamenti || []).length} account aggiornati.` }; scrivi(t); }, 1500);
+        setTimeout(() => { const t = leggi(); t.ultimaSync = { ...t.ultimaSync, esito: "ok", fine: new Date().toISOString(), messaggio: `${extra.account ? extra.account.length : (t.collegamenti || []).length} account aggiornati.` }; scrivi(t); }, 1500);
         return { ok: true };
       }
       scrivi(s);

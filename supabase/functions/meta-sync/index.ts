@@ -268,7 +268,9 @@ async function lavora(ws, syncId, inizioMs) {
       return;
     }
     if (dettagli.giri === 1) dettagli.accountVisti = await aggiornaAccount(ws, token);
-    const coll = await db(`meta_collegamenti?select=account_id&workspace_id=eq.${ws}`);
+    // Aggiornamento di un solo cliente: dettagli.solo elenca i suoi account
+    const solo = Array.isArray(dettagli.solo) ? dettagli.solo.map(String) : null;
+    const coll = (await db(`meta_collegamenti?select=account_id&workspace_id=eq.${ws}`)).filter((c) => !solo || solo.includes(String(c.account_id)));
     const accounts = coll.length
       ? await db(`meta_account?select=*&workspace_id=eq.${ws}&account_id=in.${lista(coll.map((c) => c.account_id))}`)
       : [];
@@ -393,7 +395,7 @@ async function chiudiLogin(url) {
   }
 }
 
-async function nuovoSync(ws, origine) {
+async function nuovoSync(ws, origine, solo = null) {
   // Un aggiornamento alla volta per spazio: se uno è partito da meno di 10 minuti, non ne apro un altro
   const dieciMin = new Date(Date.now() - 10 * 60e3).toISOString();
   // Un aggiornamento rimasto "in corso" da più di 10 minuti si è interrotto: lo chiudo per non lasciarlo appeso
@@ -401,7 +403,8 @@ async function nuovoSync(ws, origine) {
     corpo: { esito: "errore", fine: new Date().toISOString(), messaggio: "Interrotto prima di finire: riparte dagli account mancanti con il prossimo aggiornamento." } });
   const attivi = await db(`meta_sync?select=id&workspace_id=eq.${ws}&esito=eq.in_corso&avvio=gt.${dieciMin}`);
   if (attivi.length) return { id: attivi[0].id, giaInCorso: true };
-  const [s] = await db("meta_sync", { metodo: "POST", corpo: { workspace_id: ws, origine }, prefer: "return=representation" });
+  const [s] = await db("meta_sync", { metodo: "POST", prefer: "return=representation",
+    corpo: { workspace_id: ws, origine, ...(solo ? { dettagli: { solo } } : {}) } });
   return { id: s.id, giaInCorso: false };
 }
 
@@ -463,7 +466,9 @@ async function gestisci(req) {
     try { return risposta({ ok: true, account: await aggiornaAccount(ws, token) }); }
     catch (e) { return risposta({ errore: e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto: ricollegalo." : e.message }, 502); }
   }
-  const s = await nuovoSync(ws, "manuale");
+  // "account": aggiorna solo questi (un cliente e i suoi sottoclienti); senza, tutti i collegati
+  const solo = Array.isArray(corpo.account) && corpo.account.length ? corpo.account.map((x) => String(x).replace(/\D/g, "")).filter(Boolean).slice(0, 200) : null;
+  const s = await nuovoSync(ws, solo ? "cliente" : "manuale", solo);
   if (!s.giaInCorso) sottofondo(lavora(ws, s.id, inizioMs));
   return risposta({ ok: true, sync: s.id, giaInCorso: s.giaInCorso }, 202);
 }

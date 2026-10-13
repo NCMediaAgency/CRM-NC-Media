@@ -1657,7 +1657,7 @@ const GUIDA = [
       { h: "Cosa arriva", p: "Le campagne attive o che hanno speso negli ultimi 90 giorni, con stato, budget giornaliero, date, spesa, impression, clic, clic sul link, lead, acquisti e ricavi. Sotto ogni campagna i suoi ad set e annunci con i totali. Le finestre Test, Matura e le settimane Attive sono già sommate da Meta, con la frequenza vera di ciascuna." },
       { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
       { h: "Cosa resta tuo", p: "Lo stato In test, le soglie, la linea, il funnel, le note, lo stadio dei creativi e, se l'hai segnato come scritto a mano, l'esito commerciale (conversioni e ricavi). Il budget giornaliero cambiato su Meta entra nello storico con la data del giorno, come quando lo cambi dalla scheda." },
-      { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
+      { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito tutti i clienti collegati. Per uno solo usa il pulsante Aggiorna sulla sua riga in Impostazioni, oppure Aggiorna questo cliente nella sua scheda (se ha sottoclienti, aggiorna anche loro): utile quando un account si è fermato o ti serve un dato fresco. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
       { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento." },
       { h: "Il pulsante Chiedi i dati aggiornati", p: "Resta per i clienti che non hai collegato o per le piattaforme diverse da Meta: prepara la richiesta da incollare in chat, come prima." },
     ],
@@ -3844,11 +3844,13 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
     catch (e) { setMetaStato({ attesa: "", errore: e.message || String(e), esito: "" }); }
   };
 
-  const aggiornaMeta = async (azione) => {
+  /* extra.account: aggiorna solo questi account (un cliente); chi: il cliente, per il pulsante della sua riga */
+  const aggiornaMeta = async (azione, extra = {}, chi = "") => {
     if (!meta || metaStato.attesa) return;
-    setMetaStato({ attesa: azione === "account" ? "account" : "sync", errore: "", esito: "" });
+    setMetaStato({ attesa: azione === "account" ? "account" : "sync", errore: "", esito: "", cliente: chi });
     try {
-      await meta.sincronizza(azione);
+      const avvio = await meta.sincronizza(azione, extra);
+      if (avvio && avvio.giaInCorso) setMetaStato((x) => ({ ...x, esito: "C'era già un aggiornamento in corso: aspetto che finisca." }));
       if (azione === "account") {
         const info = await caricaMeta(false);
         setMetaStato({ attesa: "", errore: "", esito: `Elenco aggiornato: ${(info && info.account.length) || 0} account visibili.` });
@@ -4190,6 +4192,15 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   const metaStatoAcc = (a) => ACCOUNT_STATI[Number(a.stato)] || (a.stato == null ? "—" : `stato ${a.stato}`);
   const metaEtichetta = (a) => `${a.nome || a.account_id} · act_${a.account_id}${a.valuta ? ` · ${a.valuta}` : ""}${accountUtilizzabile(a) ? "" : ` · ${metaStatoAcc(a)}`}`;
   const metaSuggeriti = (z) => suggerisciAccount(z, metaAccount.filter((a) => !metaDiChi.has(String(a.account_id)) && accountUtilizzabile(a))).slice(0, 5);
+  /* Gli account da aggiornare per un cliente: i suoi, e con i sottoclienti anche i loro */
+  const metaIdDi = (id, conSotto) => {
+    const ids = conSotto ? [id, ...discendenti(id)] : [id];
+    return metaColl.filter((c) => ids.includes(c.cliente_id)).map((c) => String(c.account_id));
+  };
+  const metaAggiornaCliente = (z, conSotto) => {
+    const ids = metaIdDi(z.id, conSotto);
+    if (ids.length) aggiornaMeta(undefined, { account: ids }, z.id);
+  };
   const metaDelCliente = (id) => metaColl.filter((c) => c.cliente_id === id)
     .map((c) => metaAccount.find((a) => String(a.account_id) === String(c.account_id)) || { account_id: String(c.account_id), nome: "", stato: null });
 
@@ -4255,6 +4266,12 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
         <header>
           <h2>Meta Ads</h2>
           <span className="sp eyebrow">ultimo aggiornamento {metaQuando(metaInfo && metaInfo.ultimaSync && metaInfo.ultimaSync.fine)}</span>
+          {metaFb && metaIdDi(z.id, true).length > 0 && (
+            <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={() => metaAggiornaCliente(z, true)}
+              title={discendenti(z.id).length ? "Scarica adesso i dati di questo cliente e dei suoi sottoclienti" : "Scarica adesso i dati di questo cliente"}>
+              {metaStato.attesa === "sync" && metaStato.cliente === z.id ? "Aggiornamento in corso…" : discendenti(z.id).length ? "Aggiorna cliente e sottoclienti" : "Aggiorna questo cliente"}
+            </button>
+          )}
           {metaPulsanti()}
         </header>
         {metaMessaggi()}
@@ -4338,7 +4355,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
           </div>
         ) : (
           <div className="wrap"><table className="tbl">
-            <thead><tr><th>Cliente</th><th>Account collegati</th><th>Collega</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Account collegati</th><th>Collega</th><th className="r">Dati</th></tr></thead>
             <tbody>
               {righe.map(({ z, liv }) => {
                 const miei = metaDelCliente(z.id);
@@ -4347,6 +4364,22 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
                     <td style={{ paddingLeft: 14 + liv * 18 }}>{liv ? <span className="sub">↳ </span> : null}<b>{z.nome}</b></td>
                     <td>{miei.length ? miei.map(metaChip) : <span className="sub">nessuno</span>}</td>
                     <td style={{ minWidth: 260 }}>{metaCollega(z)}</td>
+                    <td className="r" style={{ whiteSpace: "nowrap" }}>
+                      {miei.length > 0 && (
+                        <>
+                          <button className="btn ghost mini" disabled={!!metaStato.attesa || !metaFb} onClick={() => metaAggiornaCliente(z, false)}
+                            title="Scarica adesso solo gli account di questo cliente">
+                            {metaStato.attesa === "sync" && metaStato.cliente === z.id ? "Aggiorno…" : "Aggiorna"}
+                          </button>
+                          <div className="sub" style={{ marginTop: 4 }}>
+                            {(() => {
+                              const date = miei.map((a) => a.ultimo_sync).filter(Boolean).sort();
+                              return date.length < miei.length ? "mai aggiornato" : `dati del ${metaQuando(date[0])}`;
+                            })()}
+                          </div>
+                        </>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
