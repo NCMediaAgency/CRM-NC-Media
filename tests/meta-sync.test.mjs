@@ -240,4 +240,50 @@ globalThis.fetch = fetchOk;
 r = await chiama({ azione: "scollega" }, { Authorization: "Bearer utente" });
 assert.ok(!tabelle.meta_token.length);
 
+// ---------- 10. proseguimento bloccato (Verify JWT acceso), ripresa e "continua" dal CRM ----------
+tabelle.meta_token.push({ workspace_id: "ws1", token: "tok-lungo" });
+tokenAtteso = "tok-lungo";
+const dataVera2 = Date.now; let salto2 = 0; Date.now = () => dataVera2() + salto2;
+tabelle.meta_collegamenti = [];
+tabelle.meta_account = tabelle.meta_account.filter((a) => !/^6\d\d$/.test(a.account_id));
+for (const n of ["601", "602", "603", "604", "605"]) {
+  tabelle.meta_account.push({ workspace_id: "ws1", account_id: n, nome: "Acc " + n, valuta: "EUR", fuso: "Europe/Rome", stato: 1, ultimo_sync: null });
+  tabelle.meta_collegamenti.push({ workspace_id: "ws1", account_id: n, cliente_id: "z" + n });
+}
+const giri10 = {};
+const fetch10 = globalThis.fetch;
+let bloccaRichiamo = true;
+globalThis.fetch = async (url, init = {}) => {
+  const s = String(url);
+  const m = s.match(/act_(6\d\d)\/campaigns/);
+  if (m) { giri10[m[1]] = (giri10[m[1]] || 0) + 1; salto2 += 60000; return { ok: true, status: 200, json: async () => ({ data: [] }) }; }
+  if (/act_6\d\d\/insights/.test(s) || s.includes("me/adaccounts")) return { ok: true, status: 200, json: async () => ({ data: [] }) };
+  if (s === "https://db.test/functions/v1/meta-sync" && bloccaRichiamo) return { ok: false, status: 401, json: async () => ({}), text: async () => "" };
+  return fetch10(url, init);
+};
+r = await chiama({}, { Authorization: "Bearer utente" }); await finisci();
+let s10 = tabelle.meta_sync.at(-1);
+assert.equal(s10.esito, "parziale", s10.messaggio);
+assert.match(s10.messaggio, /Verify JWT/);
+const primi = Object.keys(giri10);
+assert.equal(primi.length, 2, "nel primo giro ne entrano due");
+// nuovo Aggiorna ora: riparte dagli account mai aggiornati, non dagli stessi
+salto2 += 11 * 60e3;
+r = await chiama({}, { Authorization: "Bearer utente" }); await finisci();
+const secondi = Object.keys(giri10).filter((k) => !primi.includes(k));
+assert.equal(secondi.length, 2, "il secondo giro prende due account nuovi: " + JSON.stringify(giri10));
+// "continua" dal CRM su un aggiornamento fermo
+bloccaRichiamo = false;
+const fermo = { id: 999, workspace_id: "ws1", origine: "manuale", avvio: new Date(Date.now()).toISOString(), esito: "in_corso", messaggio: "In corso", dettagli: { account: {}, giri: 1, battito: new Date(Date.now() - 120e3).toISOString() } };
+tabelle.meta_sync.push(fermo);
+r = await chiama({ azione: "continua", sync: 999 }, { Authorization: "Bearer utente" });
+assert.equal(r.stato, 202, JSON.stringify(r.corpo)); await finisci();
+assert.equal(fermo.esito, "ok", fermo.messaggio);
+// con battito recente non riparte (il lavoro sta già andando)
+const vivo = { id: 1000, workspace_id: "ws1", origine: "manuale", avvio: new Date(Date.now()).toISOString(), esito: "in_corso", messaggio: "", dettagli: { battito: new Date(Date.now()).toISOString() } };
+tabelle.meta_sync.push(vivo);
+r = await chiama({ azione: "continua", sync: 1000 }, { Authorization: "Bearer utente" });
+assert.equal(r.corpo.inCorso, true);
+globalThis.fetch = fetch10; Date.now = dataVera2;
+
 console.log("meta-sync: tutte le prove passate ✔", { chiamateMeta: chiamate.length, oggetti: tabelle.meta_oggetti.length, finestre: tabelle.meta_finestre.length, ultimo: ultimo.messaggio });

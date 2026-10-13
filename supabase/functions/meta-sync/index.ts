@@ -19,7 +19,8 @@
 const VERSIONE = Deno.env.get("META_API_VERSION") || "v24.0";
 const GRAPH = `https://graph.facebook.com/${VERSIONE}`;
 const TEST_1 = 3, TEST_2 = 10, FINESTRA = 7; // come nel CRM
-const TEMPO_MAX = 110_000; // ms di lavoro per invocazione, poi si richiama
+const TEMPO_MAX = 100_000; // ms di lavoro per invocazione, poi si richiama
+const TEMPO_LIMITE = 135_000; // oltre questo un account si ferma a metà: le finestre mancanti arrivano al giro dopo
 const GIORNI_RICALCOLO = 8; // Meta ritocca i giorni recenti: le finestre che li toccano si riscaricano
 const VALUTE_SENZA_CENTESIMI = ["CLP", "COP", "CRC", "HUF", "ISK", "IDR", "JPY", "KRW", "PYG", "TWD", "VND"];
 
@@ -155,7 +156,7 @@ async function aggiornaAccount(ws, token) {
 }
 
 // ---------- un account ----------
-async function sincronizzaAccount(ws, acc, token) {
+async function sincronizzaAccount(ws, acc, token, limiteMs = Infinity) {
   const g = (percorso, parametri) => graph(percorso, parametri, token);
   const id = acc.account_id, act = `act_${id}`, valuta = acc.valuta;
   const ieri = dataNelFuso(acc.fuso, -1);
@@ -214,12 +215,14 @@ async function sincronizzaAccount(ws, acc, token) {
   const soglia = sommaGiorni(ieri, -GIORNI_RICALCOLO);
   let nFinestre = 0;
   for (const c of righe.filter((r) => r.livello === "campaign")) {
+    if (Date.now() > limiteMs) break; // tempo finito: le finestre che mancano non sono salvate, le prende il prossimo giro
     const tutte = finestre(c.inizio, minimo(ieri, c.fine || ieri));
     const valide = new Set(tutte.map((f) => f.inizio));
     const vecchie = salvate.filter((f) => f.campagna_id === c.id && !valide.has(f.inizio)).map((f) => f.inizio);
     if (vecchie.length) await db(`meta_finestre?workspace_id=eq.${ws}&campagna_id=eq.${c.id}&inizio=in.${lista(vecchie)}`, { metodo: "DELETE" });
     const daFare = tutte.filter((f) => giaFatte.get(`${c.id}|${f.inizio}`) !== f.fine || f.fine >= soglia);
     for (const blocco of pezzi(daFare, 25)) {
+      if (Date.now() > limiteMs) break;
       const r = await g(`${c.id}/insights`, { fields: CAMPI_INSIGHTS, limit: "100",
         time_ranges: JSON.stringify(blocco.map((f) => ({ since: f.inizio, until: f.fine }))) });
       const perInizio = new Map(r.map((x) => [x.date_start, x]));
@@ -234,11 +237,16 @@ async function sincronizzaAccount(ws, acc, token) {
 }
 
 // ---------- uno spazio di lavoro, a tempo ----------
+/* La funzione richiama sé stessa per proseguire. Restituisce lo stato HTTP: 401 qui vuol dire
+   quasi sempre che "Verify JWT" è acceso sulla funzione e Supabase blocca la chiamata. */
 async function richiamati(corpo) {
-  const chiave = await db("rpc/meta_cron_chiave", { metodo: "POST", corpo: {} });
-  await fetch(`${ENV().url}/functions/v1/meta-sync`, {
-    method: "POST", headers: { "Content-Type": "application/json", "x-cron-key": chiave }, body: JSON.stringify(corpo),
-  });
+  try {
+    const chiave = await db("rpc/meta_cron_chiave", { metodo: "POST", corpo: {} });
+    const r = await fetch(`${ENV().url}/functions/v1/meta-sync`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-cron-key": chiave }, body: JSON.stringify(corpo),
+    });
+    return r.status;
+  } catch { return 0; }
 }
 
 /* Il token dello spazio di lavoro (collegato con "Collega Facebook"), o quello di riserva */
@@ -264,13 +272,15 @@ async function lavora(ws, syncId, inizioMs) {
     const accounts = coll.length
       ? await db(`meta_account?select=*&workspace_id=eq.${ws}&account_id=in.${lista(coll.map((c) => c.account_id))}`)
       : [];
-    // Da fare in questo giro: i collegati non ancora passati in questo aggiornamento (il registro lo ricorda fra un giro e l'altro)
-    const restanti = accounts.filter((a) => !dettagli.account[a.account_id]);
+    // Da fare in questo giro: i collegati non ancora passati in questo aggiornamento (il registro lo ricorda fra un giro e l'altro),
+    // cominciando da quelli aggiornati da più tempo: se un giro si interrompe, il successivo non riparte dagli stessi
+    const restanti = accounts.filter((a) => !dettagli.account[a.account_id])
+      .sort((x, y) => (x.ultimo_sync || "").localeCompare(y.ultimo_sync || ""));
     let limite = false;
     for (const a of restanti) {
       if (Date.now() - inizioMs > TEMPO_MAX) break;
       try {
-        dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a, token)) };
+        dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a, token, inizioMs + TEMPO_LIMITE)) };
         await db(`meta_account?workspace_id=eq.${ws}&account_id=eq.${a.account_id}`, { metodo: "PATCH", corpo: { ultimo_sync: new Date().toISOString(), ultimo_errore: "" } });
       } catch (e) {
         dettagli.account[a.account_id] = { nome: a.nome, errore: e.message };
@@ -279,12 +289,25 @@ async function lavora(ws, syncId, inizioMs) {
         if (e instanceof ErroreMeta && e.limite) { limite = true; break; }
         if (e instanceof ErroreMeta && e.scaduto) throw new Error("L'accesso a Facebook è scaduto o è stato revocato: ricollegalo dalle Impostazioni del CRM.");
       }
+      // Battito: il CRM capisce che il lavoro procede (e, se si ferma, chiede di continuare)
+      const fattiOra = accounts.filter((x) => dettagli.account[x.account_id]).length;
+      dettagli.battito = new Date().toISOString();
+      await salvaSync({ messaggio: `In corso: ${fattiOra} di ${accounts.length} account` });
     }
     const fatti = accounts.filter((a) => dettagli.account[a.account_id]).length;
     const mancano = accounts.length - fatti;
-    if (mancano > 0 && !limite && dettagli.giri < 30) {
+    if (mancano > 0 && !limite && dettagli.giri < 40) {
+      dettagli.battito = new Date().toISOString();
       await salvaSync({ messaggio: `In corso: ${fatti} di ${accounts.length} account` });
-      await richiamati({ continua: syncId, workspace_id: ws });
+      const stato = await richiamati({ continua: syncId, workspace_id: ws });
+      if (stato >= 200 && stato < 300) return;
+      // Il proseguimento automatico non è partito: lo dico chiaramente invece di restare "in corso" per sempre
+      dettagli.richiamoFallito = stato;
+      await salvaSync({
+        esito: "parziale", fine: new Date().toISOString(),
+        messaggio: `${fatti} di ${accounts.length} account aggiornati. Il proseguimento automatico non è partito (risposta ${stato || "assente"})`
+          + (stato === 401 ? ': in Supabase, nella funzione meta-sync, spegni "Verify JWT".' : ": premi di nuovo Aggiorna ora, riprende dagli account mancanti."),
+      });
       return;
     }
     const errori = Object.values(dettagli.account).filter((x) => x.errore).length;
@@ -362,6 +385,9 @@ async function chiudiLogin(url) {
 async function nuovoSync(ws, origine) {
   // Un aggiornamento alla volta per spazio: se uno è partito da meno di 10 minuti, non ne apro un altro
   const dieciMin = new Date(Date.now() - 10 * 60e3).toISOString();
+  // Un aggiornamento rimasto "in corso" da più di 10 minuti si è interrotto: lo chiudo per non lasciarlo appeso
+  await db(`meta_sync?workspace_id=eq.${ws}&esito=eq.in_corso&avvio=lt.${dieciMin}`, { metodo: "PATCH",
+    corpo: { esito: "errore", fine: new Date().toISOString(), messaggio: "Interrotto prima di finire: riparte dagli account mancanti con il prossimo aggiornamento." } });
   const attivi = await db(`meta_sync?select=id&workspace_id=eq.${ws}&esito=eq.in_corso&avvio=gt.${dieciMin}`);
   if (attivi.length) return { id: attivi[0].id, giaInCorso: true };
   const [s] = await db("meta_sync", { metodo: "POST", corpo: { workspace_id: ws, origine }, prefer: "return=representation" });
@@ -406,6 +432,15 @@ async function gestisci(req) {
   if (corpo.azione === "login") {
     try { return risposta({ ok: true, url: await avviaLogin(ws, corpo.ritorno || "") }); }
     catch (e) { return risposta({ errore: e.message }, 400); }
+  }
+  /* Il CRM chiede di proseguire un aggiornamento fermo (per esempio se il proseguimento automatico non è partito) */
+  if (corpo.azione === "continua" && corpo.sync) {
+    const [s2] = await db(`meta_sync?id=eq.${Number(corpo.sync)}&workspace_id=eq.${ws}&select=esito,dettagli`);
+    if (!s2 || s2.esito !== "in_corso") return risposta({ ok: true, niente: true });
+    const battito = (s2.dettagli && s2.dettagli.battito) || "";
+    if (battito && Date.now() - new Date(battito).getTime() < 60e3) return risposta({ ok: true, inCorso: true });
+    sottofondo(lavora(ws, Number(corpo.sync), inizioMs));
+    return risposta({ ok: true, ripreso: true }, 202);
   }
   if (corpo.azione === "scollega") {
     await db(`meta_token?workspace_id=eq.${ws}`, { metodo: "DELETE" });

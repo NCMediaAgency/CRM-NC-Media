@@ -3854,12 +3854,20 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
         setMetaStato({ attesa: "", errore: "", esito: `Elenco aggiornato: ${(info && info.account.length) || 0} account visibili.` });
         return;
       }
-      /* La funzione lavora in sottofondo: aspetto che il registro dica che ha finito (al massimo 5 minuti) */
-      for (let i = 0; i < 100; i++) {
+      /* La funzione lavora in sottofondo: aspetto che il registro dica che ha finito (al massimo 15 minuti),
+         mostrando l'avanzamento. Se resta ferma più di un minuto (proseguimento automatico non partito),
+         le chiedo io di continuare: funziona finché questa pagina è aperta. */
+      for (let i = 0; i < 300; i++) {
         await new Promise((r) => setTimeout(r, 3000));
         const info = await meta.stato();
         setMetaInfo(info);
-        if (info.ultimaSync && info.ultimaSync.esito !== "in_corso") break;
+        const u = info.ultimaSync;
+        if (!u || u.esito !== "in_corso") break;
+        if (u.messaggio) setMetaStato((x) => ({ ...x, esito: u.messaggio }));
+        const battito = u.dettagli && u.dettagli.battito;
+        if (i % 10 === 9 && battito && Date.now() - new Date(battito).getTime() > 75e3) {
+          try { await meta.sincronizza("continua", { sync: u.id }); } catch { /* riprovo al prossimo controllo */ }
+        }
       }
       const info = await caricaMeta(true);
       const u = info && info.ultimaSync;
