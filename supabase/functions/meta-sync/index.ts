@@ -272,6 +272,14 @@ async function lavora(ws, syncId, inizioMs) {
     const accounts = coll.length
       ? await db(`meta_account?select=*&workspace_id=eq.${ws}&account_id=in.${lista(coll.map((c) => c.account_id))}`)
       : [];
+    // Un account rimasto "in lavorazione" dal giro precedente vuol dire che l'esecuzione è stata interrotta lì
+    // (di solito un account molto pesante): lo segno e vado avanti, così non blocca tutti gli altri
+    for (const [idAcc, v] of Object.entries(dettagli.account)) {
+      if (v && v.inLavorazione) {
+        dettagli.account[idAcc] = { nome: v.nome, errore: "Interrotto durante lo scarico (account molto pesante): riprovo al prossimo aggiornamento." };
+        await db(`meta_account?workspace_id=eq.${ws}&account_id=eq.${idAcc}`, { metodo: "PATCH", corpo: { ultimo_errore: dettagli.account[idAcc].errore } });
+      }
+    }
     // Da fare in questo giro: i collegati non ancora passati in questo aggiornamento (il registro lo ricorda fra un giro e l'altro),
     // cominciando da quelli aggiornati da più tempo: se un giro si interrompe, il successivo non riparte dagli stessi
     const restanti = accounts.filter((a) => !dettagli.account[a.account_id])
@@ -279,6 +287,9 @@ async function lavora(ws, syncId, inizioMs) {
     let limite = false;
     for (const a of restanti) {
       if (Date.now() - inizioMs > TEMPO_MAX) break;
+      dettagli.account[a.account_id] = { nome: a.nome, inLavorazione: true };
+      dettagli.battito = new Date().toISOString();
+      await salvaSync({});
       try {
         dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a, token, inizioMs + TEMPO_LIMITE)) };
         await db(`meta_account?workspace_id=eq.${ws}&account_id=eq.${a.account_id}`, { metodo: "PATCH", corpo: { ultimo_sync: new Date().toISOString(), ultimo_errore: "" } });

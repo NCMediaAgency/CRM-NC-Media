@@ -279,6 +279,16 @@ tabelle.meta_sync.push(fermo);
 r = await chiama({ azione: "continua", sync: 999 }, { Authorization: "Bearer utente" });
 assert.equal(r.stato, 202, JSON.stringify(r.corpo)); await finisci();
 assert.equal(fermo.esito, "ok", fermo.messaggio);
+// un account rimasto "in lavorazione" (esecuzione interrotta lì) viene saltato con un errore, gli altri proseguono
+const interrotto = { id: 998, workspace_id: "ws1", origine: "manuale", avvio: new Date(Date.now()).toISOString(), esito: "in_corso", messaggio: "",
+  dettagli: { giri: 1, battito: new Date(Date.now() - 120e3).toISOString(), account: { "601": { nome: "Acc 601", inLavorazione: true } } } };
+tabelle.meta_sync.push(interrotto);
+const prima601 = giri10["601"] || 0;
+r = await chiama({ azione: "continua", sync: 998 }, { Authorization: "Bearer utente" }); await finisci();
+assert.equal(giri10["601"] || 0, prima601, "l'account interrotto non si riprova nello stesso aggiornamento");
+assert.match(interrotto.dettagli.account["601"].errore, /pesante/);
+assert.equal(interrotto.esito, "parziale", interrotto.messaggio);
+assert.ok(["602", "603", "604", "605"].every((k) => interrotto.dettagli.account[k] && !interrotto.dettagli.account[k].inLavorazione), "gli altri completati");
 // con battito recente non riparte (il lavoro sta già andando)
 const vivo = { id: 1000, workspace_id: "ws1", origine: "manuale", avvio: new Date(Date.now()).toISOString(), esito: "in_corso", messaggio: "", dettagli: { battito: new Date(Date.now()).toISOString() } };
 tabelle.meta_sync.push(vivo);
