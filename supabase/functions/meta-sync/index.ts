@@ -31,10 +31,15 @@ const CORS = {
 const risposta = (corpo, stato = 200) =>
   new Response(JSON.stringify(corpo), { status: stato, headers: { ...CORS, "Content-Type": "application/json" } });
 
+/* Chiavi di Supabase: le nuove (SUPABASE_SECRET_KEYS / SUPABASE_PUBLISHABLE_KEYS, dizionari JSON)
+   o, se presenti, quelle vecchie ormai deprecate */
+const primaChiave = (nome) => {
+  try { const d = JSON.parse(Deno.env.get(nome) || "{}"); return d.default || Object.values(d)[0] || ""; } catch { return ""; }
+};
 const ENV = () => ({
   url: Deno.env.get("SUPABASE_URL") || "",
-  servizio: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
-  anon: Deno.env.get("SUPABASE_ANON_KEY") || "",
+  servizio: primaChiave("SUPABASE_SECRET_KEYS") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+  anon: primaChiave("SUPABASE_PUBLISHABLE_KEYS") || Deno.env.get("SUPABASE_ANON_KEY") || "",
   token: Deno.env.get("META_TOKEN") || "",
   appId: Deno.env.get("META_APP_ID") || "",
   appSecret: Deno.env.get("META_APP_SECRET") || "",

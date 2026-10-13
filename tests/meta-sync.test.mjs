@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
 // ---------- carico la funzione come modulo, con Deno ed EdgeRuntime finti ----------
-const ENVV = { SUPABASE_URL: "https://db.test", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_x", SUPABASE_ANON_KEY: "anon", META_TOKEN: "tok", META_APP_ID: "app1", META_APP_SECRET: "segreto" };
+// Chiavi nuove di Supabase (dizionari JSON); quelle vecchie restano vuote
+const ENVV = { SUPABASE_URL: "https://db.test", SUPABASE_SECRET_KEYS: '{"default":"sb_secret_x"}', SUPABASE_PUBLISHABLE_KEYS: '{"default":"sb_publishable_y"}', META_TOKEN: "tok", META_APP_ID: "app1", META_APP_SECRET: "segreto" };
 let gestore = null;
 const inSottofondo = [];
 globalThis.Deno = { env: { get: (k) => ENVV[k] }, serve: (f) => { gestore = f; } };
@@ -91,7 +92,8 @@ globalThis.fetch = async (url, init = {}) => {
   const json = (corpo, stato = 200) => ({ ok: stato < 400, status: stato, json: async () => corpo, text: async () => (corpo === null ? "" : JSON.stringify(corpo)) });
   if (s.startsWith("https://graph.facebook.com/")) return json(metaFinto(s));
   if (s.startsWith("https://db.test/rest/v1/")) return json(dbFinto(s, init));
-  if (s === "https://db.test/auth/v1/user") return json({ id: "u1" }, init.headers.Authorization === "Bearer utente" ? 200 : 401);
+  if (s.startsWith("https://db.test/rest/v1/")) assert.equal(init.headers.apikey, init.headers.Authorization ? "sb_publishable_y" : "sb_secret_x");
+  if (s === "https://db.test/auth/v1/user") { assert.equal(init.headers.apikey, "sb_publishable_y"); return json({ id: "u1" }, init.headers.Authorization === "Bearer utente" ? 200 : 401); }
   if (s === "https://db.test/functions/v1/meta-sync") { // la funzione che si richiama
     const r = await gestore(new Request(s, { method: "POST", headers: init.headers, body: init.body }));
     return json(await r.json(), r.status);
