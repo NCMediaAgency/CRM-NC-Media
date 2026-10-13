@@ -35,8 +35,13 @@ export function apiMetaFinta() {
   return {
     async stato() {
       const s = leggi();
-      return { account: s.account || [], collegamenti: s.collegamenti || [], ultimaSync: s.ultimaSync || null };
+      return { account: s.account || [], collegamenti: s.collegamenti || [], ultimaSync: s.ultimaSync || null, facebook: s.facebook || null };
     },
+    async collegaFacebook() {
+      const s = leggi(); s.facebook = { collegato: true, utente_meta: "Profilo di prova", scadenza: new Date(Date.now() + 60 * 864e5).toISOString() }; scrivi(s);
+      window.location.href = window.location.pathname + "?meta=collegato";
+    },
+    async scollegaFacebook() { const s = leggi(); delete s.facebook; scrivi(s); },
     async dati() { const s = leggi(); return { oggetti: s.oggetti || [], finestre: s.finestre || [] }; },
     async collega(accountId, clienteId) {
       const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId).concat({ account_id: accountId, cliente_id: clienteId }); scrivi(s);
@@ -44,6 +49,7 @@ export function apiMetaFinta() {
     async scollega(accountId) { const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId); scrivi(s); },
     async sincronizza(azione) {
       const s = leggi();
+      if (!s.facebook) throw new Error("Facebook non è collegato: premi \"Collega Facebook\".");
       s.account = ACCOUNT.map((a) => ({ ...a, ultimo_sync: azione ? null : new Date().toISOString(), ultimo_errore: a.stato === 3 && !azione ? "Pagamento in sospeso sull'account" : "" }));
       if (!azione) {
         Object.assign(s, generaDati(s.collegamenti || []));

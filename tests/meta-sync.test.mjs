@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
 // ---------- carico la funzione come modulo, con Deno ed EdgeRuntime finti ----------
-const ENVV = { SUPABASE_URL: "https://db.test", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_x", SUPABASE_ANON_KEY: "anon", META_TOKEN: "tok" };
+const ENVV = { SUPABASE_URL: "https://db.test", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_x", SUPABASE_ANON_KEY: "anon", META_TOKEN: "tok", META_APP_ID: "app1", META_APP_SECRET: "segreto" };
 let gestore = null;
 const inSottofondo = [];
 globalThis.Deno = { env: { get: (k) => ENVV[k] }, serve: (f) => { gestore = f; } };
@@ -14,13 +14,14 @@ await import("data:text/javascript;base64," + Buffer.from(sorgente).toString("ba
 assert.ok(gestore, "la funzione registra il gestore");
 
 // ---------- database finto (solo ciò che usa la funzione) ----------
-const tabelle = { meta_account: [], meta_collegamenti: [], meta_oggetti: [], meta_finestre: [], meta_sync: [] };
-const CHIAVI = { meta_account: ["workspace_id", "account_id"], meta_oggetti: ["workspace_id", "livello", "id"], meta_finestre: ["workspace_id", "campagna_id", "inizio"] };
+const tabelle = { meta_account: [], meta_collegamenti: [], meta_oggetti: [], meta_finestre: [], meta_sync: [], meta_token: [], meta_login: [] };
+const CHIAVI = { meta_account: ["workspace_id", "account_id"], meta_oggetti: ["workspace_id", "livello", "id"], meta_finestre: ["workspace_id", "campagna_id", "inizio"], meta_token: ["workspace_id"], meta_login: ["stato"] };
 let prossimoId = 1;
 const filtri = (q) => [...q.entries()].filter(([k]) => !["select", "on_conflict"].includes(k)).map(([k, v]) => {
   const [op, ...resto] = v.split("."); const val = resto.join(".");
   if (op === "eq") return (r) => String(r[k]) === val;
   if (op === "gt") return (r) => String(r[k]) > val;
+  if (op === "lt") return (r) => String(r[k]) < val;
   if (op === "in") { const l = val.slice(1, -1).split(",").map((x) => x.replace(/"/g, "")); return (r) => l.includes(String(r[k])); }
   throw new Error("filtro " + v);
 });
@@ -41,7 +42,7 @@ function dbFinto(url, init) {
       const ch = CHIAVI[percorso];
       const esist = ch && t.find((x) => ch.every((k) => String(x[k]) === String(r[k])));
       if (esist) Object.assign(esist, r);
-      else { const n = percorso === "meta_sync" ? { id: prossimoId++, avvio: new Date().toISOString(), esito: "in_corso", dettagli: {}, messaggio: "", ...r } : { ...r }; t.push(n); out.push(n); }
+      else { const n = percorso === "meta_sync" ? { id: prossimoId++, avvio: new Date().toISOString(), esito: "in_corso", dettagli: {}, messaggio: "", ...r } : percorso === "meta_login" ? { creato: new Date().toISOString(), ...r } : { ...r }; t.push(n); out.push(n); }
     }
     return out;
   }
@@ -53,10 +54,17 @@ const giorni = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10
 const azioni = (lead, acquisti) => [{ action_type: "lead", value: String(lead) }, { action_type: "omni_purchase", value: String(acquisti) }, { action_type: "link_click", value: "999" }];
 const ins = (spend, lead = 0, acq = 0, valore = 0) => ({ spend: String(spend), impressions: "1000", clicks: "50", inline_link_clicks: "30", reach: "800", frequency: "1.25", actions: azioni(lead, acq), action_values: [{ action_type: "omni_purchase", value: String(valore) }] });
 const chiamate = [];
+let tokenAtteso = "tok";
 function metaFinto(url) {
   const u = new URL(url); const p = u.pathname.replace(/^\/v[\d.]+\//, ""); const q = Object.fromEntries(u.searchParams);
   chiamate.push(p + (q.level ? `?level=${q.level}` : "") + (q.date_preset ? `&${q.date_preset}` : ""));
-  assert.equal(q.access_token, "tok");
+  if (p === "oauth/access_token") {
+    assert.equal(q.client_secret, "segreto"); assert.ok(!q.access_token, "niente token vuoto");
+    if (q.code) { assert.equal(q.code, "codice-fb"); assert.equal(q.redirect_uri, "https://db.test/functions/v1/meta-sync"); return { access_token: "breve" }; }
+    assert.equal(q.fb_exchange_token, "breve"); return { access_token: "tok-lungo", expires_in: 5184000 };
+  }
+  if (p === "me") { assert.equal(q.access_token, "tok-lungo"); return { id: "9", name: "Nicola Ciappa" }; }
+  assert.equal(q.access_token, tokenAtteso);
   if (p === "me/adaccounts") return { data: [{ account_id: "555", name: "BDF 1", currency: "USD", account_status: 1, timezone_name: "America/New_York", business: { name: "Boutique Del Fitness" } }, { account_id: "777", name: "Altro", currency: "EUR", account_status: 101, timezone_name: "Europe/Rome" }] };
   if (p === "act_555/campaigns") return { data: [
     { id: "c1", name: "Lead fitness", effective_status: "ACTIVE", objective: "OUTCOME_LEADS", daily_budget: "5000", start_time: giorni(20) + "T10:00:00-0400" },
@@ -183,5 +191,51 @@ assert.ok(s8.dettagli.giri >= 2, `si è richiamata (${s8.dettagli.giri} giri)`);
 assert.deepEqual(Object.keys(perAccount).sort(), ["556", "557", "558", "559"], "tutti gli account passati");
 assert.ok(Object.values(perAccount).every((n) => n === 1), "nessun account ripetuto");
 globalThis.fetch = fetchPrima; Date.now = dataVera;
+
+// ---------- 9. Collega Facebook: finestra, ritorno, token lungo salvato e usato ----------
+r = await chiama({ azione: "login", ritorno: "https://evil.example.com/" }, { Authorization: "Bearer utente" });
+assert.equal(r.stato, 400, "ritorno verso un altro sito: rifiutato");
+r = await chiama({ azione: "login", ritorno: "https://crm-nc-media.attaccante.workers.dev/" }, { Authorization: "Bearer utente" });
+assert.equal(r.stato, 400, "stesso nome su un altro account Cloudflare: rifiutato");
+r = await chiama({ azione: "login", ritorno: "https://claude-x-crm-nc-media.nciappa9.workers.dev/" }, { Authorization: "Bearer utente" });
+assert.equal(r.stato, 200, JSON.stringify(r.corpo));
+const dialog = new URL(r.corpo.url);
+assert.equal(dialog.hostname, "www.facebook.com"); assert.equal(dialog.searchParams.get("client_id"), "app1");
+assert.equal(dialog.searchParams.get("scope"), "ads_read,business_management");
+const stato = dialog.searchParams.get("state");
+assert.ok(stato.length >= 32 && tabelle.meta_login.some((x) => x.stato === stato && x.workspace_id === "ws1"));
+// state inventato: rifiutato
+let cb = await gestore(new Request("https://db.test/functions/v1/meta-sync?code=x&state=falso"));
+assert.equal(cb.status, 400);
+// annullato dall'utente
+r = await chiama({ azione: "login", ritorno: "http://localhost:5173/" }, { Authorization: "Bearer utente" });
+const stato2 = new URL(r.corpo.url).searchParams.get("state");
+cb = await gestore(new Request(`https://db.test/functions/v1/meta-sync?error=access_denied&error_description=Annullato&state=${stato2}`));
+assert.equal(cb.status, 302); assert.match(cb.headers.get("Location"), /meta=errore/);
+// ritorno buono
+tokenAtteso = "tok-lungo";
+cb = await gestore(new Request(`https://db.test/functions/v1/meta-sync?code=codice-fb&state=${stato}`));
+assert.equal(cb.status, 302, await cb.clone().text());
+assert.equal(cb.headers.get("Location"), "https://claude-x-crm-nc-media.nciappa9.workers.dev/?meta=collegato");
+const tk = tabelle.meta_token.find((x) => x.workspace_id === "ws1");
+assert.equal(tk.token, "tok-lungo"); assert.equal(tk.utente_meta, "Nicola Ciappa");
+assert.ok(new Date(tk.scadenza) - Date.now() > 59 * 864e5, "scade fra 60 giorni");
+assert.ok(!tabelle.meta_login.some((x) => x.stato === stato), "lo state si usa una volta sola");
+cb = await gestore(new Request(`https://db.test/functions/v1/meta-sync?code=codice-fb&state=${stato}`));
+assert.equal(cb.status, 400, "riusare lo stesso ritorno non funziona");
+// l'aggiornamento ora usa il token dello spazio di lavoro (metaFinto controlla access_token)
+tabelle.meta_collegamenti = [{ workspace_id: "ws1", account_id: "555", cliente_id: "z1" }];
+r = await chiama({}, { Authorization: "Bearer utente" }); await finisci();
+assert.equal(tabelle.meta_sync.at(-1).esito, "ok", tabelle.meta_sync.at(-1).messaggio);
+// token scaduto: messaggio chiaro
+const fetchOk = globalThis.fetch;
+globalThis.fetch = async (url, init) => (String(url).includes("graph.facebook.com") && !String(url).includes("oauth")
+  ? { ok: false, status: 400, json: async () => ({ error: { message: "Error validating access token", code: 190 } }) } : fetchOk(url, init));
+r = await chiama({}, { Authorization: "Bearer utente" }); await finisci();
+assert.equal(tabelle.meta_sync.at(-1).esito, "errore"); assert.match(tabelle.meta_sync.at(-1).messaggio, /scaduto/);
+globalThis.fetch = fetchOk;
+// scollega
+r = await chiama({ azione: "scollega" }, { Authorization: "Bearer utente" });
+assert.ok(!tabelle.meta_token.length);
 
 console.log("meta-sync: tutte le prove passate ✔", { chiamateMeta: chiamate.length, oggetti: tabelle.meta_oggetti.length, finestre: tabelle.meta_finestre.length, ultimo: ultimo.messaggio });

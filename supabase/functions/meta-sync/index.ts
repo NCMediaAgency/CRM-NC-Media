@@ -1,14 +1,18 @@
 // meta-sync — scarica da Meta Ads i dati degli account collegati ai clienti del CRM.
 //
-// Due modi di avvio:
+// Tre modi di avvio:
 //  · dal cron delle 9 (intestazione x-cron-key, vedi migrazione 0002): tutti gli spazi di lavoro;
-//  · dal CRM (utente collegato): "Aggiorna ora" o "Aggiorna l'elenco degli account".
+//  · dal CRM (utente collegato): "Collega Facebook", "Aggiorna ora", "Aggiorna l'elenco degli account";
+//  · da Facebook (GET con code e state): il ritorno dalla finestra di accesso.
 // Risponde subito e lavora in sottofondo. Se gli account sono tanti, a fine tempo si
 // richiama da sola e prosegue da dove era arrivata.
 //
 // Scrive in meta_account, meta_oggetti (totali di campagne, ad set, annunci),
 // meta_finestre (Test 3 giorni, Matura 7, poi settimane) e meta_sync (registro).
-// Il token di Meta sta nel segreto META_TOKEN delle Edge Functions: mai nel codice.
+// Accesso a Meta: il token del profilo Facebook di chi preme "Collega Facebook" (tabella meta_token,
+// migrazione 0003), rinnovato ogni volta che si ricollega. Segreti delle Edge Functions:
+// META_APP_ID, META_APP_SECRET e, se l'app usa Facebook Login for Business, META_CONFIG_ID.
+// META_TOKEN resta come riserva (per esempio un token di utente di sistema).
 //
 // Il file è un unico modulo senza dipendenze, così si può incollare nell'editor di Supabase.
 
@@ -32,6 +36,10 @@ const ENV = () => ({
   servizio: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
   anon: Deno.env.get("SUPABASE_ANON_KEY") || "",
   token: Deno.env.get("META_TOKEN") || "",
+  appId: Deno.env.get("META_APP_ID") || "",
+  appSecret: Deno.env.get("META_APP_SECRET") || "",
+  configId: Deno.env.get("META_CONFIG_ID") || "",
+  origini: (Deno.env.get("CRM_ORIGINI") || "").split(",").map((x) => x.trim()).filter(Boolean),
 });
 
 // ---------- database (PostgREST con la chiave di servizio) ----------
@@ -60,10 +68,12 @@ class ErroreMeta extends Error {
   codice;
   constructor(messaggio, codice) { super(messaggio); this.codice = codice; }
   get limite() { return [4, 17, 32, 613].includes(this.codice) || (this.codice >= 80000 && this.codice <= 80014); }
+  get scaduto() { return this.codice === 190 || this.codice === 102; }
 }
-async function graph(percorso, parametri = {}) {
+async function graph(percorso, parametri = {}, token) {
   const tutti = [];
-  const q = new URLSearchParams({ ...parametri, access_token: ENV().token });
+  const q = new URLSearchParams(parametri);
+  if (token) q.set("access_token", token);
   let url = `${GRAPH}/${percorso}?${q}`;
   for (let pagine = 0; url && pagine < 200; pagine++) {
     const r = await fetch(url);
@@ -129,8 +139,8 @@ const pezzi = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.
 const filtroCampagne = (ids) => JSON.stringify([{ field: "campaign.id", operator: "IN", value: ids }]);
 
 // ---------- elenco account ----------
-async function aggiornaAccount(ws) {
-  const acc = await graph("me/adaccounts", { fields: "account_id,name,currency,account_status,timezone_name,business{name}", limit: "200" });
+async function aggiornaAccount(ws, token) {
+  const acc = await graph("me/adaccounts", { fields: "account_id,name,currency,account_status,timezone_name,business{name}", limit: "200" }, token);
   await upsert("meta_account", "workspace_id,account_id", acc.map((a) => ({
     workspace_id: ws, account_id: String(a.account_id), nome: a.name || "", valuta: a.currency || "",
     stato: a.account_status ?? null, fuso: a.timezone_name || "", business: (a.business && a.business.name) || "",
@@ -140,14 +150,15 @@ async function aggiornaAccount(ws) {
 }
 
 // ---------- un account ----------
-async function sincronizzaAccount(ws, acc) {
+async function sincronizzaAccount(ws, acc, token) {
+  const g = (percorso, parametri) => graph(percorso, parametri, token);
   const id = acc.account_id, act = `act_${id}`, valuta = acc.valuta;
   const ieri = dataNelFuso(acc.fuso, -1);
   const ora = new Date().toISOString();
 
   // Campagne da seguire: attive, o con spesa negli ultimi 90 giorni. Le vecchie restano fuori.
-  const campagne = await graph(`${act}/campaigns`, { fields: "id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time", limit: "500" });
-  const recenti = await graph(`${act}/insights`, { level: "campaign", date_preset: "last_90d", fields: "campaign_id,campaign_name,spend", limit: "500" });
+  const campagne = await g(`${act}/campaigns`, { fields: "id,name,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time", limit: "500" });
+  const recenti = await g(`${act}/insights`, { level: "campaign", date_preset: "last_90d", fields: "campaign_id,campaign_name,spend", limit: "500" });
   const conSpesa = new Map(recenti.filter((r) => num(r.spend) > 0).map((r) => [r.campaign_id, r.campaign_name]));
   const seguite = campagne.filter((c) => c.effective_status === "ACTIVE" || conSpesa.has(c.id));
   // Archiviate con spesa recente: non escono dall'elenco delle campagne, le ricostruisco dagli insights
@@ -161,12 +172,12 @@ async function sincronizzaAccount(ws, acc) {
   for (const blocco of pezzi(ids, 50)) {
     const filtro = filtroCampagne(blocco);
     for (const [livello, chiave] of [["campaign", "campaign_id"], ["adset", "adset_id"], ["ad", "ad_id"]]) {
-      const righe = await graph(`${act}/insights`, { level: livello, date_preset: "maximum", filtering: filtro, limit: "500",
+      const righe = await g(`${act}/insights`, { level: livello, date_preset: "maximum", filtering: filtro, limit: "500",
         fields: `campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,${CAMPI_INSIGHTS}` });
       righe.forEach((r) => totali[livello].set(r[chiave], r));
     }
-    adsets.push(...await graph(`${act}/adsets`, { fields: "id,name,campaign_id,effective_status,daily_budget,lifetime_budget,start_time,end_time", filtering: filtro, limit: "500" }));
-    ads.push(...await graph(`${act}/ads`, { fields: "id,name,campaign_id,adset_id,effective_status", filtering: filtro, limit: "500" }));
+    adsets.push(...await g(`${act}/adsets`, { fields: "id,name,campaign_id,effective_status,daily_budget,lifetime_budget,start_time,end_time", filtering: filtro, limit: "500" }));
+    ads.push(...await g(`${act}/ads`, { fields: "id,name,campaign_id,adset_id,effective_status", filtering: filtro, limit: "500" }));
   }
 
   const vuote = { spesa: 0, impression: 0, click: 0, click_link: 0, reach: 0, frequenza: 0, lead: 0, conversioni: 0, ricavi: 0 };
@@ -204,7 +215,7 @@ async function sincronizzaAccount(ws, acc) {
     if (vecchie.length) await db(`meta_finestre?workspace_id=eq.${ws}&campagna_id=eq.${c.id}&inizio=in.${lista(vecchie)}`, { metodo: "DELETE" });
     const daFare = tutte.filter((f) => giaFatte.get(`${c.id}|${f.inizio}`) !== f.fine || f.fine >= soglia);
     for (const blocco of pezzi(daFare, 25)) {
-      const r = await graph(`${c.id}/insights`, { fields: CAMPI_INSIGHTS, limit: "100",
+      const r = await g(`${c.id}/insights`, { fields: CAMPI_INSIGHTS, limit: "100",
         time_ranges: JSON.stringify(blocco.map((f) => ({ since: f.inizio, until: f.fine }))) });
       const perInizio = new Map(r.map((x) => [x.date_start, x]));
       await upsert("meta_finestre", "workspace_id,campagna_id,inizio", blocco.map((f) => ({
@@ -225,6 +236,12 @@ async function richiamati(corpo) {
   });
 }
 
+/* Il token dello spazio di lavoro (collegato con "Collega Facebook"), o quello di riserva */
+async function tokenDi(ws) {
+  const r = await db(`meta_token?select=token,scadenza&workspace_id=eq.${ws}`);
+  return (r[0] && r[0].token) || ENV().token;
+}
+
 async function lavora(ws, syncId, inizioMs) {
   const [sync] = await db(`meta_sync?id=eq.${syncId}&select=dettagli`);
   const dettagli = sync.dettagli || {};
@@ -232,7 +249,12 @@ async function lavora(ws, syncId, inizioMs) {
   dettagli.giri = (dettagli.giri || 0) + 1;
   const salvaSync = (campi) => db(`meta_sync?id=eq.${syncId}`, { metodo: "PATCH", corpo: { dettagli, ...campi } });
   try {
-    if (dettagli.giri === 1) dettagli.accountVisti = await aggiornaAccount(ws);
+    const token = await tokenDi(ws);
+    if (!token) {
+      await salvaSync({ esito: "errore", messaggio: "Facebook non è collegato: premi \"Collega Facebook\" nelle Impostazioni del CRM.", fine: new Date().toISOString() });
+      return;
+    }
+    if (dettagli.giri === 1) dettagli.accountVisti = await aggiornaAccount(ws, token);
     const coll = await db(`meta_collegamenti?select=account_id&workspace_id=eq.${ws}`);
     const accounts = coll.length
       ? await db(`meta_account?select=*&workspace_id=eq.${ws}&account_id=in.${lista(coll.map((c) => c.account_id))}`)
@@ -243,13 +265,14 @@ async function lavora(ws, syncId, inizioMs) {
     for (const a of restanti) {
       if (Date.now() - inizioMs > TEMPO_MAX) break;
       try {
-        dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a)) };
+        dettagli.account[a.account_id] = { nome: a.nome, ...(await sincronizzaAccount(ws, a, token)) };
         await db(`meta_account?workspace_id=eq.${ws}&account_id=eq.${a.account_id}`, { metodo: "PATCH", corpo: { ultimo_sync: new Date().toISOString(), ultimo_errore: "" } });
       } catch (e) {
         dettagli.account[a.account_id] = { nome: a.nome, errore: e.message };
         // Segno il passaggio anche se è andato male: l'errore resta visibile, il giro non si blocca
         await db(`meta_account?workspace_id=eq.${ws}&account_id=eq.${a.account_id}`, { metodo: "PATCH", corpo: { ultimo_sync: new Date().toISOString(), ultimo_errore: e.message.slice(0, 500) } });
         if (e instanceof ErroreMeta && e.limite) { limite = true; break; }
+        if (e instanceof ErroreMeta && e.scaduto) throw new Error("L'accesso a Facebook è scaduto o è stato revocato: ricollegalo dalle Impostazioni del CRM.");
       }
     }
     const fatti = accounts.filter((a) => dettagli.account[a.account_id]).length;
@@ -266,7 +289,68 @@ async function lavora(ws, syncId, inizioMs) {
       : `${fatti - errori} account aggiornati${errori ? `, ${errori} con errori` : ""}${limite ? ". Meta ha limitato le richieste: riprovo al prossimo aggiornamento" : ""}${mancano && !limite ? `, ${mancano} non raggiunti` : ""}.`;
     await salvaSync({ esito, messaggio, fine: new Date().toISOString() });
   } catch (e) {
-    await salvaSync({ esito: "errore", messaggio: e.message.slice(0, 500), fine: new Date().toISOString() });
+    const msg = e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto o è stato revocato: ricollegalo dalle Impostazioni del CRM." : e.message;
+    await salvaSync({ esito: "errore", messaggio: msg.slice(0, 500), fine: new Date().toISOString() });
+  }
+}
+
+// ---------- accesso con Facebook ----------
+const ritornoValido = (u) => {
+  try {
+    const x = new URL(u);
+    if (ENV().origini.length) return ENV().origini.includes(x.origin);
+    // Solo il CRM pubblicato su questo account Cloudflare (versione definitiva e anteprime) o la prova locale;
+    // per un dominio proprio si elenca l'origine nel segreto CRM_ORIGINI
+    return (x.protocol === "https:" && /^([a-z0-9-]+-)?crm-nc-media\.nciappa9\.workers\.dev$/.test(x.hostname)) || ["localhost", "127.0.0.1"].includes(x.hostname);
+  } catch { return false; }
+};
+const indirizzoRitorno = () => `${ENV().url}/functions/v1/meta-sync`;
+
+/* Prepara la finestra di Facebook: lo state lega il ritorno a questo spazio di lavoro */
+async function avviaLogin(ws, ritorno) {
+  if (!ENV().appId || !ENV().appSecret) throw new Error("Mancano i segreti META_APP_ID e META_APP_SECRET nelle impostazioni delle Edge Functions.");
+  if (!ritornoValido(ritorno)) throw new Error("Indirizzo di ritorno non consentito.");
+  const stato = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  await db(`meta_login?creato=lt.${new Date(Date.now() - 3600e3).toISOString()}`, { metodo: "DELETE" });
+  await db("meta_login", { metodo: "POST", corpo: { stato, workspace_id: ws, ritorno } });
+  const q = new URLSearchParams({ client_id: ENV().appId, redirect_uri: indirizzoRitorno(), state: stato, response_type: "code" });
+  if (ENV().configId) q.set("config_id", ENV().configId);
+  else q.set("scope", "ads_read,business_management");
+  return `https://www.facebook.com/${VERSIONE}/dialog/oauth?${q}`;
+}
+
+/* Ritorno da Facebook: codice → token breve → token lungo (60 giorni), salvato per lo spazio di lavoro */
+async function chiudiLogin(url) {
+  const stato = url.searchParams.get("state") || "";
+  const righe = stato ? await db(`meta_login?stato=eq.${encodeURIComponent(stato)}&select=*`) : [];
+  const voce = righe[0];
+  if (!voce) return new Response("Richiesta di accesso scaduta o non valida: riprova dal CRM.", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  await db(`meta_login?stato=eq.${encodeURIComponent(stato)}`, { metodo: "DELETE" });
+  const torna = (esito, motivo = "") => {
+    const r = new URL(voce.ritorno);
+    r.searchParams.set("meta", esito);
+    if (motivo) r.searchParams.set("motivo", motivo.slice(0, 200));
+    return new Response(null, { status: 302, headers: { Location: r.toString() } });
+  };
+  if (Date.now() - new Date(voce.creato).getTime() > 15 * 60e3) return torna("errore", "Richiesta scaduta: riprova.");
+  const code = url.searchParams.get("code");
+  if (!code) return torna("errore", url.searchParams.get("error_description") || "Accesso annullato.");
+  try {
+    const { appId, appSecret } = ENV();
+    const breve = await graph("oauth/access_token", { client_id: appId, client_secret: appSecret, redirect_uri: indirizzoRitorno(), code }, "");
+    const lungo = await graph("oauth/access_token", { grant_type: "fb_exchange_token", client_id: appId, client_secret: appSecret, fb_exchange_token: breve.access_token }, "");
+    const token = lungo.access_token || breve.access_token;
+    const io = await graph("me", { fields: "id,name" }, token);
+    const durata = Number(lungo.expires_in || breve.expires_in || 0);
+    await upsert("meta_token", "workspace_id", [{
+      workspace_id: voce.workspace_id, token, utente_meta: io.name || "",
+      scadenza: durata ? new Date(Date.now() + durata * 1000).toISOString() : null, aggiornato: new Date().toISOString(),
+    }]);
+    // Subito l'elenco degli account, così il CRM può proporre i collegamenti
+    try { await aggiornaAccount(voce.workspace_id, token); } catch { /* lo si rifà dal CRM */ }
+    return torna("collegato");
+  } catch (e) {
+    return torna("errore", e.message);
   }
 }
 
@@ -290,7 +374,8 @@ const sottofondo = (p) => {
 async function gestisci(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const inizioMs = Date.now();
-  if (!ENV().token) return risposta({ errore: "Manca il segreto META_TOKEN nelle impostazioni delle Edge Functions." }, 500);
+  const url = new URL(req.url);
+  if (req.method === "GET" && url.searchParams.has("state")) return chiudiLogin(url);
   const corpo = await req.json().catch(() => ({}));
   const chiaveCron = req.headers.get("x-cron-key");
 
@@ -313,9 +398,19 @@ async function gestisci(req) {
   const utente = await fetch(`${ENV().url}/auth/v1/user`, { headers: { apikey: ENV().anon, Authorization: auth } });
   if (!auth || !utente.ok) return risposta({ errore: "accesso richiesto" }, 401);
   const ws = await db("rpc/my_workspace", { metodo: "POST", corpo: {}, auth: { apikey: ENV().anon, Authorization: auth } });
+  if (corpo.azione === "login") {
+    try { return risposta({ ok: true, url: await avviaLogin(ws, corpo.ritorno || "") }); }
+    catch (e) { return risposta({ errore: e.message }, 400); }
+  }
+  if (corpo.azione === "scollega") {
+    await db(`meta_token?workspace_id=eq.${ws}`, { metodo: "DELETE" });
+    return risposta({ ok: true });
+  }
   if (corpo.azione === "account") {
-    try { return risposta({ ok: true, account: await aggiornaAccount(ws) }); }
-    catch (e) { return risposta({ errore: e.message }, 502); }
+    const token = await tokenDi(ws);
+    if (!token) return risposta({ errore: "Facebook non è collegato: premi \"Collega Facebook\"." }, 400);
+    try { return risposta({ ok: true, account: await aggiornaAccount(ws, token) }); }
+    catch (e) { return risposta({ errore: e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto: ricollegalo." : e.message }, 502); }
   }
   const s = await nuovoSync(ws, "manuale");
   if (!s.giaInCorso) sottofondo(lavora(ws, s.id, inizioMs));

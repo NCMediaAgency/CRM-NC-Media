@@ -17,13 +17,16 @@ async function tutte(tabella, ws, colonne = "*") {
 export function apiMetaCloud(ws) {
   return {
     async stato() {
-      const [account, collegamenti, sync] = await Promise.all([
+      const [account, collegamenti, sync, conn] = await Promise.all([
         tutte("meta_account", ws),
         tutte("meta_collegamenti", ws),
         supabase.from("meta_sync").select("*").eq("workspace_id", ws).order("avvio", { ascending: false }).limit(1),
+        supabase.rpc("meta_connessione"),
       ]);
       if (sync.error) throw sync.error;
-      return { account, collegamenti, ultimaSync: (sync.data || [])[0] || null };
+      /* Prima della migrazione 0003 la funzione non esiste: il collegamento risulta semplicemente assente */
+      const facebook = (!conn.error && (conn.data || [])[0]) || null;
+      return { account, collegamenti, ultimaSync: (sync.data || [])[0] || null, facebook };
     },
     async dati() {
       const [oggetti, finestre] = await Promise.all([tutte("meta_oggetti", ws), tutte("meta_finestre", ws)]);
@@ -38,9 +41,16 @@ export function apiMetaCloud(ws) {
       const { error } = await supabase.from("meta_collegamenti").delete().eq("workspace_id", ws).eq("account_id", String(accountId));
       if (error) throw error;
     },
-    /* azione "account": solo l'elenco degli account; altrimenti l'aggiornamento completo */
-    async sincronizza(azione) {
-      const { data, error } = await supabase.functions.invoke("meta-sync", { body: azione ? { azione } : {} });
+    /* Apre la finestra di Facebook; al ritorno il CRM riceve ?meta=collegato (o ?meta=errore&motivo=…) */
+    async collegaFacebook() {
+      const ritorno = window.location.origin + window.location.pathname;
+      const r = await this.sincronizza("login", { ritorno });
+      window.location.href = r.url;
+    },
+    async scollegaFacebook() { await this.sincronizza("scollega"); },
+    /* azione "account": solo l'elenco degli account; senza azione l'aggiornamento completo */
+    async sincronizza(azione, extra = {}) {
+      const { data, error } = await supabase.functions.invoke("meta-sync", { body: azione ? { azione, ...extra } : {} });
       if (error) {
         let dettaglio = "";
         try { dettaglio = (await error.context.json()).errore || ""; } catch { /* risposta senza corpo */ }
