@@ -7000,7 +7000,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
       setKpiImport({ ...k, fatto: `Caricati ${mesi.length} mesi nel Ciclo di vendita di ${(cliente(k.cliente) || {}).nome || "—"}${gia ? ` (${gia} già presenti, aggiornati)` : ""}.` });
     };
     return conValuta(valutaCliente(data, (k && k.cliente) || attivo.id), () => (
-      <section className="card">
+      <section className="card" id="kpi-import">
         <header>
           <h2>Importa i numeri da un file KPI</h2>
           <span className="sp eyebrow">Excel o CSV · va nel Ciclo di vendita</span>
@@ -10549,7 +10549,9 @@ Regole:
                 if (i > -1) mappa[c.k] = i;
               });
               if (mappa.data === undefined) {
-                chiedi({ titolo: "Non riconosco il file", testo: "Manca la colonna Data. Usa il modulo scaricabile da qui senza cambiare le intestazioni.", etichetta: "Ho capito", azione: () => {} });
+                /* Non è il registro: forse è un file KPI di riepilogo, lo passo al riquadro sopra */
+                leggiFileKpi(file);
+                setTimeout(() => { const el = document.getElementById("kpi-import"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
                 return;
               }
               const nuove = [];
