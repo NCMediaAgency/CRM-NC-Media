@@ -446,13 +446,23 @@ async function chiudiLogin(url) {
 }
 
 async function nuovoSync(ws, origine, solo = null) {
-  // Un aggiornamento alla volta per spazio: se uno è partito da meno di 10 minuti, non ne apro un altro
-  const dieciMin = new Date(Date.now() - 10 * 60e3).toISOString();
-  // Un aggiornamento rimasto "in corso" da più di 10 minuti si è interrotto: lo chiudo per non lasciarlo appeso
-  await db(`meta_sync?workspace_id=eq.${ws}&esito=eq.in_corso&avvio=lt.${dieciMin}`, { metodo: "PATCH",
-    corpo: { esito: "errore", fine: new Date().toISOString(), messaggio: "Interrotto prima di finire: riparte dagli account mancanti con il prossimo aggiornamento." } });
-  const attivi = await db(`meta_sync?select=id&workspace_id=eq.${ws}&esito=eq.in_corso&avvio=gt.${dieciMin}`);
-  if (attivi.length) return { id: attivi[0].id, giaInCorso: true };
+  // Un aggiornamento "in corso" senza battito da più di 3 minuti si è fermato: lo chiudo per non lasciarlo appeso.
+  // Si guarda il battito, non l'avvio: un aggiornamento completo di molti account dura legittimamente più a lungo.
+  const ferma = Date.now() - 3 * 60e3;
+  const aperti = await db(`meta_sync?select=id,avvio,dettagli&workspace_id=eq.${ws}&esito=eq.in_corso`);
+  const vivi = [];
+  for (const s of aperti) {
+    const ultimo = new Date((s.dettagli && s.dettagli.battito) || s.avvio).getTime();
+    if (ultimo < ferma) {
+      await db(`meta_sync?id=eq.${s.id}`, { metodo: "PATCH",
+        corpo: { esito: "errore", fine: new Date().toISOString(), messaggio: "Interrotto prima di finire: riparte dagli account mancanti con il prossimo aggiornamento." } });
+    } else vivi.push(s);
+  }
+  // Uno alla volta per tipo: un aggiornamento completo non ne apre un secondo; quello di un cliente
+  // parte anche se il completo è in corso, e si aspetta solo se c'è già lo stesso (stessi account)
+  const chiave = (x) => (Array.isArray(x) ? [...x].map(String).sort().join(",") : "");
+  const uguale = vivi.find((s) => (solo ? chiave(s.dettagli && s.dettagli.solo) === chiave(solo) : !(s.dettagli && s.dettagli.solo)));
+  if (uguale) return { id: uguale.id, giaInCorso: true };
   const [s] = await db("meta_sync", { metodo: "POST", prefer: "return=representation",
     corpo: { workspace_id: ws, origine, ...(solo ? { dettagli: { solo } } : {}) } });
   return { id: s.id, giaInCorso: false };

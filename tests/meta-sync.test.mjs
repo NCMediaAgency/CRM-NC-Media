@@ -349,4 +349,26 @@ assert.equal(r.corpo.campagne.find((c) => c.id === "c9").stato, "ARCHIVED");
 assert.equal((await chiama({ azione: "campagne", account: "999" }, { Authorization: "Bearer utente" })).stato, 404, "account di un altro spazio");
 globalThis.fetch = fetch11;
 
+// ---------- 12. aggiornamento di un cliente mentre il completo è in corso ----------
+tabelle.meta_collegamenti = [{ workspace_id: "ws1", account_id: "555", cliente_id: "z1" }];
+tabelle.meta_sync.forEach((x) => { if (x.esito === "in_corso") x.esito = "errore"; });
+// completo partito 40 minuti fa ma vivo (battito recente): non va chiuso né riusato dal cliente
+const completo = { id: 2000, workspace_id: "ws1", origine: "programmato", avvio: new Date(Date.now() - 40 * 60e3).toISOString(), esito: "in_corso", messaggio: "In corso: 8 di 66 account",
+  dettagli: { giri: 3, battito: new Date().toISOString(), account: {} } };
+tabelle.meta_sync.push(completo);
+r = await chiama({ account: ["555"] }, { Authorization: "Bearer utente" });
+assert.notEqual(r.corpo.sync, 2000, "il cliente ha il suo aggiornamento");
+assert.equal(r.corpo.giaInCorso, false);
+const doppio = await chiama({ account: ["555"] }, { Authorization: "Bearer utente" });
+assert.equal(doppio.corpo.sync, r.corpo.sync, "lo stesso cliente premuto due volte: aspetta il primo");
+await finisci();
+assert.equal(tabelle.meta_sync.find((x) => x.id === r.corpo.sync).esito, "ok");
+assert.equal(completo.esito, "in_corso", "il completo vivo resta in corso");
+r = await chiama({}, { Authorization: "Bearer utente" });
+assert.equal(r.corpo.sync, 2000, "un secondo completo aspetta quello in corso");
+// senza battito da più di 3 minuti si considera fermo
+completo.dettagli.battito = new Date(Date.now() - 4 * 60e3).toISOString();
+r = await chiama({}, { Authorization: "Bearer utente" }); await finisci();
+assert.equal(completo.esito, "errore"); assert.notEqual(r.corpo.sync, 2000);
+
 console.log("meta-sync: tutte le prove passate ✔", { chiamateMeta: chiamate.length, oggetti: tabelle.meta_oggetti.length, finestre: tabelle.meta_finestre.length, ultimo: ultimo.messaggio });

@@ -16,17 +16,20 @@ async function tutte(tabella, ws, colonne = "*") {
 
 export function apiMetaCloud(ws) {
   return {
-    async stato() {
-      const [account, collegamenti, sync, conn] = await Promise.all([
+    /* seguita: l'aggiornamento partito da questa pagina (può non essere l'ultimo, se un altro è in corso) */
+    async stato(seguita = null) {
+      const [account, collegamenti, sync, conn, mio] = await Promise.all([
         tutte("meta_account", ws),
         tutte("meta_collegamenti", ws),
         supabase.from("meta_sync").select("*").eq("workspace_id", ws).order("avvio", { ascending: false }).limit(1),
         supabase.rpc("meta_connessione"),
+        seguita ? supabase.from("meta_sync").select("*").eq("workspace_id", ws).eq("id", seguita).limit(1) : Promise.resolve({ data: [] }),
       ]);
       if (sync.error) throw sync.error;
       /* Prima della migrazione 0003 la funzione non esiste: il collegamento risulta semplicemente assente */
       const facebook = (!conn.error && (conn.data || [])[0]) || null;
-      return { account, collegamenti, ultimaSync: (sync.data || [])[0] || null, facebook };
+      const ultimaSync = (sync.data || [])[0] || null;
+      return { account, collegamenti, ultimaSync, facebook, seguita: ((mio && mio.data) || [])[0] || ultimaSync };
     },
     async dati() {
       const [oggetti, finestre] = await Promise.all([tutte("meta_oggetti", ws), tutte("meta_finestre", ws)]);

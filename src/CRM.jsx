@@ -3796,10 +3796,10 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   /* Scelta delle campagne di un account: { account, lista (da Meta), scelte, filtro, errore } */
   const [metaRegola, setMetaRegola] = useState(null);
   const metaAvviato = useRef(false);
-  const caricaMeta = useCallback(async (conDati = true) => {
+  const caricaMeta = useCallback(async (conDati = true, seguita = null) => {
     if (!meta) return null;
     try {
-      const info = await meta.stato();
+      const info = await meta.stato(seguita);
       setMetaInfo(info);
       if (conDati && info.collegamenti.length && !bloccaSalvataggio.current) {
         const dati = await meta.dati();
@@ -3862,7 +3862,8 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
     setMetaStato({ attesa: azione === "account" ? "account" : "sync", errore: "", esito: "", cliente: chi });
     try {
       const avvio = await meta.sincronizza(azione, extra);
-      if (avvio && avvio.giaInCorso) setMetaStato((x) => ({ ...x, esito: "C'era già un aggiornamento in corso: aspetto che finisca." }));
+      if (avvio && avvio.giaInCorso) setMetaStato((x) => ({ ...x, esito: "C'era già lo stesso aggiornamento in corso: aspetto che finisca." }));
+      const mio = (avvio && avvio.sync) || null;
       if (azione === "account") {
         const info = await caricaMeta(false);
         setMetaStato({ attesa: "", errore: "", esito: `Elenco aggiornato: ${(info && info.account.length) || 0} account visibili.` });
@@ -3873,9 +3874,9 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
          le chiedo io di continuare: funziona finché questa pagina è aperta. */
       for (let i = 0; i < 300; i++) {
         await new Promise((r) => setTimeout(r, 3000));
-        const info = await meta.stato();
+        const info = await meta.stato(mio);
         setMetaInfo(info);
-        const u = info.ultimaSync;
+        const u = info.seguita;
         if (!u || u.esito !== "in_corso") break;
         if (u.messaggio) setMetaStato((x) => ({ ...x, esito: u.messaggio }));
         const battito = u.dettagli && u.dettagli.battito;
@@ -3883,8 +3884,8 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
           try { await meta.sincronizza("continua", { sync: u.id }); } catch { /* riprovo al prossimo controllo */ }
         }
       }
-      const info = await caricaMeta(true);
-      const u = info && info.ultimaSync;
+      const info = await caricaMeta(true, mio);
+      const u = info && (info.seguita || info.ultimaSync);
       if (!u || u.esito === "in_corso") setMetaStato({ attesa: "", errore: "", esito: "L'aggiornamento continua in sottofondo: i numeri arrivano alla prossima apertura." });
       else setMetaStato({ attesa: "", errore: u.esito === "errore" ? u.messaggio : "", esito: u.esito !== "errore" ? u.messaggio : "" });
     } catch (e) {

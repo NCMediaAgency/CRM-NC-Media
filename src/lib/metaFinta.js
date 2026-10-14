@@ -35,7 +35,7 @@ export function apiMetaFinta() {
   return {
     async stato() {
       const s = leggi();
-      return { account: s.account || [], collegamenti: s.collegamenti || [], ultimaSync: s.ultimaSync || null, facebook: s.facebook || null };
+      return { account: s.account || [], collegamenti: s.collegamenti || [], ultimaSync: s.ultimaSync || null, seguita: s.ultimaSync || null, facebook: s.facebook || null };
     },
     async collegaFacebook() {
       const s = leggi(); s.facebook = { collegato: true, utente_meta: "Profilo di prova", scadenza: new Date(Date.now() + 60 * 864e5).toISOString() }; scrivi(s);
