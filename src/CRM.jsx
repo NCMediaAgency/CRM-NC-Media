@@ -1439,7 +1439,7 @@ const GUIDA = [
     id: "adv", t: "Advertising e avvisi",
     intro: "Inserisci solo i dati grezzi che copi dalla piattaforma. CTR, CPC, CPM, CPA e ROAS li calcola l'app.",
     blocchi: [
-      { h: "Dentro e fuori dal cliente", p: "Con Tutti i clienti selezionato, Advertising mostra una riga per cliente con i totali: campagne e quante sono accese, spesa, lead, CPL, conversioni, ROAS, contratti e incassato, ognuno nella valuta del suo cliente. Campagne, ad set, annunci, finestre, ritmo di erogazione e totali per funnel e linea si guardano dentro il cliente: un clic sulla riga ti porta lì." },
+      { h: "Dentro e fuori dal cliente", p: "Con Tutti i clienti selezionato, Advertising mostra una riga per cliente con i totali: campagne e quante sono accese, spesa, lead, CPL, conversioni, ROAS, contratti e incassato, ognuno nella valuta del suo cliente. Contratti e incassato arrivano dalle schede chiusura collegate alle campagne o dagli importi scritti nelle campagne; se non ce ne sono, dal Ciclo di vendita del cliente (sotto il numero è indicato quanti mesi), e in quel caso il ROAS, quando la piattaforma non dichiara ricavi, è il rapporto fra contratti e spesa di quei soli mesi. Campagne, ad set, annunci, finestre, ritmo di erogazione e totali per funnel e linea si guardano dentro il cliente: un clic sulla riga ti porta lì." },
       { h: "Benchmark", p: "Per ogni campagna imposti ROAS minimo, CPL massimo, CPA massimo, CTR minimo, frequenza e CPM massimi. Lascia 0 quello che non vuoi controllare. Cambiando obiettivo l'app propone soglie tipiche, che poi correggi con i numeri veri del cliente." },
       { h: "CPL e CPA sono due cose diverse", p: "Nelle campagne a contatti il lead è il primo punto di conversione, e il CPL massimo è il tetto che conta: è lì che la campagna si rompe per prima. Il CPA massimo misura il punto dopo — l'appuntamento, la vendita, qualunque cosa tu stia contando come conversione. Se li tieni separati vedi dove si perde il margine: un CPL in linea con un CPA fuori tetto è un problema di vendita, non di advertising. Se lasci il CPL a 0 vale il CPA, così le campagne create prima di questo campo continuano a essere giudicate; e dove lead e conversioni sono lo stesso numero l'app mostra solo l'avviso sul CPL, per non dire due volte la stessa cosa." },
       { h: "Il lead non è una conversione", p: "Sono due colonne diverse apposta. Il lead è il contatto che arriva; la conversione è quello che succede dopo — l'appuntamento fissato, il preventivo accettato, la vendita — e quel numero la piattaforma non lo conosce: lo sai tu. Meta però chiama \"risultati\" i lead, quindi importando un account a contatti finiscono in tutte e due le colonne e il CPA esce identico al CPL. Quando capita, sotto le conversioni compare la scritta \"= lead\" e in cima alla sezione appare il pulsante \"Separa conversioni dai lead\": azzera le conversioni sulle campagne che stai guardando e sulle loro finestre, lasciando intatti lead e CPL. Da lì il campo Conversioni torna tuo: lo scrivi nella scheda anche se la campagna ha le finestre — è l'unico dato del blocco che resta scrivibile, insieme ai ricavi — e accanto al numero compare \"a mano\" perché si veda che non arriva da Meta." },
@@ -9316,11 +9316,23 @@ Regole:
     /* Fuori dai clienti solo i totali per cliente: campagne, ad set e finestre si guardano dentro il cliente */
     if (!attivo) {
       const tutte = m.campagne.filter((k) => cerca(k.nome + " " + nomeCli(k.clienteId)));
+      /* Contratti e incassato: dalle campagne (schede collegate o importi scritti) se ci sono,
+         altrimenti dal Ciclo di vendita del cliente. Il ritorno si calcola sui soli mesi che hanno
+         contratti, con la spesa di quegli stessi mesi: spesa da sempre contro contratti di un anno
+         darebbe un numero che non corrisponde a niente. */
       const righeCli = ordinaGerarchia().map(({ z, liv }) => {
         const l = tutte.filter((k) => k.clienteId === z.id);
-        return l.length ? { z, liv, ...derivate(somma(l)), ...soldiTot(l), n: l.length, accese: l.filter((k) => ["attiva", "test"].includes(k.stato)).length } : null;
+        if (!l.length) return null;
+        const camp = soldiTot(l);
+        const mv = righeMensili([z.id]).filter((r) => r.contratto || r.incassato);
+        const ctV = mv.reduce((x, r) => x + r.contratto, 0), icV = mv.reduce((x, r) => x + r.incassato, 0), spV = mv.reduce((x, r) => x + r.spesa, 0);
+        const daCiclo = !(camp.contratto + camp.incassato) && ctV + icV > 0;
+        return { z, liv, ...derivate(somma(l)), n: l.length, accese: l.filter((k) => ["attiva", "test"].includes(k.stato)).length,
+          contratto: daCiclo ? ctV : camp.contratto, incassato: daCiclo ? icV : camp.incassato, daCiclo,
+          ritorno: daCiclo && spV ? ctV / spV : 0, mesiV: daCiclo ? mv.length : 0 };
       }).filter(Boolean);
-      const TT = derivate(somma(tutte)), ST = soldiTot(tutte);
+      const TT = derivate(somma(tutte));
+      const ST = righeCli.reduce((x, r) => ({ contratto: x.contratto + r.contratto, incassato: x.incassato + r.incassato }), { contratto: 0, incassato: 0 });
       const entra = (id) => { cambiaAccount(id); setVista("campagne"); };
       return conValuta(valutaComune(tutte.map((k) => k.clienteId)), () => (
         <>
@@ -9328,12 +9340,12 @@ Regole:
             <div className="kpi"><IcoKpi t="Spesa del periodo" /><div className="eyebrow">Spesa</div><div className="v">{eur0(TT.sp)}</div><div className="s">{righeCli.length} clienti · {tutte.length} campagne</div></div>
             <div className="kpi"><IcoKpi /><div className="eyebrow">Lead</div><div className="v">{int(TT.ld)}</div><div className="s">CPL medio {TT.ld ? eur(TT.cpl) : "—"}</div></div>
             <div className="kpi"><IcoKpi /><div className="eyebrow">Conversioni</div><div className="v">{int(TT.cv)}</div><div className="s">CPA medio {TT.cv ? eur(TT.cpa) : "—"}</div></div>
-            <div className="kpi"><IcoKpi /><div className="eyebrow">Incassato</div><div className="v">{eur0(ST.incassato)}</div><div className="s">contratti {eur0(ST.contratto)} · ROAS {TT.sp && TT.rc ? fmt(TT.roas) : "—"}</div></div>
+            <div className="kpi"><IcoKpi /><div className="eyebrow">Incassato</div><div className="v">{eur0(ST.incassato)}</div><div className="s">contratti {eur0(ST.contratto)}{TT.sp && TT.rc ? ` · ROAS ${fmt(TT.roas)}` : ""}</div></div>
           </div>
           <section className="card">
             <header><h2>Advertising per cliente</h2><span className="sp eyebrow">totali · campagne, ad set e finestre sono dentro ogni cliente</span></header>
             <div className="wrap"><table className="tbl">
-              <thead><tr><th>Cliente</th><th className="r">Campagne</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Conversioni</th><th className="r">ROAS</th><th className="r">Contratti</th><th className="r">Incassato</th></tr></thead>
+              <thead><tr><th>Cliente</th><th className="r">Campagne</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Conversioni</th><th className="r" title="ROAS dichiarato dalla piattaforma; se manca, contratti su spesa dei mesi del Ciclo di vendita">ROAS</th><th className="r">Contratti</th><th className="r">Incassato</th></tr></thead>
               <tbody>
                 {mapValuta(righeCli, (r) => r.z.id, (r) => (
                   <tr key={r.z.id} className="clic" onClick={() => entra(r.z.id)} title="Apri l'advertising del cliente">
@@ -9343,8 +9355,8 @@ Regole:
                     <td className="r">{int(r.ld)}</td>
                     <td className="r">{r.ld ? eur(r.cpl) : "—"}</td>
                     <td className="r">{int(r.cv)}</td>
-                    <td className="r">{r.sp && r.rc ? fmt(r.roas) : "—"}</td>
-                    <td className="r">{eur0(r.contratto)}</td>
+                    <td className="r">{r.sp && r.rc ? fmt(r.roas) : r.ritorno ? <>{fmt(r.ritorno)}×<div className="sub">su contratti</div></> : "—"}</td>
+                    <td className="r">{eur0(r.contratto)}{r.daCiclo ? <div className="sub">ciclo di vendita · {int(r.mesiV)} {r.mesiV === 1 ? "mese" : "mesi"}</div> : null}</td>
                     <td className="r">{eur0(r.incassato)}</td>
                   </tr>
                 ))}
