@@ -1450,6 +1450,7 @@ const GUIDA = [
     id: "adv", t: "Advertising e avvisi",
     intro: "Inserisci solo i dati grezzi che copi dalla piattaforma. CTR, CPC, CPM, CPA e ROAS li calcola l'app.",
     blocchi: [
+      { h: "Più account pubblicitari per lo stesso cliente", p: "Un cliente può avere quanti account vuoi: li colleghi dalla sua scheda, sezione Meta Ads. Dentro il cliente, Advertising mostra allora la tabella Per obiettivo e account: per ogni obiettivo una riga di totale, con spesa, lead, CPL, conversioni, CPA, ROAS e contratti sommati su tutti gli account, e sotto una riga per ogni account con i suoi numeri. Obiettivi diversi restano separati, perché un CPL di lead e un CPA di vendite non si sommano. Un clic su un account filtra l'elenco delle campagne su quell'account e quell'obiettivo; nei filtri c'è anche la scelta Account pubblicitario, e sotto ogni campagna compare il nome dell'account da cui arriva." },
       { h: "Clienti principali e sottoclienti", p: "In Advertising si vedono a colpo d'occhio solo i clienti principali, con i numeri loro e dei sottoclienti sommati. La freccia accanto al nome apre i sottoclienti, uno per riga, più la riga dell'account principale da solo. Dentro un cliente vale lo stesso: prima le sue campagne, poi una riga chiusa per ogni sottocliente con i suoi totali, che la freccia apre sulle sue campagne." },
       { h: "Dentro e fuori dal cliente", p: "Con Tutti i clienti selezionato, Advertising mostra una riga per cliente con i totali: campagne e quante sono accese, spesa, lead, CPL, conversioni, ROAS, contratti e incassato, ognuno nella valuta del suo cliente. Contratti e incassato arrivano dalle schede chiusura collegate alle campagne o dagli importi scritti nelle campagne; se non ce ne sono, dal Ciclo di vendita del cliente (sotto il numero è indicato quanti mesi), e in quel caso il ROAS, quando la piattaforma non dichiara ricavi, è il rapporto fra contratti e spesa di quei soli mesi. Campagne, ad set, annunci, finestre, ritmo di erogazione e totali per funnel e linea si guardano dentro il cliente: un clic sulla riga ti porta lì." },
       { h: "Benchmark", p: "Per ogni campagna imposti ROAS minimo, CPL massimo, CPA massimo, CTR minimo, frequenza e CPM massimi. Lascia 0 quello che non vuoi controllare. Cambiando obiettivo l'app propone soglie tipiche, che poi correggi con i numeri veri del cliente." },
@@ -9190,6 +9191,7 @@ Regole:
   const SezioneAdv = () => {
     const base = (attivo ? S.campagne : m.campagne).filter((k) =>
       (attivo || !fAdv.cli || k.clienteId === fAdv.cli) &&
+      (!fAdv.account || (k.metaAccount || "__mano") === fAdv.account) &&
       (!fAdv.piattaforma || k.piattaforma === fAdv.piattaforma) &&
       (!fAdv.obiettivo || k.obiettivo === fAdv.obiettivo) &&
       (!fAdv.stato || k.stato === fAdv.stato) &&
@@ -9412,6 +9414,32 @@ Regole:
       ));
     }
 
+    /* Più account pubblicitari per lo stesso cliente: ogni campagna sa da quale account arriva
+       (metaAccount); quelle scritte a mano stanno insieme sotto "Inserite a mano". */
+    const nomeAccountAdv = (id) => {
+      if (id === "__mano") return "Inserite a mano";
+      const a = metaAccount.find((x) => String(x.account_id) === String(id));
+      return a ? a.nome || `act_${id}` : `act_${id}`;
+    };
+    const accountAdv = attivo ? [...new Set((attivo ? S.campagne : []).map((k) => k.metaAccount || "__mano"))]
+      .map((id) => ({ id, nome: nomeAccountAdv(id) })).sort((a, b) => a.nome.localeCompare(b.nome, "it")) : [];
+    /* Totali per obiettivo, con sotto il dettaglio di ogni account: le situazioni restano distinte,
+       ma dove l'obiettivo è lo stesso i numeri si sommano e le medie si ricalcolano sui totali */
+    const perObiettivoAccount = (() => {
+      if (!attivo || accountAdv.length < 2) return [];
+      const ob = new Map();
+      base.forEach((k) => { const o = k.obiettivo || "altro"; ob.set(o, [...(ob.get(o) || []), k]); });
+      return [...ob.entries()].map(([o, l]) => {
+        const acc = new Map();
+        l.forEach((k) => { const a = k.metaAccount || "__mano"; acc.set(a, [...(acc.get(a) || []), k]); });
+        return {
+          o, nome: et(OBIETTIVI, o) || "Altro", tot: { ...derivate(somma(l)), ...soldiTot(l) }, n: l.length,
+          account: [...acc.entries()].map(([a, la]) => ({ id: a, nome: nomeAccountAdv(a), n: la.length, accese: la.filter((k) => ["attiva", "test", "errore"].includes(k.stato)).length,
+            bloccato: (la.find((k) => k.accountBloccato) || {}).accountBloccato || "", ...derivate(somma(la)), ...soldiTot(la) })).sort((x, y) => y.sp - x.sp),
+        };
+      }).sort((a, b) => b.tot.sp - a.tot.sp);
+    })();
+
     /* Dentro un cliente con sottoclienti: prima le campagne del cliente, poi una riga chiusa per
        ogni sottocliente (con i suoi totali) che si apre con la freccia e mostra le sue campagne */
     const listaAdv = (righe) => {
@@ -9552,6 +9580,15 @@ Regole:
           </header>
           {filtriAperti && (
             <div className="pannello-filtri">
+              {attivo && accountAdv.length > 1 && (
+                <div className="f">
+                  <label htmlFor="fl-acc">Account pubblicitario</label>
+                  <select id="fl-acc" value={fAdv.account || ""} onChange={(e) => setFAdv({ ...fAdv, account: e.target.value })}>
+                    <option value="">Tutti gli account</option>
+                    {accountAdv.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                  </select>
+                </div>
+              )}
               {!attivo && (
                 <div className="f">
                   <label htmlFor="fl-cli">Cliente</label>
@@ -9695,6 +9732,7 @@ Regole:
                         </span>
                       )}
                       {et(PIATTAFORME, k.piattaforma)} · {attivo ? et(OBIETTIVI, k.obiettivo) : nomeCli(k.clienteId)}
+                      {attivo && accountAdv.length > 1 ? ` · ${nomeAccountAdv(k.metaAccount || "__mano")}` : ""}
                     </div>
                   </td>
                   <td className="sub">{k.funnelId ? (nomeFunnel(k.funnelId) || "—") : <span className="sub">—</span>}</td>
@@ -9859,6 +9897,48 @@ Regole:
             {!piattaforme.length && <div className="empty"><b>Nessun dato</b>Serve almeno una campagna.</div>}
           </section>
         </div>
+
+        {perObiettivoAccount.length > 0 && (
+          <section className="card">
+            <header><h2>Per obiettivo e account</h2><span className="sp eyebrow">{accountAdv.length} account · totali sommati solo a parità di obiettivo</span></header>
+            <div className="wrap"><table className="tbl">
+              <thead><tr><th>Obiettivo · account</th><th className="r">Campagne</th><th className="r">Spesa</th><th className="r">CTR link</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Conv.</th><th className="r">CPA</th><th className="r">ROAS</th><th className="r">Contratto</th></tr></thead>
+              <tbody>
+                {perObiettivoAccount.flatMap((g) => [
+                  <tr key={g.o} className="adv-gruppo">
+                    <td><b>{g.nome}</b><div className="sub">totale di {g.account.length} {g.account.length === 1 ? "account" : "account"}</div></td>
+                    <td className="r">{int(g.n)}</td>
+                    <td className="r"><b>{eur0(g.tot.sp)}</b></td>
+                    <td className="r">{g.tot.imp ? pctv(g.tot.ctrLink) : "—"}</td>
+                    <td className="r">{g.tot.ld ? int(g.tot.ld) : "—"}</td>
+                    <td className="r"><b>{g.tot.ld ? eur(g.tot.cpl) : "—"}</b></td>
+                    <td className="r">{g.tot.cv ? int(g.tot.cv) : "—"}</td>
+                    <td className="r"><b>{g.tot.cv ? eur(g.tot.cpa) : "—"}</b></td>
+                    <td className="r">{g.tot.rc ? `${fmt(g.tot.roas)}×` : "—"}</td>
+                    <td className="r">{g.tot.contratto ? eur0(g.tot.contratto) : "—"}</td>
+                  </tr>,
+                  ...g.account.map((a) => (
+                    <tr key={g.o + a.id} className="clic" onClick={() => { setFAdv({ ...fAdv, account: a.id, obiettivo: g.o }); setFiltriAperti(true); }}
+                      title="Mostra solo le campagne di questo account con questo obiettivo">
+                      <td style={{ paddingLeft: 32 }}><span className="sub">↳ </span>{a.nome}
+                        <div className="sub">{int(a.accese)} accese{a.bloccato ? <span className="neg"> · account {a.bloccato}</span> : null}</div></td>
+                      <td className="r">{int(a.n)}</td>
+                      <td className="r">{eur0(a.sp)}</td>
+                      <td className="r">{a.imp ? pctv(a.ctrLink) : "—"}</td>
+                      <td className="r">{a.ld ? int(a.ld) : "—"}</td>
+                      <td className="r">{a.ld ? eur(a.cpl) : "—"}</td>
+                      <td className="r">{a.cv ? int(a.cv) : "—"}</td>
+                      <td className="r">{a.cv ? eur(a.cpa) : "—"}</td>
+                      <td className="r">{a.rc ? `${fmt(a.roas)}×` : "—"}</td>
+                      <td className="r">{a.contratto ? eur0(a.contratto) : "—"}</td>
+                    </tr>
+                  )),
+                ])}
+              </tbody>
+            </table></div>
+            <div className="nota">Un clic su un account filtra l'elenco delle campagne su quell'account e quell'obiettivo. Obiettivi diversi non si sommano: un CPL di lead e un CPA di vendite non sono la stessa misura.</div>
+          </section>
+        )}
 
         {campFasi && (() => {
           const k = base.find((x) => x.id === campFasi) || m.campagne.find((x) => x.id === campFasi);
