@@ -1,0 +1,7 @@
+# Configurazione minima per la CLI di Supabase, usata dall'automazione di GitHub
+# (.github/workflows/supabase.yml). Il progetto vero è cggxgzazjyeayfhynhhd.
+project_id = "crm-nc-media"
+
+# La chiama anche il cron con la sua chiave: niente controllo del JWT di Supabase
+[functions.meta-sync]
+verify_jwt = false

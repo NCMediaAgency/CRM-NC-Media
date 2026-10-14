@@ -1,0 +1,59 @@
+# Porta su Supabase le modifiche a database e funzione meta-sync, senza copiarle a mano.
+# Segreti del repository (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN  token personale di Supabase (Edge Functions, Migrations, Database)
+#   SUPABASE_DB_PASSWORD   password del database
+# C'è un solo progetto Supabase per anteprima e versione definitiva: le modifiche
+# valgono subito per entrambe, quindi vanno sempre scritte in modo compatibile.
+name: Supabase
+
+on:
+  push:
+    branches: [main, claude/crm-recreation-chat-qlyl5l]
+    paths: ["supabase/**", ".github/workflows/supabase.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: supabase
+  cancel-in-progress: false
+
+jobs:
+  pubblica:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROGETTO: cggxgzazjyeayfhynhhd
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controllo dei segreti
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::Mancano i segreti SUPABASE_ACCESS_TOKEN e/o SUPABASE_DB_PASSWORD nel repository."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Collegamento al progetto
+        run: supabase link --project-ref "$PROGETTO" --password "$SUPABASE_DB_PASSWORD"
+
+      # 0001-0003 sono state eseguite a mano dallo SQL Editor prima dell'automazione:
+      # le segno come fatte (una volta sola), così non ripartono
+      - name: Migrazioni già eseguite a mano
+        run: |
+          fatte=$(supabase migration list --linked 2>/dev/null || true)
+          echo "$fatte"
+          for v in 0001 0002 0003; do
+            if ! echo "$fatte" | grep -Eq "^\s*$v\s*\|\s*$v\b"; then
+              supabase migration repair --linked --status applied "$v"
+            fi
+          done
+
+      - name: Migrazioni nuove
+        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+
+      - name: Funzione meta-sync
+        run: supabase functions deploy meta-sync --project-ref "$PROGETTO" --no-verify-jwt --use-api
