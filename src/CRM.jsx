@@ -261,6 +261,16 @@ const DIZ = {
   },
 };
 
+/* Campagna ferma ("errore"): la causa arriva da Meta con lo stato dell'account */
+const CAUSE_FERMO = {
+  pagamento: { l: "Errore pagamento", titolo: "Campagna ferma per errore di pagamento", causa: "Carta rifiutata, plafond superato o metodo di pagamento scaduto nel gestore inserzioni.", azione: "Sistema il metodo di pagamento nella piattaforma, poi riporta lo stato su Attiva: l'avviso sparisce e il fermo resta registrato nel Diario." },
+  disattivato: { l: "Account disattivato", titolo: "Campagna ferma: account pubblicitario disattivato da Meta", causa: "Meta ha disattivato l'account pubblicitario: le campagne non erogano finché non viene riattivato.", azione: "Apri Qualità dell'account in Meta Business Suite e chiedi la revisione. Se l'account non torna, sposta le campagne su un altro account collegato al cliente." },
+  revisione: { l: "Account in revisione", titolo: "Campagna ferma: account pubblicitario in revisione", causa: "Meta sta verificando l'account per un controllo di rischio: nel frattempo le campagne non erogano.", azione: "Controlla Qualità dell'account in Meta Business Suite: di solito basta attendere o completare la verifica richiesta." },
+  chiuso: { l: "Account chiuso", titolo: "Campagna ferma: account pubblicitario chiuso", causa: "L'account pubblicitario è chiuso o in chiusura: non può più erogare.", azione: "Collega al cliente l'account nuovo e segna la campagna come conclusa." },
+};
+const causaFermo = (k) => CAUSE_FERMO[k.causaErrore] || CAUSE_FERMO.pagamento;
+const etStato = (k) => (k.stato === "errore" ? causaFermo(k).l : et(STATI_CAMPAGNA, k.stato));
+
 const STATI_CAMPAGNA = [
   { v: "attiva", l: "Attiva" }, { v: "test", l: "In test" }, { v: "errore", l: "Errore pagamento" },
   { v: "pausa", l: "In pausa" }, { v: "conclusa", l: "Conclusa" },
@@ -863,16 +873,17 @@ function avvisi(k, ctx = {}) {
      L'avviso resta finché non cambi stato, e non si mescola con le valutazioni di rendimento. */
   if (k.stato === "errore" && k.archiviata !== "si") {
     const g = k.erroreDal ? giorniTra(k.erroreDal, oggi()) : 0;
+    const cf = causaFermo(k);
     return [{
       campagnaId: k.id, clienteId: k.clienteId, gravita: "critica",
-      metrica: "Pagamento", valore: g ? `${int(g)} ${g === 1 ? "giorno" : "giorni"}` : "in corso",
+      metrica: k.causaErrore && k.causaErrore !== "pagamento" ? "Account" : "Pagamento", valore: g ? `${int(g)} ${g === 1 ? "giorno" : "giorni"}` : "in corso",
       soglia: "da risolvere",
-      titolo: "Campagna ferma per errore di pagamento",
-      cosa: k.erroreDal
+      titolo: cf.titolo,
+      cosa: (k.erroreDal
         ? `Segnalata il ${dataItA(k.erroreDal)}: sono ${int(g)} ${g === 1 ? "giorno" : "giorni"} che non eroga.`
-        : "La campagna è segnata in errore di pagamento e non sta erogando.",
-      causa: "Carta rifiutata, plafond superato o metodo di pagamento scaduto nel gestore inserzioni.",
-      azione: "Sistema il metodo di pagamento nella piattaforma, poi riporta lo stato su Attiva: l'avviso sparisce e il fermo resta registrato nel Diario.",
+        : `La campagna è segnata come "${cf.l}" e non sta erogando.`) + (k.accountBloccato ? ` Stato dell'account su Meta: ${k.accountBloccato}.` : ""),
+      causa: cf.causa,
+      azione: cf.azione,
     }];
   }
 
@@ -1345,7 +1356,7 @@ const faseCampagna = (k) => {
   if (g === null) return { g: null, fase: "nd", l: "senza data di inizio" };
   if (k.stato === "errore") {
     const gg = k.erroreDal ? giorniTra(k.erroreDal, oggi()) : 0;
-    return { g, fase: "errore", l: gg ? `ferma da ${gg} ${gg === 1 ? "giorno" : "giorni"}` : "ferma per pagamento" };
+    return { g, fase: "errore", l: gg ? `ferma da ${gg} ${gg === 1 ? "giorno" : "giorni"}` : k.causaErrore && k.causaErrore !== "pagamento" ? `ferma: ${causaFermo(k).l.toLowerCase()}` : "ferma per pagamento" };
   }
   if (k.stato !== "attiva" && k.fine && k.fine < oggi()) {
     return { g, fase: "chiusa", l: `${g} giorni · chiusa il ${dataIt(k.fine)}` };
@@ -1667,7 +1678,7 @@ const GUIDA = [
       { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito tutti i clienti collegati. Per uno solo usa il pulsante Aggiorna sulla sua riga in Impostazioni, oppure Aggiorna questo cliente nella sua scheda (se ha sottoclienti, aggiorna anche loro): utile quando un account si è fermato o ti serve un dato fresco. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
       { h: "Scegliere quali campagne scaricare", p: "Nella Scheda cliente, sotto ogni account collegato, c'è Campagne da scaricare. Normalmente il CRM prende le attive e quelle che hanno speso negli ultimi 90 giorni. Con Solo le attive prende solo quelle accese (quando una si spegne, la registra un'ultima volta in pausa e poi la lascia). Con Solo quelle che scelgo il CRM legge da Meta l'elenco delle campagne dell'account, accese prima e poi per spesa, e scarichi solo quelle che spunti; Cambia la scelta riapre l'elenco. Le campagne non scelte già presenti nel CRM restano dove sono: se non ti servono le elimini e non verranno ricaricate. La scelta vale dal prossimo aggiornamento; per vederla subito premi Aggiorna questo cliente." },
       { h: "Account che si aggiornano solo a mano", p: "Sempre sotto l'account, togliendo la spunta Nell'aggiornamento automatico l'account resta fuori dall'aggiornamento delle 9 e da Aggiorna ora: si aggiorna solo quando premi Aggiorna sulla sua riga in Impostazioni o Aggiorna questo cliente nella sua scheda. Serve per gli account pesanti, quelli fermi o quelli che ti basta caricare una volta: scarichi i dati, togli la spunta, e l'aggiornamento di tutti diventa più veloce. In Impostazioni, accanto al nome dell'account, compare la sua regola (solo attive, campagne scelte, solo a mano)." },
-      { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento." },
+      { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento; su un account disattivato, in revisione o chiuso passano rispettivamente in Account disattivato, Account in revisione o Account chiuso, con l'avviso critico e i giorni di fermo come per il pagamento. Sotto lo stato di ogni campagna dell'account compare anche lo stato su Meta, con il motivo della disattivazione quando Meta lo dà (per esempio violazione delle norme pubblicitarie o account compromesso)." },
       { h: "Il pulsante Chiedi i dati aggiornati", p: "Resta per i clienti che non hai collegato o per le piattaforme diverse da Meta: prepara la richiesta da incollare in chat, come prima." },
     ],
   },
@@ -2310,7 +2321,9 @@ const semaforoBase = (data, k) => {
     return esito("grigio", "La campagna non è in corso.", "Niente da decidere.");
   }
   if (k.stato === "errore") {
-    return esito("rosso", "Ferma per errore di pagamento.", "Sistema il metodo di pagamento: finché è ferma, nessun dato è attendibile.");
+    return k.causaErrore && k.causaErrore !== "pagamento"
+      ? esito("rosso", `Ferma: ${causaFermo(k).l.toLowerCase()}.`, `${causaFermo(k).azione} Finché è ferma, nessun dato è attendibile.`)
+      : esito("rosso", "Ferma per errore di pagamento.", "Sistema il metodo di pagamento: finché è ferma, nessun dato è attendibile.");
   }
   if (!kpi) {
     return esito("grigio", "Manca il KPI: senza costo obiettivo non c'è niente con cui confrontare il costo reale.",
@@ -5245,9 +5258,10 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
         const g = giorniTra(dal, oggi());
         upd("annotazioni", (l) => [{
           id: uid(), clienteId: resto.clienteId, campagnaId: resto.id, data: oggi(), tipo: "esterno",
-          testo: `Errore di pagamento risolto su "${resto.nome}". Campagna ferma dal ${dataItA(dal)} al ${dataItA(oggi())}: ${int(g)} ${g === 1 ? "giorno" : "giorni"} senza erogazione. Stato riportato su "${et(STATI_CAMPAGNA, resto.stato)}".`,
+          testo: `${causaFermo(prima).l} risolto su "${resto.nome}". Campagna ferma dal ${dataItA(dal)} al ${dataItA(oggi())}: ${int(g)} ${g === 1 ? "giorno" : "giorni"} senza erogazione. Stato riportato su "${et(STATI_CAMPAGNA, resto.stato)}".`,
         }, ...l]);
         resto.erroreDal = "";
+        resto.causaErrore = "";
       }
       /* I totali salvati seguono le finestre tenute: se ne cancelli una, il totale
          in archivio scende con lei invece di restare il vecchio numero. */
@@ -5564,7 +5578,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
           return w ? <div className="sub" style={{ color: "#C99A3A" }}>in valutazione dopo modifica · fino al {dataIt(w.fino)}</div> : null;
         })()}
       </td>
-      <td><span className="tag" data-k={k.stato}>{et(STATI_CAMPAGNA, k.stato)}</span></td>
+      <td><span className="tag" data-k={k.stato}>{etStato(k)}</span>{k.accountBloccato ? <div className="sub neg" title="Stato dell'account pubblicitario su Meta">account {k.accountBloccato}</div> : null}</td>
       <td className="r">{eur(k.d.sp)}<div className="sub mono">di {eur(k.budget)}</div></td>
       <td className={"r " + (k.bmk.ctrMin && (k.d.ctrLink || k.d.ctr) < k.bmk.ctrMin ? "neg" : "")}>{pctv(k.d.ctrLink || k.d.ctr)}</td>
       <td className="r">{eur(k.d.cpcLink || k.d.cpc)}</td>
@@ -8744,7 +8758,7 @@ Regole:
                       <input type="checkbox" checked={mia} aria-label={`Collega ${k.nome}`}
                         onChange={(e) => imposta([k.id], e.target.checked ? f.id : "")} />
                       <span className="nm">{k.nome}</span>
-                      <span className="st"><span className="tag" data-k={k.stato}>{et(STATI_CAMPAGNA, k.stato)}</span></span>
+                      <span className="st"><span className="tag" data-k={k.stato}>{etStato(k)}</span>{k.accountBloccato ? <div className="sub neg" title="Stato dell'account pubblicitario su Meta">account {k.accountBloccato}</div> : null}</span>
                       <span className="st mono">{eur0(k.d.sp)}</span>
                       <span className="st mono">{k.d.ld ? int(k.d.ld) : "—"}</span>
                       <span className="alt">{altrove ? `già su ${altrove}` : ""}</span>
@@ -9561,7 +9575,7 @@ Regole:
                   <option value="matura">In fase Matura</option>
                   <option value="attiva">In fase Attiva</option>
                   <option value="chiusa">Chiuse</option>
-                  <option value="errore">Ferme per pagamento</option>
+                  <option value="errore">Ferme (pagamento o account)</option>
                   <option value="__valutazione">In valutazione dopo modifica</option>
                   <option value="nd">Senza data di inizio</option>
                 </select>
@@ -9678,7 +9692,8 @@ Regole:
                   </td>
                   <td className="sub">{k.funnelId ? (nomeFunnel(k.funnelId) || "—") : <span className="sub">—</span>}</td>
                   <td>
-                    <span className="tag" data-k={k.stato}>{et(STATI_CAMPAGNA, k.stato)}</span>
+                    <span className="tag" data-k={k.stato}>{etStato(k)}</span>
+                    {k.accountBloccato ? <div className="sub neg" title="Stato dell'account pubblicitario su Meta">account {k.accountBloccato}</div> : null}
                     <div className="sub">{fase === "totale" ? faseCampagna(k).l : f.quando}</div>
                     {(() => {
                       const pr = valutazionePronta(k);
@@ -11868,7 +11883,7 @@ Regole:
                           <option value="matura">Matura</option>
                           <option value="attiva">Attiva</option>
                           <option value="chiusa">Chiuse</option>
-                          <option value="errore">Ferme per pagamento</option>
+                          <option value="errore">Ferme (pagamento o account)</option>
                         </select>
                         <select value={cruSegnale} onChange={(e) => setCruSegnale(e.target.value)} aria-label="Filtra per semaforo">
                           <option value="">Tutti i segnali</option>
@@ -12219,7 +12234,7 @@ Regole:
           liste={{
             linee: [...new Set(data.campagne.map((k) => k.linea).filter(Boolean))].sort(),
             campagne: data.campagne.filter((k) => k.archiviata !== "si").map((k) => ({
-              id: k.id, nome: k.nome, clienteId: k.clienteId, stato: et(STATI_CAMPAGNA, k.stato),
+              id: k.id, nome: k.nome, clienteId: k.clienteId, stato: etStato(k),
               altro: k.funnelId && ed && k.funnelId !== ed.draft.id
                 ? (data.funnel.find((f) => f.id === k.funnelId) || {}).nome : "",
             })).sort((a, b) => a.nome.localeCompare(b.nome, "it")),

@@ -87,6 +87,18 @@ assert.equal(k1b.budgetGiorno, 80); assert.equal(k1b.storicoBudget.length, 2); a
 const meta4 = { ...meta, account: [{ ...meta.account[0], stato: 3 }] };
 const k1c = applicaMeta({ ...d, campagne: d.campagne.map((k) => (k.id === "k1" ? { ...k, stato: "attiva" } : k)) }, meta4, opz).data.campagne.find((k) => k.id === "k1");
 assert.equal(k1c.stato, "errore"); assert.equal(k1c.erroreDal, "2026-10-12");
+assert.equal(k1c.causaErrore, "pagamento"); assert.equal(k1c.accountBloccato, "");
+// Account disattivato da Meta (account compromesso): stessa logica, con la causa e il motivo
+const meta5 = { ...meta, account: [{ ...meta.account[0], stato: 2, motivo_blocco: 15 }] };
+const d5 = applicaMeta({ ...d, campagne: d.campagne.map((k) => (k.id === "k1" ? { ...k, stato: "attiva" } : k)) }, meta5, opz).data;
+const k1d = d5.campagne.find((k) => k.id === "k1");
+assert.equal(k1d.stato, "errore"); assert.equal(k1d.causaErrore, "disattivato");
+assert.match(k1d.accountBloccato, /disattivato · account compromesso/);
+const spenta = d5.campagne.find((k) => k.metaId === "c2");
+assert.equal(spenta.stato, "pausa", "la campagna spenta resta spenta"); assert.match(spenta.accountBloccato, /disattivato/, "ma porta lo stato dell'account");
+// Account riattivato: tutto torna pulito
+const k1e = applicaMeta(d5, meta, opz).data.campagne.find((k) => k.id === "k1");
+assert.equal(k1e.stato, "attiva"); assert.equal(k1e.causaErrore, ""); assert.equal(k1e.accountBloccato, ""); assert.equal(k1e.erroreDal, "");
 
 // Stati e obiettivi
 assert.equal(statoCampagnaDaMeta({ stato: "ARCHIVED" }, null, "", "2026-10-12"), "conclusa");

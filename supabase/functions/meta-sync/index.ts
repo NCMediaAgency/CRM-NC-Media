@@ -146,10 +146,10 @@ const filtroCampagne = (ids) => JSON.stringify([{ field: "campaign.id", operator
 
 // ---------- elenco account ----------
 async function aggiornaAccount(ws, token) {
-  const acc = await graph("me/adaccounts", { fields: "account_id,name,currency,account_status,timezone_name,business{name}", limit: "200" }, token);
+  const acc = await graph("me/adaccounts", { fields: "account_id,name,currency,account_status,disable_reason,timezone_name,business{name}", limit: "200" }, token);
   await upsert("meta_account", "workspace_id,account_id", acc.map((a) => ({
     workspace_id: ws, account_id: String(a.account_id), nome: a.name || "", valuta: a.currency || "",
-    stato: a.account_status ?? null, fuso: a.timezone_name || "", business: (a.business && a.business.name) || "",
+    stato: a.account_status ?? null, motivo_blocco: a.disable_reason ?? null, fuso: a.timezone_name || "", business: (a.business && a.business.name) || "",
     aggiornato: new Date().toISOString(),
   })));
   return acc.length;

@@ -16,7 +16,24 @@ export const obiettivoDaMeta = (o) => {
 };
 
 /* Account con problemi di pagamento: le campagne accese non stanno davvero erogando */
-const ACCOUNT_IN_ERRORE = [3, 9];
+/* Account che non erogano: le campagne accese su Meta risultano ferme nel CRM, con la causa */
+const ACCOUNT_IN_ERRORE = [2, 3, 7, 8, 9, 100, 101, 202];
+export const causaBlocco = (account) => {
+  const s = Number(account && account.stato);
+  if ([3, 8, 9].includes(s)) return "pagamento";
+  if (s === 2) return "disattivato";
+  if (s === 7) return "revisione";
+  if ([100, 101, 202].includes(s)) return "chiuso";
+  return "";
+};
+/* disable_reason dell'API di Meta */
+export const MOTIVI_BLOCCO = {
+  1: "violazione delle norme pubblicitarie", 2: "verifica della proprietà intellettuale", 3: "rischio sui pagamenti",
+  4: "account chiuso da Meta", 5: "verifica antifrode", 6: "integrità dell'attività", 7: "chiusura definitiva",
+  8: "account di rivenditore inutilizzato", 9: "account inutilizzato", 10: "account ombrello",
+  11: "norme del Business Manager", 12: "account non veritiero", 13: "entità legale non più condivisa",
+  14: "revisione del contesto", 15: "account compromesso",
+};
 export const ACCOUNT_STATI = {
   1: "attivo", 2: "disattivato", 3: "pagamento in sospeso", 7: "in revisione", 8: "in attesa di saldo",
   9: "periodo di tolleranza", 100: "in chiusura", 101: "chiuso", 201: "attivo", 202: "chiuso",
@@ -138,6 +155,11 @@ export function applicaMeta(data, meta, opz) {
     /* Traccia del fermo per pagamento, come il salvataggio della scheda */
     if (stato === "errore" && !(vecchia && vecchia.erroreDal)) campi.erroreDal = oggi;
     if (stato !== "errore") campi.erroreDal = "";
+    /* Causa del fermo e stato dell'account, anche per le campagne spente: si vede accanto al nome */
+    const causa = causaBlocco(acc);
+    campi.causaErrore = stato === "errore" ? causa || "pagamento" : "";
+    campi.accountBloccato = causa && causa !== "pagamento"
+      ? `${ACCOUNT_STATI[Number(acc.stato)] || "bloccato"}${acc.motivo_blocco && MOTIVI_BLOCCO[acc.motivo_blocco] ? ` · ${MOTIVI_BLOCCO[acc.motivo_blocco]}` : ""}` : "";
 
     if (vecchia) {
       const nuova = { ...vecchia, ...campi };
