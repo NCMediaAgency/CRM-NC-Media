@@ -37,23 +37,39 @@ jobs:
         with:
           version: latest
 
-      - name: Collegamento al progetto
-        run: supabase link --project-ref "$PROGETTO" --password "$SUPABASE_DB_PASSWORD"
+      # Indirizzo del database dal pooler di Supabase (sessione, porta 5432): il token può leggerlo,
+      # mentre "supabase link" chiederebbe anche le chiavi API, che non servono
+      - name: Indirizzo del database
+        run: |
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROGETTO/config/database/pooler" > pooler.json
+          python3 - <<'PY'
+          import json, os, urllib.parse
+          righe = json.load(open("pooler.json"))
+          p = next((r for r in righe if r.get("database_type") == "PRIMARY"), righe[0])
+          pw = urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"], safe="")
+          url = f"postgresql://{p['db_user']}:{pw}@{p['db_host']}:5432/{p.get('db_name') or 'postgres'}"
+          print(f"::add-mask::{url}")
+          print(f"::add-mask::{pw}")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"DB_URL={url}\n")
+          PY
+          rm pooler.json
 
       # 0001-0003 sono state eseguite a mano dallo SQL Editor prima dell'automazione:
       # le segno come fatte (una volta sola), così non ripartono
       - name: Migrazioni già eseguite a mano
         run: |
-          fatte=$(supabase migration list --linked 2>/dev/null || true)
+          fatte=$(supabase migration list --db-url "$DB_URL" 2>/dev/null || true)
           echo "$fatte"
           for v in 0001 0002 0003; do
             if ! echo "$fatte" | grep -Eq "^\s*$v\s*\|\s*$v\b"; then
-              supabase migration repair --linked --status applied "$v"
+              supabase migration repair --db-url "$DB_URL" --status applied "$v"
             fi
           done
 
       - name: Migrazioni nuove
-        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+        run: supabase db push --db-url "$DB_URL" --yes
 
       - name: Funzione meta-sync
         run: supabase functions deploy meta-sync --project-ref "$PROGETTO" --no-verify-jwt --use-api
