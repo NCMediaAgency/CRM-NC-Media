@@ -1406,7 +1406,7 @@ const GUIDA = [
       { h: "Cosa entra nei totali dell'agenzia", p: "La panoramica e il riepilogo mensile a livello agenzia contano solo i clienti principali: spesa, lead, CPL, contratti e andamento escludono i sottoclienti, e nella tabella Performance i sottoclienti non compaiono come righe. Sotto il nome di chi ne ha leggi quanti sono esclusi. Per vedere i loro numeri entri nel cliente madre e usi l'interruttore consolidato." },
       { h: "L'eccezione degli avvisi", p: "Gli avvisi restano su tutti gli account, sottoclienti compresi, e nella riga del cliente principale è indicato quanti arrivano da loro. È una scelta deliberata: un problema critico sulla campagna di un sottocliente non deve restare invisibile solo perché i suoi numeri non entrano nei totali." },
       { h: "Sforzo/Resa", p: "Quanto incassi per ogni tentativo di contatto: incassato diviso chiamate fatte, nel mese. È il valore medio che ogni contatto gestito porta davvero in cassa, e si legge accanto al CPL. Se è più alto del CPL il funnel è in profitto e aumentare il volume ha senso; se è più basso, ogni contatto in più costa più di quanto rende, e la colonna diventa bordeaux. Scomposto, quel numero è tasso di conversione per scontrino medio: tanti contatti con poco incassato vuol dire lead fuori target o vendita inefficace; pochi contatti con molto incassato vuol dire un funnel di qualità da scalare tenendo fermo il target. Se nel ciclo di vendita non hai registrato le chiamate, la colonna usa i contatti entrati nel funnel e lo dichiara sotto il numero: le due basi non sono confrontabili fra loro, quindi tienine conto quando metti due clienti a fianco." },
-      { h: "Performance dei clienti", p: "La tabella riporta per ogni cliente la spesa, i lead, il CPL, le demo, le chiusure, i contratti e lo Sforzo/Resa dell'ultimo mese con dati, più la resa rispetto all'obiettivo pubblicitario. Il pallino dello stato riassume il giudizio: rosso se ha avvisi critici, ambra se ne ha di attenzione o se è sotto obiettivo, verde se regge. Cliccando entri nel cliente." },
+      { h: "Performance dei clienti", p: "La tabella riporta per ogni cliente la spesa, i lead e il CPL dell'ultimo mese con dati, e le demo, le chiusure, i contratti e lo Sforzo/Resa dell'ultimo mese che ha numeri commerciali: spesso il mese in corso ha già la spesa di Meta ma non ancora il ciclo di vendita, e in quel caso sotto il numero compare il mese da cui arriva. Più la resa rispetto all'obiettivo pubblicitario. Il pallino dello stato riassume il giudizio: rosso se ha avvisi critici, ambra se ne ha di attenzione o se è sotto obiettivo, verde se regge. Cliccando entri nel cliente." },
       { h: "Ogni giorno, due minuti", p: "Apri il Cruscotto e guarda gli avvisi. Se ce n'è uno critico, o lo risolvi o lo trasformi in un task con una data." },
       { h: "Ogni settimana, venti minuti", p: "Aggiorna i dati delle campagne, poi premi Salva rilevazione in Advertising. È quel gesto che crea lo storico: senza, l'app può dirti solo se sei sopra soglia, non se stai peggiorando." },
       { h: "Ogni mese, un'ora", p: "Compila il periodo del Ciclo di vendita, registra le chiusure, genera il Report del cliente e scarica un backup. Poi guarda Economia: è il momento in cui scopri quale cliente ti sta costando più di quanto rende." },
@@ -11093,6 +11093,12 @@ Regole:
               const perf = m.portafoglio.filter((p) => idsPrinc.includes(p.id)).map((p) => {
                 const r = righeMensili([p.id]);
                 const u = r[r.length - 1] || { lead: 0, cpl: 0, demo: 0, chiusure: 0, contratto: 0, resa: 0, tentativi: 0, suChiamate: false };
+                /* I numeri commerciali arrivano spesso dopo la spesa (il mese in corso ha già Meta ma
+                   non ancora il ciclo di vendita): per demo, chiusure, contratti e resa prendo l'ultimo
+                   mese che li ha, e lo dichiaro sotto il numero se non è lo stesso della spesa. */
+                const uv = [...r].reverse().find((x) => x.demo || x.chiusure || x.contratto || x.incassato);
+                const vend = uv ? { demo: uv.demo, chiusure: uv.chiusure, contratto: uv.contratto, resa: uv.resa, tentativi: uv.tentativi,
+                  suChiamate: uv.suChiamate, meseVend: uv.mm !== u.mm ? uv.mm : "" } : { meseVend: "" };
                 /* Gli avvisi comprendono i sottoclienti: un problema critico su un loro
                    account non deve restare invisibile solo perché i numeri qui sono del madre. */
                 const suoi = gruppo(p.id);
@@ -11100,7 +11106,7 @@ Regole:
                 const attenz = m.avvisi.filter((a) => suoi.includes(a.clienteId) && a.gravita === "attenzione").length;
                 const daFigli = m.avvisi.filter((a) => suoi.includes(a.clienteId) && a.clienteId !== p.id).length;
                 const stato = critici ? "critico" : attenz ? "attenzione" : p.modo === "nd" ? "nd" : p.perf >= 1 ? "ottimo" : p.perf >= 0.8 ? "buono" : "attenzione";
-                return { ...p, ...u, stato, critici, attenz, daFigli };
+                return { ...p, ...u, ...vend, stato, critici, attenz, daFigli };
               }).sort((a, b) => b.sp - a.sp);
               const colore = { ottimo: "var(--ok)", buono: "var(--ok)", attenzione: "var(--warn)", critico: "var(--acc-t)", nd: "var(--ink3)" };
               const testoStato = { ottimo: "Ottimo", buono: "Buono", attenzione: "Attenzione", critico: "Critico", nd: "Senza obiettivo" };
@@ -11170,7 +11176,7 @@ Regole:
                   <section className="card">
                     <header>
                       <h2>Performance dei clienti</h2>
-                      <span className="sp eyebrow">solo clienti principali · ultimo mese con dati</span>
+                      <span className="sp eyebrow">solo clienti principali · ultimo mese con dati, per spesa e per vendite</span>
                       <button className="btn ghost mini" onClick={() => setVista("mesi")}>Riepilogo mensile</button>
                     </header>
                     <div className="wrap">
@@ -11192,13 +11198,13 @@ Regole:
                               <td className="r">{p.sp ? eur0(p.sp) : "—"}</td>
                               <td className="r">{p.lead ? int(p.lead) : "—"}</td>
                               <td className="r">{p.cpl ? eur(p.cpl) : "—"}</td>
-                              <td className="r">{p.demo ? int(p.demo) : "—"}</td>
-                              <td className="r">{p.chiusure ? int(p.chiusure) : "—"}</td>
-                              <td className="r">{p.contratto ? eur0(p.contratto) : "—"}</td>
+                              <td className="r">{p.demo ? int(p.demo) : "—"}{p.meseVend && p.demo ? <div className="sub">{meseIt(p.meseVend)}</div> : null}</td>
+                              <td className="r">{p.chiusure ? int(p.chiusure) : "—"}{p.meseVend && p.chiusure ? <div className="sub">{meseIt(p.meseVend)}</div> : null}</td>
+                              <td className="r">{p.contratto ? eur0(p.contratto) : "—"}{p.meseVend && p.contratto ? <div className="sub">{meseIt(p.meseVend)}</div> : null}</td>
                               <td className={"r " + (p.resa ? (p.cpl && p.resa >= p.cpl ? "pos" : p.cpl ? "neg" : "") : "")}
                                 title={p.resa ? `${eur(p.resa)} incassati per ogni ${p.suChiamate ? "chiamata fatta" : "contatto entrato nel funnel"} (${int(p.tentativi)}). ${p.cpl ? `Il contatto costa ${eur(p.cpl)}: ${p.resa >= p.cpl ? "il funnel è in profitto" : "ogni contatto costa più di quanto rende"}.` : ""}` : "Serve il numero di chiamate o di lead del mese"}>
                                 {p.resa ? eurDi(p.resa, p.valuta) : "—"}
-                                {p.resa > 0 && <div className="sub">{p.suChiamate ? "per chiamata" : "per contatto"}</div>}
+                                {p.resa > 0 && <div className="sub">{p.suChiamate ? "per chiamata" : "per contatto"}{p.meseVend ? ` · ${meseIt(p.meseVend)}` : ""}</div>}
                               </td>
                               <td className="r">{p.testo}</td>
                               <td>
