@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/meta-applica.test.mjs && node tests/meta-sync.test.mjs"
+    "test": "node tests/meta-applica.test.mjs && node tests/meta-sync.test.mjs && node tests/kpi.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

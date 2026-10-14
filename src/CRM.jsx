@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
 import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
+import { trovaTabelleKpi, applicaKpi, VOCI_KPI } from "./lib/kpi.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
   AlertTriangle, Clock, BarChart3, Percent, Layers, Briefcase, Gauge,
@@ -1553,6 +1554,7 @@ const GUIDA = [
     blocchi: [
       { h: "Fissate contro svolte", p: "Discovery e demo hanno due numeri distinti apposta. La differenza è lo show up, ed è quasi sempre il buco più costoso e il meno guardato." },
       { h: "Chi comanda sui numeri", p: "Se per quel mese esistono schede chiusura, sono loro a determinare chiusure, valore contratto e incassato: nella tabella compare \"da schede chiusura\". I campi manuali restano solo per i mesi che non dettagli." },
+      { h: "Importare da un file KPI", p: "Se il cliente tiene i suoi numeri in un foglio di riepilogo, dentro il cliente, nella scheda File o nel Ciclo di vendita, carichi il file Excel o CSV nel riquadro Importa i numeri da un file KPI. Il CRM cerca le tabelle con le voci in colonna (spesa, lead, appuntamenti fissati e svolti, nuovi clienti, fatturato e incassato dei nuovi clienti) e i mesi in riga, anche con una colonna per funnel sotto ogni mese, e te le elenca: scegli quali caricare e in quale cliente o sottocliente. Più tabelle si sommano mese per mese, utile quando un mese ha i funnel separati e nessuna colonna totale. Gli appuntamenti diventano demo fissate e svolte, i nuovi clienti chiusure. Prima di scrivere vedi l'anteprima mese per mese; si aggiornano solo i campi presenti nel file, e ricaricarlo sostituisce i numeri invece di sommarli." },
       { h: "Contratto e incassato", p: "Sono due cose diverse e vanno tenute separate: sul contratto si festeggia, sull'incassato si paga. La quota incassata e il residuo sono calcolati da soli." },
       { h: "Capacità", p: "Slot disponibili e ore al primo contatto servono a capire se il collo di bottiglia è il traffico o la capacità di lavorarlo. Sopra le dodici ore di attesa parte un avviso: prima di alzare il budget, riduci quel tempo." },
     ],
@@ -3795,6 +3797,8 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   const [metaScelta, setMetaScelta] = useState({});
   /* Scelta delle campagne di un account: { account, lista (da Meta), scelte, filtro, errore } */
   const [metaRegola, setMetaRegola] = useState(null);
+  /* Import di un file KPI nel Ciclo di vendita: { nome, tabelle, scelte, cliente, anno, errore } */
+  const [kpiImport, setKpiImport] = useState(null);
   const metaAvviato = useRef(false);
   const caricaMeta = useCallback(async (conDati = true, seguita = null) => {
     if (!meta) return null;
@@ -6949,6 +6953,118 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   };
 
   /* ---------- file e procedure ---------- */
+  /* ---------- File KPI → Ciclo di vendita (scheda File e Ciclo di vendita del cliente) ---------- */
+  const leggiFileKpi = (file) => {
+    if (!attivo) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const wb = eExcel(file.name)
+          ? XLSX.read(new Uint8Array(r.result), { type: "array", cellDates: true })
+          : XLSX.read(String(r.result), { type: "string" });
+        const fogli = wb.SheetNames.map((n) => ({ nome: n, righe: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) }));
+        const tabelle = trovaTabelleKpi(fogli);
+        setKpiImport({ nome: file.name, tabelle, scelte: tabelle.length ? [tabelle[0].id] : [], cliente: attivo.id,
+          anno: new Date().getFullYear(), errore: tabelle.length ? "" : "Nel file non ho trovato tabelle con i mesi in riga e le voci (spesa, lead, appuntamenti, clienti, fatturato) in colonna." });
+      } catch (e) { setKpiImport({ nome: file.name, tabelle: [], scelte: [], cliente: attivo.id, anno: new Date().getFullYear(), errore: `Non riesco a leggere il file: ${e.message || e}` }); }
+    };
+    if (eExcel(file.name)) r.readAsArrayBuffer(file); else r.readAsText(file);
+  };
+  /* Somma per mese delle tabelle scelte (es. FUNNEL OT + BOOST REEL di un mese senza colonna totale) */
+  const mesiKpi = (k) => {
+    const per = new Map();
+    k.tabelle.filter((t) => k.scelte.includes(t.id)).forEach((t) => t.mesi.forEach((x) => {
+      const periodo = x.periodo || `${k.anno}-${String(x.m).padStart(2, "0")}`;
+      const v = per.get(periodo) || { periodo, m: x.m, anno: x.anno || k.anno, valori: {}, da: [] };
+      Object.entries(x.valori).forEach(([c, n]) => { v.valori[c] = (v.valori[c] || 0) + n; });
+      v.da.push(t.gruppo);
+      per.set(periodo, v);
+    }));
+    return [...per.values()].sort((a, b) => (a.periodo < b.periodo ? -1 : 1));
+  };
+  const PannelloKpi = () => {
+    if (!attivo) return null;
+    const k = kpiImport;
+    const mesi = k ? mesiKpi(k) : [];
+    const clienti = [attivo.id, ...discendenti(attivo.id)].map(cliente).filter(Boolean);
+    const campi = VOCI_KPI.filter((v) => mesi.some((x) => x.valori[v.k] !== undefined));
+    const totaleEAltri = k && k.tabelle.some((t) => k.scelte.includes(t.id) && /totale/i.test(t.gruppo))
+      && k.tabelle.some((t) => k.scelte.includes(t.id) && !/totale/i.test(t.gruppo) && t.foglio === k.tabelle.find((x) => k.scelte.includes(x.id) && /totale/i.test(x.gruppo)).foglio);
+    const gia = k ? mesi.filter((x) => data.vendite.some((v) => v.clienteId === k.cliente && v.periodo === x.periodo)).length : 0;
+    const importa = () => {
+      const fonte = k.nome;
+      setData((d) => {
+        const r = applicaKpi(d.vendite, k.cliente, mesi.map((x) => ({ periodo: x.periodo, m: x.m, anno: x.anno, valori: x.valori })), { uid, fonte });
+        return { ...d, vendite: r.vendite };
+      });
+      setKpiImport({ ...k, fatto: `Caricati ${mesi.length} mesi nel Ciclo di vendita di ${(cliente(k.cliente) || {}).nome || "—"}${gia ? ` (${gia} già presenti, aggiornati)` : ""}.` });
+    };
+    return conValuta(valutaCliente(data, (k && k.cliente) || attivo.id), () => (
+      <section className="card">
+        <header>
+          <h2>Importa i numeri da un file KPI</h2>
+          <span className="sp eyebrow">Excel o CSV · va nel Ciclo di vendita</span>
+          {k && <button className="btn ghost mini" onClick={() => setKpiImport(null)}>Chiudi</button>}
+        </header>
+        <div style={{ padding: "14px 18px", display: "grid", gap: 10 }}>
+          <div className="drop">
+            <input type="file" accept=".xlsx,.xlsm,.xls,.ods,.csv" aria-label="File KPI"
+              onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) leggiFileKpi(f); e.target.value = ""; }} />
+            <span className="sub">Il foglio di riepilogo del cliente: voci in colonna (spesa, lead, appuntamenti fissati e svolti, nuovi clienti, fatturato, incassato) e mesi in riga, anche con una colonna per funnel sotto ogni mese.</span>
+          </div>
+          {k && k.errore && <div className="meta-msg" data-tipo="errore">{k.errore}</div>}
+          {k && k.fatto && <div className="meta-msg" data-tipo="ok">{k.fatto}</div>}
+          {k && k.tabelle.length > 0 && !k.fatto && (
+            <>
+              <div className="sub">Nel file <b>{k.nome}</b> ho trovato {k.tabelle.length} {k.tabelle.length === 1 ? "tabella" : "tabelle"}. Scegli quali caricare: se ne scegli più di una, i loro numeri si sommano mese per mese.</div>
+              <div className="meta-camp" style={{ maxHeight: 240 }}>
+                {k.tabelle.map((t) => (
+                  <label key={t.id}>
+                    <input type="checkbox" checked={k.scelte.includes(t.id)}
+                      onChange={(e) => setKpiImport((x) => ({ ...x, scelte: e.target.checked ? [...x.scelte, t.id] : x.scelte.filter((y) => y !== t.id) }))} />
+                    <span className="nome"><b>{t.gruppo}</b><span className="sub"> · foglio {t.foglio}</span></span>
+                    <span className="sub mono">{t.mesi.length} mesi · {t.mesi[0].periodo ? meseIt(t.mesi[0].periodo) : t.mesi[0].m}{t.mesi.length > 1 ? ` – ${t.mesi[t.mesi.length - 1].periodo ? meseIt(t.mesi[t.mesi.length - 1].periodo) : t.mesi[t.mesi.length - 1].m}` : ""}</span>
+                  </label>
+                ))}
+              </div>
+              {totaleEAltri && <div className="meta-msg" data-tipo="errore">Hai scelto una colonna TOTALE insieme ad altre dello stesso foglio: i numeri verrebbero contati due volte.</div>}
+              <div className="meta-riga">
+                <span className="sub">Carica in</span>
+                <select value={k.cliente} onChange={(e) => setKpiImport((x) => ({ ...x, cliente: e.target.value }))} aria-label="Cliente di destinazione" style={{ maxWidth: 300 }}>
+                  {clienti.map((z) => <option key={z.id} value={z.id}>{z.id === attivo.id ? z.nome : `↳ ${z.nome}`}</option>)}
+                </select>
+                {k.tabelle.some((t) => k.scelte.includes(t.id) && t.annoMancante) && (
+                  <>
+                    <span className="sub">Anno dei mesi senza anno</span>
+                    <input type="number" value={k.anno} min="2015" max="2100" style={{ width: 90 }}
+                      onChange={(e) => setKpiImport((x) => ({ ...x, anno: Number(e.target.value) || x.anno }))} aria-label="Anno" />
+                  </>
+                )}
+              </div>
+              {mesi.length > 0 && (
+                <div className="wrap"><table className="tbl">
+                  <thead><tr><th>Mese</th>{campi.map((v) => <th key={v.k} className="r" title={v.l}>{v.b}</th>)}</tr></thead>
+                  <tbody>
+                    {mesi.map((x) => (
+                      <tr key={x.periodo}>
+                        <td><b>{meseIt(x.periodo)}</b>{data.vendite.some((v) => v.clienteId === k.cliente && v.periodo === x.periodo) ? <div className="sub">già presente: si aggiorna</div> : null}</td>
+                        {campi.map((v) => <td key={v.k} className="r">{x.valori[v.k] === undefined ? "—" : ["spesa", "valoreContratto", "incassato"].includes(v.k) ? eur(x.valori[v.k]) : int(x.valori[v.k])}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+              )}
+              <div className="meta-riga">
+                <button className="btn ghost mini" disabled={!mesi.length} onClick={importa}>Carica {mesi.length} {mesi.length === 1 ? "mese" : "mesi"} nel Ciclo di vendita</button>
+                <span className="sub">Appuntamenti fissati e svolti vanno in demo fissate e svolte, i nuovi clienti in chiusure. Si aggiornano solo i campi presenti nel file: gli altri restano come sono.</span>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    ));
+  };
+
   const SezioneFile = () => {
     const base = (attivo ? S.file : data.file)
       .filter((f) => (!fFile.cat || f.categoria === fFile.cat) && (!fFile.tipo || f.tipo === fFile.tipo))
@@ -6982,6 +7098,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
 
     return (
       <>
+        {PannelloKpi()}
         {senzaProcedure && (
           <article className="al" data-g="attenzione">
             <div className="meta"><span className="tag">contenuti pronti</span></div>
@@ -10373,6 +10490,8 @@ Regole:
             </article>
           );
         })()}
+
+        {PannelloKpi()}
 
         {(() => {
           const gs = data.giornate.filter((g) => (attivo ? ambito.includes(g.clienteId) : true));
