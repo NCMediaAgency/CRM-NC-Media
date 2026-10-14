@@ -60,7 +60,7 @@ jobs:
       # le segno come fatte (una volta sola), così non ripartono
       - name: Migrazioni già eseguite a mano
         run: |
-          fatte=$(supabase migration list --db-url "$DB_URL" 2>/dev/null || true)
+          fatte=$(supabase migration list --db-url "$DB_URL" 2>/dev/null | tr -d '`' || true)
           echo "$fatte"
           for v in 0001 0002 0003; do
             if ! echo "$fatte" | grep -Eq "^\s*$v\s*\|\s*$v\b"; then
