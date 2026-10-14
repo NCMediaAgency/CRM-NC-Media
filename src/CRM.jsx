@@ -1675,7 +1675,7 @@ const GUIDA = [
       { h: "Cosa arriva", p: "Le campagne attive o che hanno speso negli ultimi 90 giorni, con stato, budget giornaliero, date, spesa, impression, clic, clic sul link, lead, acquisti e ricavi. Sotto ogni campagna i suoi ad set e annunci con i totali. Le finestre Test, Matura e le settimane Attive sono già sommate da Meta, con la frequenza vera di ciascuna." },
       { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
       { h: "Cosa resta tuo", p: "Lo stato In test, le soglie, la linea, il funnel, le note, lo stadio dei creativi e, se l'hai segnato come scritto a mano, l'esito commerciale (conversioni e ricavi). Il budget giornaliero cambiato su Meta entra nello storico con la data del giorno, come quando lo cambi dalla scheda." },
-      { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito tutti i clienti collegati. Per uno solo usa il pulsante Aggiorna sulla sua riga in Impostazioni, oppure Aggiorna questo cliente nella sua scheda (se ha sottoclienti, aggiorna anche loro): utile quando un account si è fermato o ti serve un dato fresco. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
+      { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito tutti i clienti collegati. Per uno solo usa il pulsante Aggiorna sulla sua riga in Impostazioni, oppure dalla sua scheda: se ha sottoclienti trovi due pulsanti, Aggiorna solo questo cliente (i suoi account e basta) e Aggiorna cliente e sottoclienti: utile quando un account si è fermato o ti serve un dato fresco. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
       { h: "Scegliere quali campagne scaricare", p: "Nella Scheda cliente, sotto ogni account collegato, c'è Campagne da scaricare. Normalmente il CRM prende le attive e quelle che hanno speso negli ultimi 90 giorni. Con Solo le attive prende solo quelle accese (quando una si spegne, la registra un'ultima volta in pausa e poi la lascia). Con Solo quelle che scelgo il CRM legge da Meta l'elenco delle campagne dell'account, accese prima e poi per spesa, e scarichi solo quelle che spunti; Cambia la scelta riapre l'elenco. Le campagne non scelte già presenti nel CRM restano dove sono: se non ti servono le elimini e non verranno ricaricate. La scelta vale dal prossimo aggiornamento; per vederla subito premi Aggiorna questo cliente." },
       { h: "Account che si aggiornano solo a mano", p: "Sempre sotto l'account, togliendo la spunta Nell'aggiornamento automatico l'account resta fuori dall'aggiornamento delle 9 e da Aggiorna ora: si aggiorna solo quando premi Aggiorna sulla sua riga in Impostazioni o Aggiorna questo cliente nella sua scheda. Serve per gli account pesanti, quelli fermi o quelli che ti basta caricare una volta: scarichi i dati, togli la spunta, e l'aggiornamento di tutti diventa più veloce. In Impostazioni, accanto al nome dell'account, compare la sua regola (solo attive, campagne scelte, solo a mano)." },
       { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento; su un account disattivato, in revisione o chiuso passano rispettivamente in Account disattivato, Account in revisione o Account chiuso, con l'avviso critico e i giorni di fermo come per il pagamento. Sotto lo stato di ogni campagna dell'account compare anche lo stato su Meta, con il motivo della disattivazione quando Meta lo dà (per esempio violazione delle norme pubblicitarie o account compromesso)." },
@@ -3885,9 +3885,9 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   };
 
   /* extra.account: aggiorna solo questi account (un cliente); chi: il cliente, per il pulsante della sua riga */
-  const aggiornaMeta = async (azione, extra = {}, chi = "") => {
+  const aggiornaMeta = async (azione, extra = {}, chi = "", solo = false) => {
     if (!meta || metaStato.attesa) return;
-    setMetaStato({ attesa: azione === "account" ? "account" : "sync", errore: "", esito: "", cliente: chi });
+    setMetaStato({ attesa: azione === "account" ? "account" : "sync", errore: "", esito: "", cliente: chi, solo });
     try {
       const avvio = await meta.sincronizza(azione, extra);
       if (avvio && avvio.giaInCorso) setMetaStato((x) => ({ ...x, esito: "C'era già lo stesso aggiornamento in corso: aspetto che finisca." }));
@@ -4240,7 +4240,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   };
   const metaAggiornaCliente = (z, conSotto) => {
     const ids = metaIdDi(z.id, conSotto);
-    if (ids.length) aggiornaMeta(undefined, { account: ids }, z.id);
+    if (ids.length) aggiornaMeta(undefined, { account: ids }, z.id, !conSotto && discendenti(z.id).length > 0);
   };
   /* Regole per account (quali campagne, se entra nell'aggiornamento di tutti): stanno nel collegamento */
   const metaRegolaDi = (accId) => metaColl.find((c) => String(c.account_id) === String(accId)) || {};
@@ -4405,10 +4405,17 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
         <header>
           <h2>Meta Ads</h2>
           <span className="sp eyebrow">ultimo aggiornamento {metaQuando(metaInfo && metaInfo.ultimaSync && metaInfo.ultimaSync.fine)}</span>
+          {/* Con sottoclienti due pulsanti: solo il cliente (i suoi account) o anche i sottoclienti */}
+          {metaFb && discendenti(z.id).length > 0 && metaIdDi(z.id, false).length > 0 && (
+            <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={() => metaAggiornaCliente(z, false)}
+              title="Scarica adesso solo gli account di questo cliente, senza i sottoclienti">
+              {metaStato.attesa === "sync" && metaStato.cliente === z.id && metaStato.solo ? "Aggiornamento in corso…" : "Aggiorna solo questo cliente"}
+            </button>
+          )}
           {metaFb && metaIdDi(z.id, true).length > 0 && (
             <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={() => metaAggiornaCliente(z, true)}
               title={discendenti(z.id).length ? "Scarica adesso i dati di questo cliente e dei suoi sottoclienti" : "Scarica adesso i dati di questo cliente"}>
-              {metaStato.attesa === "sync" && metaStato.cliente === z.id ? "Aggiornamento in corso…" : discendenti(z.id).length ? "Aggiorna cliente e sottoclienti" : "Aggiorna questo cliente"}
+              {metaStato.attesa === "sync" && metaStato.cliente === z.id && !metaStato.solo ? "Aggiornamento in corso…" : discendenti(z.id).length ? "Aggiorna cliente e sottoclienti" : "Aggiorna questo cliente"}
             </button>
           )}
           {metaPulsanti()}
