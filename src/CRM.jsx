@@ -1554,6 +1554,7 @@ const GUIDA = [
     blocchi: [
       { h: "Fissate contro svolte", p: "Discovery e demo hanno due numeri distinti apposta. La differenza è lo show up, ed è quasi sempre il buco più costoso e il meno guardato." },
       { h: "Chi comanda sui numeri", p: "Se per quel mese esistono schede chiusura, sono loro a determinare chiusure, valore contratto e incassato: nella tabella compare \"da schede chiusura\". I campi manuali restano solo per i mesi che non dettagli." },
+      { h: "Fuori dai clienti, solo i totali", p: "Con Tutti i clienti selezionato, Ciclo di vendita, Chiusure e Advertising mostrano una riga per cliente con i totali: mesi registrati, lead, demo, chiusure, contratti e incassato; spesa, CPL e ROAS per l'advertising. Ogni importo resta nella valuta del suo cliente. I dettagli, cioè i singoli mesi, le schede chiusura, le campagne, gli ad set e le finestre, stanno dentro il cliente: un clic sulla riga ti porta lì." },
       { h: "Importare da un file KPI", p: "Se il cliente tiene i suoi numeri in un foglio di riepilogo, dentro il cliente, nella scheda File o nel Ciclo di vendita, carichi il file Excel o CSV nel riquadro Importa i numeri da un file KPI. Il CRM cerca le tabelle con le voci in colonna (spesa, lead, appuntamenti fissati e svolti, nuovi clienti, fatturato e incassato dei nuovi clienti) e i mesi in riga, anche con una colonna per funnel sotto ogni mese, e te le elenca: scegli quali caricare e in quale cliente o sottocliente. Più tabelle si sommano mese per mese, utile quando un mese ha i funnel separati e nessuna colonna totale. Gli appuntamenti diventano demo fissate e svolte, i nuovi clienti chiusure. Prima di scrivere vedi l'anteprima mese per mese; si aggiornano solo i campi presenti nel file, e ricaricarlo sostituisce i numeri invece di sommarli." },
       { h: "Contratto e incassato", p: "Sono due cose diverse e vanno tenute separate: sul contratto si festeggia, sull'incassato si paga. La quota incassata e il residuo sono calcolati da soli." },
       { h: "Capacità", p: "Slot disponibili e ore al primo contatto servono a capire se il collo di bottiglia è il traffico o la capacità di lavorarlo. Sopra le dodici ore di attesa parte un avviso: prima di alzare il budget, riduci quel tempo." },
@@ -9308,6 +9309,49 @@ Regole:
       .sort((a, b) => b.d.sp - a.d.sp);
     const nomeCampagna = (id) => (data.campagne.find((k) => k.id === id) || {}).nome || "—";
 
+    /* Fuori dai clienti solo i totali per cliente: campagne, ad set e finestre si guardano dentro il cliente */
+    if (!attivo) {
+      const tutte = m.campagne.filter((k) => cerca(k.nome + " " + nomeCli(k.clienteId)));
+      const righeCli = ordinaGerarchia().map(({ z, liv }) => {
+        const l = tutte.filter((k) => k.clienteId === z.id);
+        return l.length ? { z, liv, ...derivate(somma(l)), ...soldiTot(l), n: l.length, accese: l.filter((k) => ["attiva", "test"].includes(k.stato)).length } : null;
+      }).filter(Boolean);
+      const TT = derivate(somma(tutte)), ST = soldiTot(tutte);
+      const entra = (id) => { cambiaAccount(id); setVista("campagne"); };
+      return conValuta(valutaComune(tutte.map((k) => k.clienteId)), () => (
+        <>
+          <div className="kpis">
+            <div className="kpi"><IcoKpi t="Spesa del periodo" /><div className="eyebrow">Spesa</div><div className="v">{eur0(TT.sp)}</div><div className="s">{righeCli.length} clienti · {tutte.length} campagne</div></div>
+            <div className="kpi"><IcoKpi /><div className="eyebrow">Lead</div><div className="v">{int(TT.ld)}</div><div className="s">CPL medio {TT.ld ? eur(TT.cpl) : "—"}</div></div>
+            <div className="kpi"><IcoKpi /><div className="eyebrow">Conversioni</div><div className="v">{int(TT.cv)}</div><div className="s">CPA medio {TT.cv ? eur(TT.cpa) : "—"}</div></div>
+            <div className="kpi"><IcoKpi /><div className="eyebrow">Incassato</div><div className="v">{eur0(ST.incassato)}</div><div className="s">contratti {eur0(ST.contratto)} · ROAS {TT.sp && TT.rc ? fmt(TT.roas) : "—"}</div></div>
+          </div>
+          <section className="card">
+            <header><h2>Advertising per cliente</h2><span className="sp eyebrow">totali · campagne, ad set e finestre sono dentro ogni cliente</span></header>
+            <div className="wrap"><table className="tbl">
+              <thead><tr><th>Cliente</th><th className="r">Campagne</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Conversioni</th><th className="r">ROAS</th><th className="r">Contratti</th><th className="r">Incassato</th></tr></thead>
+              <tbody>
+                {mapValuta(righeCli, (r) => r.z.id, (r) => (
+                  <tr key={r.z.id} className="clic" onClick={() => entra(r.z.id)} title="Apri l'advertising del cliente">
+                    <td style={{ paddingLeft: 14 + r.liv * 18 }}>{r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b></td>
+                    <td className="r">{int(r.n)}<div className="sub mono">{int(r.accese)} accese</div></td>
+                    <td className="r">{eur0(r.sp)}</td>
+                    <td className="r">{int(r.ld)}</td>
+                    <td className="r">{r.ld ? eur(r.cpl) : "—"}</td>
+                    <td className="r">{int(r.cv)}</td>
+                    <td className="r">{r.sp && r.rc ? fmt(r.roas) : "—"}</td>
+                    <td className="r">{eur0(r.contratto)}</td>
+                    <td className="r">{eur0(r.incassato)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+            {!righeCli.length && <div className="empty"><b>Nessuna campagna</b>Le campagne si aggiungono dentro il cliente, o arrivano da Meta.</div>}
+          </section>
+        </>
+      ));
+    }
+
     return conValuta(valutaComune(base.map((k) => k.clienteId)), () => (
       <>
         <div className="kpis">
@@ -10353,7 +10397,38 @@ Regole:
           <div className="kpi"><IcoKpi t="Da incassare" /><div className="eyebrow">Da incassare</div><div className="v" style={{ color: contratto - incassato ? "var(--acc)" : "var(--ink)" }}>{eur0(contratto - incassato)}</div><div className="s">saldi ancora aperti</div></div>
         </div>
 
-        <section className="card">
+        {!attivo && (() => {
+          /* Fuori dai clienti solo i totali per account: le singole schede sono dentro il cliente */
+          const perCli = ordinaGerarchia().map(({ z, liv }) => {
+            const l = righe.filter((c) => c.clienteId === z.id);
+            if (!l.length) return null;
+            const ct = l.reduce((x, c) => x + (c.valoreContratto || 0), 0), ic = l.reduce((x, c) => x + (c.incassato || 0), 0);
+            return { z, liv, n: l.length, ct, ic, ultima: l[0].data };
+          }).filter(Boolean);
+          return (
+            <section className="card">
+              <header><h2>Chiusure per cliente</h2><span className="sp eyebrow">totali · le singole schede sono dentro ogni cliente</span></header>
+              <div className="wrap"><table className="tbl">
+                <thead><tr><th>Account</th><th className="r">Chiusure</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Residuo</th><th className="r">Ultima</th></tr></thead>
+                <tbody>
+                  {mapValuta(perCli, (r) => r.z.id, (r) => (
+                    <tr key={r.z.id} className="clic" onClick={() => { cambiaAccount(r.z.id); setVista("chiusure"); }} title="Apri le chiusure del cliente">
+                      <td style={{ paddingLeft: 14 + r.liv * 18 }}>{r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b></td>
+                      <td className="r">{int(r.n)}</td>
+                      <td className="r">{eur0(r.ct)}</td>
+                      <td className="r">{eur0(r.ic)}</td>
+                      <td className={"r " + (r.ct - r.ic > 0 ? "neg" : "")}>{r.ct - r.ic > 0 ? eur0(r.ct - r.ic) : "saldato"}</td>
+                      <td className="r sub">{dataIt(r.ultima)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+              {!perCli.length && <div className="empty"><b>Nessuna chiusura registrata</b>Le schede si aggiungono dentro ogni cliente.</div>}
+            </section>
+          );
+        })()}
+
+        {attivo && <section className="card">
           <header><h2>Clienti chiusi</h2><span className="sp eyebrow">ogni riga alimenta il mese corrispondente</span></header>
           <div className="wrap">
             <table className="tbl">
@@ -10384,7 +10459,7 @@ Regole:
           {!righe.length && (
             <div className="empty"><b>Nessuna chiusura registrata</b>Ogni scheda tiene insieme il cliente chiuso, gli importi e l'annuncio esatto da cui è arrivato.</div>
           )}
-        </section>
+        </section>}
       </>
     ));
   };
@@ -10493,7 +10568,7 @@ Regole:
 
         {PannelloKpi()}
 
-        {(() => {
+        {attivo && (() => {
           const gs = data.giornate.filter((g) => (attivo ? ambito.includes(g.clienteId) : true));
           const nomeFile = `registro-venditori-${attivo ? attivo.nome.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "clienti"}-${oggi()}`;
           const intest = COL_DIARIO.map((c) => c.l);
@@ -10710,7 +10785,39 @@ Regole:
           );
         })()}
 
-        <section className="card">
+        {!attivo && (() => {
+          /* Fuori dai clienti solo i totali per cliente: i mesi nel dettaglio sono dentro il cliente */
+          const perCli = ordinaGerarchia().map(({ z, liv }) => {
+            const l = righe.filter((r) => r.clienteId === z.id);
+            return l.length ? { z, liv, mesi: l.length, ultimo: l[0].periodo, ...sommaVendite(l) } : null;
+          }).filter(Boolean);
+          return (
+            <section className="card">
+              <header><h2>Ciclo di vendita per cliente</h2><span className="sp eyebrow">totali dei mesi registrati · il dettaglio è dentro ogni cliente</span></header>
+              <div className="wrap"><table className="tbl">
+                <thead><tr><th>Cliente</th><th className="r">Mesi</th><th className="r">Lead</th><th className="r">Demo svolte</th><th className="r">Chiusure</th><th className="r">Chiusura</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Costo/chiusura</th></tr></thead>
+                <tbody>
+                  {mapValuta(perCli, (r) => r.z.id, (r) => (
+                    <tr key={r.z.id} className="clic" onClick={() => { cambiaAccount(r.z.id); setVista("vendite"); }} title="Apri il ciclo di vendita del cliente">
+                      <td style={{ paddingLeft: 14 + r.liv * 18 }}>{r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b></td>
+                      <td className="r">{int(r.mesi)}<div className="sub mono">fino a {meseIt(r.ultimo)}</div></td>
+                      <td className="r">{int(r.lead)}</td>
+                      <td className="r">{int(r.demoSvolte)}</td>
+                      <td className="r">{int(r.chiusure)}</td>
+                      <td className="r">{r.demoSvolte ? pctv((r.chiusure / r.demoSvolte) * 100) : "—"}</td>
+                      <td className="r">{eur0(r.valoreContratto)}</td>
+                      <td className="r">{eur0(r.incassato)}</td>
+                      <td className="r">{r.chiusure && r.spesa ? eur(r.spesa / r.chiusure) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+              {!perCli.length && <div className="empty"><b>Nessun periodo caricato</b>I mesi si registrano dentro ogni cliente, a mano, dal registro dei venditori o da un file KPI.</div>}
+            </section>
+          );
+        })()}
+
+        {attivo && <section className="card">
           <header><h2>Periodi registrati</h2><span className="sp eyebrow">show up = svolte su fissate</span></header>          <div className="wrap">
             <table className="tbl">
               <thead><tr>
@@ -10749,7 +10856,7 @@ Regole:
           {!righe.length && (
             <div className="empty"><b>Nessun periodo caricato</b>Aggiungi un mese con chiamate, discovery e demo: le chiusure arrivano dalle schede della sezione Chiusure.</div>
           )}
-        </section>
+        </section>}
       </>
     ));
   };
