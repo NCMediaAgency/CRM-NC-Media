@@ -1439,6 +1439,7 @@ const GUIDA = [
     id: "adv", t: "Advertising e avvisi",
     intro: "Inserisci solo i dati grezzi che copi dalla piattaforma. CTR, CPC, CPM, CPA e ROAS li calcola l'app.",
     blocchi: [
+      { h: "Clienti principali e sottoclienti", p: "In Advertising si vedono a colpo d'occhio solo i clienti principali, con i numeri loro e dei sottoclienti sommati. La freccia accanto al nome apre i sottoclienti, uno per riga, più la riga dell'account principale da solo. Dentro un cliente vale lo stesso: prima le sue campagne, poi una riga chiusa per ogni sottocliente con i suoi totali, che la freccia apre sulle sue campagne." },
       { h: "Dentro e fuori dal cliente", p: "Con Tutti i clienti selezionato, Advertising mostra una riga per cliente con i totali: campagne e quante sono accese, spesa, lead, CPL, conversioni, ROAS, contratti e incassato, ognuno nella valuta del suo cliente. Contratti e incassato arrivano dalle schede chiusura collegate alle campagne o dagli importi scritti nelle campagne; se non ce ne sono, dal Ciclo di vendita del cliente (sotto il numero è indicato quanti mesi), e in quel caso il ROAS, quando la piattaforma non dichiara ricavi, è il rapporto fra contratti e spesa di quei soli mesi. Campagne, ad set, annunci, finestre, ritmo di erogazione e totali per funnel e linea si guardano dentro il cliente: un clic sulla riga ti porta lì." },
       { h: "Benchmark", p: "Per ogni campagna imposti ROAS minimo, CPL massimo, CPA massimo, CTR minimo, frequenza e CPM massimi. Lascia 0 quello che non vuoi controllare. Cambiando obiettivo l'app propone soglie tipiche, che poi correggi con i numeri veri del cliente." },
       { h: "CPL e CPA sono due cose diverse", p: "Nelle campagne a contatti il lead è il primo punto di conversione, e il CPL massimo è il tetto che conta: è lì che la campagna si rompe per prima. Il CPA massimo misura il punto dopo — l'appuntamento, la vendita, qualunque cosa tu stia contando come conversione. Se li tieni separati vedi dove si perde il margine: un CPL in linea con un CPA fuori tetto è un problema di vendita, non di advertising. Se lasci il CPL a 0 vale il CPA, così le campagne create prima di questo campo continuano a essere giudicate; e dove lead e conversioni sono lo stesso numero l'app mostra solo l'avviso sul CPL, per non dire due volte la stessa cosa." },
@@ -2786,6 +2787,9 @@ position:sticky;top:0;z-index:20}
 .meta-camp label{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
 .meta-camp label:last-child{border-bottom:0}
 .meta-camp .nome{flex:1;min-width:0}
+.crm .adv-freccia{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-right:6px;border-radius:5px;color:var(--ink2);border:1px solid var(--line);font-size:11px;line-height:1;vertical-align:middle;background:var(--surf2)}
+.crm .adv-freccia:hover{color:var(--ink);border-color:var(--acc-t)}
+.adv-gruppo td{background:var(--surf2)}
 .meta-msg{padding:10px 18px;font-size:13px;border-bottom:1px solid var(--line)}
 .meta-msg[data-tipo="errore"]{color:var(--acc-t)}
 .meta-msg[data-tipo="ok"]{color:var(--ok)}
@@ -3655,6 +3659,8 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   const [mostraArchCli, setMostraArchCli] = useState(false);
   const [trascina, setTrascina] = useState(false);
   const [apertiCli, setApertiCli] = useState({});
+  /* Advertising: sottoclienti aperti sotto il loro cliente principale */
+  const [apertiAdv, setApertiAdv] = useState({});
   const [campFasi, setCampFasi] = useState("");
   const [fase, setFase] = useState("totale");
   const [nuovoPadre, setNuovoPadre] = useState("");
@@ -9320,36 +9326,53 @@ Regole:
          altrimenti dal Ciclo di vendita del cliente. Il ritorno si calcola sui soli mesi che hanno
          contratti, con la spesa di quegli stessi mesi: spesa da sempre contro contratti di un anno
          darebbe un numero che non corrisponde a niente. */
-      const righeCli = ordinaGerarchia().map(({ z, liv }) => {
-        const l = tutte.filter((k) => k.clienteId === z.id);
+      /* Una riga per cliente principale con i totali suoi e dei sottoclienti; la freccia apre i sottoclienti */
+      const calcola = (z, liv, ids, extra = {}) => {
+        const l = tutte.filter((k) => ids.includes(k.clienteId));
         if (!l.length) return null;
         const camp = soldiTot(l);
-        const mv = righeMensili([z.id]).filter((r) => r.contratto || r.incassato);
+        const mv = righeMensili(ids).filter((r) => r.contratto || r.incassato);
         const ctV = mv.reduce((x, r) => x + r.contratto, 0), icV = mv.reduce((x, r) => x + r.incassato, 0), spV = mv.reduce((x, r) => x + r.spesa, 0);
         const daCiclo = !(camp.contratto + camp.incassato) && ctV + icV > 0;
-        return { z, liv, ...derivate(somma(l)), n: l.length, accese: l.filter((k) => ["attiva", "test"].includes(k.stato)).length,
+        return { z, liv, key: z.id + (extra.solo ? ":solo" : ""), ...extra, ...derivate(somma(l)), n: l.length, accese: l.filter((k) => ["attiva", "test"].includes(k.stato)).length,
           contratto: daCiclo ? ctV : camp.contratto, incassato: daCiclo ? icV : camp.incassato, daCiclo,
           ritorno: daCiclo && spV ? ctV / spV : 0, mesiV: daCiclo ? mv.length : 0 };
-      }).filter(Boolean);
+      };
+      const righeCli = ordinaGerarchia().filter((x) => x.liv === 0).flatMap(({ z }) => {
+        const sotto = ordinaGerarchia(z.id, 1);
+        const r = calcola(z, 0, [z.id, ...sotto.map((x) => x.z.id)], { nSotto: sotto.length });
+        if (!r) return [];
+        if (!sotto.length || !apertiAdv[z.id]) return [r];
+        const propria = calcola(z, 1, [z.id], { solo: true });
+        return [r, ...(propria ? [propria] : []), ...sotto.map((x) => calcola(x.z, x.liv, [x.z.id])).filter(Boolean)];
+      });
       const TT = derivate(somma(tutte));
-      const ST = righeCli.reduce((x, r) => ({ contratto: x.contratto + r.contratto, incassato: x.incassato + r.incassato }), { contratto: 0, incassato: 0 });
+      const ST = righeCli.filter((r) => r.liv === 0).reduce((x, r) => ({ contratto: x.contratto + r.contratto, incassato: x.incassato + r.incassato }), { contratto: 0, incassato: 0 });
       const entra = (id) => { cambiaAccount(id); setVista("campagne"); };
       return conValuta(valutaComune(tutte.map((k) => k.clienteId)), () => (
         <>
           <div className="kpis">
-            <div className="kpi"><IcoKpi t="Spesa del periodo" /><div className="eyebrow">Spesa</div><div className="v">{eur0(TT.sp)}</div><div className="s">{righeCli.length} clienti · {tutte.length} campagne</div></div>
+            <div className="kpi"><IcoKpi t="Spesa del periodo" /><div className="eyebrow">Spesa</div><div className="v">{eur0(TT.sp)}</div><div className="s">{righeCli.filter((r) => r.liv === 0).length} clienti principali · {tutte.length} campagne</div></div>
             <div className="kpi"><IcoKpi /><div className="eyebrow">Lead</div><div className="v">{int(TT.ld)}</div><div className="s">CPL medio {TT.ld ? eur(TT.cpl) : "—"}</div></div>
             <div className="kpi"><IcoKpi /><div className="eyebrow">Conversioni</div><div className="v">{int(TT.cv)}</div><div className="s">CPA medio {TT.cv ? eur(TT.cpa) : "—"}</div></div>
             <div className="kpi"><IcoKpi /><div className="eyebrow">Incassato</div><div className="v">{eur0(ST.incassato)}</div><div className="s">contratti {eur0(ST.contratto)}{TT.sp && TT.rc ? ` · ROAS ${fmt(TT.roas)}` : ""}</div></div>
           </div>
           <section className="card">
-            <header><h2>Advertising per cliente</h2><span className="sp eyebrow">totali · campagne, ad set e finestre sono dentro ogni cliente</span></header>
+            <header><h2>Advertising per cliente</h2><span className="sp eyebrow">clienti principali con i loro sottoclienti · ▸ apre i sottoclienti</span></header>
             <div className="wrap"><table className="tbl">
               <thead><tr><th>Cliente</th><th className="r">Campagne</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Conversioni</th><th className="r" title="ROAS dichiarato dalla piattaforma; se manca, contratti su spesa dei mesi del Ciclo di vendita">ROAS</th><th className="r">Contratti</th><th className="r">Incassato</th></tr></thead>
               <tbody>
                 {mapValuta(righeCli, (r) => r.z.id, (r) => (
-                  <tr key={r.z.id} className="clic" onClick={() => entra(r.z.id)} title="Apri l'advertising del cliente">
-                    <td style={{ paddingLeft: 14 + r.liv * 18 }}>{r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b></td>
+                  <tr key={r.key} className="clic" onClick={() => entra(r.z.id)} title="Apri l'advertising del cliente">
+                    <td style={{ paddingLeft: 14 + r.liv * 18 }}>
+                      {r.nSotto > 0 && (
+                        <button className="adv-freccia" aria-expanded={!!apertiAdv[r.z.id]} aria-label={apertiAdv[r.z.id] ? "Chiudi i sottoclienti" : "Apri i sottoclienti"}
+                          onClick={(e) => { e.stopPropagation(); setApertiAdv((x) => ({ ...x, [r.z.id]: !x[r.z.id] })); }}>{apertiAdv[r.z.id] ? "▾" : "▸"}</button>
+                      )}
+                      {r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b>
+                      {r.solo && <div className="sub">solo l'account principale</div>}
+                      {r.nSotto > 0 && <div className="sub">con {int(r.nSotto)} {r.nSotto === 1 ? "sottocliente" : "sottoclienti"}</div>}
+                    </td>
                     <td className="r">{int(r.n)}<div className="sub mono">{int(r.accese)} accese</div></td>
                     <td className="r">{eur0(r.sp)}</td>
                     <td className="r">{int(r.ld)}</td>
@@ -9367,6 +9390,43 @@ Regole:
         </>
       ));
     }
+
+    /* Dentro un cliente con sottoclienti: prima le campagne del cliente, poi una riga chiusa per
+       ogni sottocliente (con i suoi totali) che si apre con la freccia e mostra le sue campagne */
+    const listaAdv = (righe) => {
+      if (!attivo) return righe;
+      const sotto = figli(attivo.id);
+      const proprie = righe.filter((x) => !sotto.some((z) => [z.id, ...discendenti(z.id)].includes(x.k.clienteId)));
+      const gruppi = sotto.map((z) => {
+        const ids = [z.id, ...discendenti(z.id)];
+        const items = righe.filter((x) => ids.includes(x.k.clienteId));
+        return items.length ? { gruppo: z, items, tot: { ...derivate(somma(items.map((x) => ({ d: x.f.d, budget: x.k.budget })))), ...soldiTot(items.map((x) => x.k)) } } : null;
+      }).filter(Boolean).sort((a, b) => b.tot.sp - a.tot.sp);
+      if (!gruppi.length) return righe;
+      return [...proprie, ...gruppi.flatMap((g) => [g, ...(apertiAdv[g.gruppo.id] ? g.items : [])])];
+    };
+    const rigaGruppoAdv = ({ gruppo: z, items, tot: g }) => {
+      const aperto = !!apertiAdv[z.id];
+      const accese = items.filter((x) => ["attiva", "test"].includes(x.k.stato)).length;
+      return (
+        <tr key={"g" + z.id} className="clic adv-gruppo" onClick={() => setApertiAdv((x) => ({ ...x, [z.id]: !x[z.id] }))}
+          title={aperto ? "Chiudi le campagne del sottocliente" : "Apri le campagne del sottocliente"}>
+          <td style={{ paddingRight: 0, width: 22 }}><span className="adv-freccia" aria-expanded={aperto}>{aperto ? "▾" : "▸"}</span></td>
+          <td colSpan={3}><b>{z.nome}</b><div className="sub">sottocliente · {int(items.length)} campagne, {int(accese)} accese</div></td>
+          <td className="r">{eur0(g.sp)}</td>
+          <td className="r">{g.imp ? pctv(g.ctrLink) : "—"}</td>
+          <td className="r">{(g.clk || g.cl) ? eur(g.cpcLink) : "—"}</td>
+          <td className="r">{int(g.ld)}</td>
+          <td className="r">{g.ld ? eur(g.cpl) : "—"}</td>
+          <td className="r">{int(g.cv)}</td>
+          <td className="r">{g.cv ? eur(g.cpa) : "—"}</td>
+          <td className="r">{g.rc ? fmt(g.roas) : "—"}</td>
+          <td className="r">{g.contratto ? eur0(g.contratto) : "—"}</td>
+          <td className="r">{g.contratto ? eur0(g.incassato) : "—"}</td>
+          <td /><td /><td />
+        </tr>
+      );
+    };
 
     return conValuta(valutaComune(base.map((k) => k.clienteId)), () => (
       <>
@@ -9591,7 +9651,7 @@ Regole:
               <th /><th>Campagna</th><th>Funnel</th><th>Fase</th><th className="r">Speso</th><th className="r">CTR link</th><th className="r">CPC link</th><th className="r">Lead</th><th className="r">CPL</th>
               <th className="r">Conv.</th><th className="r">CPA</th><th className="r">ROAS</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Andamento</th><th className="r">Avvisi</th><th />
             </tr></thead>
-            <tbody>{mapValuta(fase === "totale" ? base.map((k) => ({ k, f: { d: k.d, quando: "" } })) : conFase, (x) => x.k.clienteId, ({ k, f }) => {
+            <tbody>{mapValuta(listaAdv(fase === "totale" ? base.map((k) => ({ k, f: { d: k.d, quando: "" } })) : conFase), (x) => (x.gruppo ? x.gruppo.id : x.k.clienteId), (x) => x.gruppo ? rigaGruppoAdv(x) : (({ k, f }) => {
               const iv = intervallo(k, ultimaRilevazione(data, k));
               const D = f.d;
               return (
@@ -9686,7 +9746,7 @@ Regole:
                   </td>
                 </tr>
               );
-            })}</tbody>
+            })(x))}</tbody>
             {base.length > 0 && (
               <tfoot>
                 <tr className="totale">
