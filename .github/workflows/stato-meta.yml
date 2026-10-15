@@ -1,0 +1,66 @@
+# Controllo in sola lettura: gli ultimi aggiornamenti da Meta e lo stato degli account.
+# Si lancia a mano da Actions (o da Claude); non scrive nulla.
+name: Stato Meta
+
+on:
+  workflow_dispatch:
+
+jobs:
+  stato:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROGETTO: cggxgzazjyeayfhynhhd
+    steps:
+      - name: Indirizzo del database
+        run: |
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROGETTO/config/database/pooler" > pooler.json
+          python3 - <<'PY'
+          import json, os, urllib.parse
+          righe = json.load(open("pooler.json"))
+          p = next((r for r in righe if r.get("database_type") == "PRIMARY"), righe[0])
+          pw = urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"], safe="")
+          url = f"postgresql://{p['db_user']}:{pw}@{p['db_host']}:5432/{p.get('db_name') or 'postgres'}"
+          print(f"::add-mask::{url}")
+          print(f"::add-mask::{pw}")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"DB_URL={url}\n")
+          PY
+          rm pooler.json
+
+      - name: Ultimi aggiornamenti
+        run: |
+          psql "$DB_URL" -X -P pager=off -c "
+            select id, origine,
+                   to_char(avvio at time zone 'Europe/Rome', 'DD/MM HH24:MI') as avvio_roma,
+                   to_char(fine at time zone 'Europe/Rome', 'DD/MM HH24:MI') as fine_roma,
+                   esito, left(messaggio, 120) as messaggio,
+                   coalesce((dettagli->>'giri')::int, 0) as giri
+            from public.meta_sync order by id desc limit 8;"
+
+      - name: Account collegati
+        run: |
+          psql "$DB_URL" -X -P pager=off -c "
+            select count(*) as collegati,
+                   count(*) filter (where (a.ultimo_sync at time zone 'Europe/Rome')::date = (now() at time zone 'Europe/Rome')::date) as aggiornati_oggi,
+                   count(*) filter (where coalesce(a.ultimo_errore, '') <> '') as con_errore,
+                   count(*) filter (where c.automatico = false) as solo_a_mano
+            from public.meta_collegamenti c
+            left join public.meta_account a on a.workspace_id = c.workspace_id and a.account_id = c.account_id;"
+          psql "$DB_URL" -X -P pager=off -c "
+            select a.nome, a.stato, to_char(a.ultimo_sync at time zone 'Europe/Rome', 'DD/MM HH24:MI') as ultimo, left(a.ultimo_errore, 100) as errore
+            from public.meta_collegamenti c join public.meta_account a on a.workspace_id = c.workspace_id and a.account_id = c.account_id
+            where coalesce(a.ultimo_errore, '') <> '' or a.ultimo_sync is null
+               or (a.ultimo_sync at time zone 'Europe/Rome')::date < (now() at time zone 'Europe/Rome')::date
+            order by a.ultimo_sync nulls first limit 40;"
+
+      - name: Cron
+        run: |
+          psql "$DB_URL" -X -P pager=off -c "
+            select jobid, schedule, active from cron.job where jobname = 'meta-sync-mattina';" || true
+          psql "$DB_URL" -X -P pager=off -c "
+            select status, to_char(start_time at time zone 'Europe/Rome', 'DD/MM HH24:MI') as avvio_roma, left(return_message, 80) as messaggio
+            from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'meta-sync-mattina')
+            order by start_time desc limit 4;" || true
