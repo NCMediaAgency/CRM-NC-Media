@@ -4,6 +4,8 @@ name: Stato Meta
 
 on:
   workflow_dispatch:
+  push:
+    paths: [".github/workflows/stato-meta.yml"]
 
 jobs:
   stato:
