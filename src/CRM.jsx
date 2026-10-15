@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import * as XLSX from "xlsx";
 import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
 import { trovaTabelleKpi, applicaKpi, VOCI_KPI } from "./lib/kpi.js";
+import { applicaComandi } from "./lib/comandi.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
   AlertTriangle, Clock, BarChart3, Percent, Layers, Briefcase, Gauge,
@@ -1695,6 +1696,18 @@ const GUIDA = [
       { h: "Account che si aggiornano solo a mano", p: "Sempre sotto l'account, togliendo la spunta Nell'aggiornamento automatico l'account resta fuori dall'aggiornamento delle 9 e da Aggiorna ora: si aggiorna solo quando premi Aggiorna sulla sua riga in Impostazioni o Aggiorna questo cliente nella sua scheda. Serve per gli account pesanti, quelli fermi o quelli che ti basta caricare una volta: scarichi i dati, togli la spunta, e l'aggiornamento di tutti diventa più veloce. In Impostazioni, accanto al nome dell'account, compare la sua regola (solo attive, campagne scelte, solo a mano)." },
       { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento; su un account disattivato, in revisione o chiuso passano rispettivamente in Account disattivato, Account in revisione o Account chiuso, con l'avviso critico e i giorni di fermo come per il pagamento. Sotto lo stato di ogni campagna dell'account compare in rosso anche lo stato su Meta, con il motivo della disattivazione quando Meta lo dà (per esempio violazione delle norme pubblicitarie o account compromesso). Le campagne che erano accese diventano ferme, con l'avviso; quelle che avevi già spento restano In pausa o Conclusa, con la scritta campagna già spenta: l'account non le ha fermate, ma se le riaccendi non erogheranno." },
       { h: "Il pulsante Chiedi i dati aggiornati", p: "Resta per i clienti che non hai collegato o per le piattaforme diverse da Meta: prepara la richiesta da incollare in chat, come prima." },
+    ],
+  },
+  {
+    id: "telegram", t: "Il bot Telegram",
+    intro: "Un assistente su Telegram che crea task e note nel diario quando glielo scrivi, risponde alle domande sui dati del CRM e ogni mattina ti manda il riepilogo dei task.",
+    blocchi: [
+      { h: "Collegarlo", p: "In Impostazioni, riquadro Bot Telegram, premi Collega Telegram e apri il link che compare: Telegram apre il bot, premi Avvia e la chat è collegata. Il link vale 30 minuti e funziona una volta sola. Il bot risponde solo alle chat collegate così; con chiunque altro dice che è privato." },
+      { h: "Cosa puoi chiedergli", p: "Scrivi come scriveresti a un collaboratore: «crea un task per BDF per venerdì: report di ottobre, priorità alta», «segna nel diario che oggi abbiamo spento le campagne Rottamazione», «sposta la call con Oliva a lunedì alle 15», «che scadenze ho domani?», «quali campagne sono ferme?». Capisce le date a parole, i nomi abbreviati dei clienti e più richieste nello stesso messaggio; se il cliente è ambiguo chiede quale. Se sbaglia, correggilo: «no, la data è il 24»." },
+      { h: "Quando compare nel CRM", p: "Il bot non scrive direttamente nei dati: mette le richieste in coda e il CRM aperto le inserisce entro un minuto, oppure appena lo apri. Così nulla di quello che stai facendo nel CRM viene sovrascritto. La conferma su Telegram invece arriva subito." },
+      { h: "Il riepilogo del mattino", p: "All'ora che scegli (predefinita 9:10, dopo l'aggiornamento di Meta) arrivano i task in ritardo, quelli di oggi, quelli di domani a priorità alta o urgente e le campagne ferme. Sotto, per ogni task di oggi o in ritardo, i pulsanti Fatto e Domani. Nel weekend solo se lo attivi." },
+      { h: "Task con orario", p: "Se un task ha un orario (campo Ora nella scheda del task, o detto al bot), il bot ti avvisa prima, con il preavviso che scegli, e ti dà i pulsanti Fatto, Domani e Lunedì. Chiudere da Telegram un task che si ripete fa nascere il successivo, come la spunta nel CRM." },
+      { h: "Cosa serve", p: "Due segreti nelle Edge Functions di Supabase: TELEGRAM_TOKEN, il token del bot creato con @BotFather, e ANTHROPIC_API_KEY, la chiave con cui il bot usa Claude per capire i messaggi. I vocali arriveranno in un secondo momento." },
     ],
   },
   {
@@ -3666,7 +3679,7 @@ const NUMERICI = {
 
 /* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
-export default function CRM({ onEsci, utente = "", meta = null } = {}) {
+export default function CRM({ onEsci, utente = "", meta = null, telegram = null } = {}) {
   const [data, setData] = useState(null);
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
@@ -3870,6 +3883,40 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
   /* Import di un file KPI nel Ciclo di vendita: { nome, tabelle, scelte, cliente, anno, errore } */
   const [kpiImport, setKpiImport] = useState(null);
   const metaAvviato = useRef(false);
+
+  /* ---------- Bot Telegram: comandi in coda (task, note, modifiche) applicati dal CRM aperto ---------- */
+  const [tgChat, setTgChat] = useState([]);
+  const [tgStato, setTgStato] = useState({ attesa: "", errore: "", esito: "", link: "", applicati: 0 });
+  const caricaTelegram = useCallback(async () => {
+    if (!telegram) return;
+    try { setTgChat(await telegram.chat()); } catch { /* prima della migrazione 0006 */ }
+  }, [telegram]);
+  const datiPronti = !!data;
+  useEffect(() => {
+    if (!telegram || !datiPronti) return;
+    let vivo = true;
+    const giro = async () => {
+      if (!vivo || bloccaSalvataggio.current) return;
+      try {
+        const comandi = await telegram.prendiComandi();
+        if (!vivo || !comandi.length) return;
+        setData((d) => (d ? applicaComandi(d, comandi, { uid, oggi: oggi(), giorniRicorrenza: (v) => (RICORRENZE.find((r) => r.v === v) || {}).g || 0 }).data : d));
+        setTgStato((x) => ({ ...x, applicati: x.applicati + comandi.length, ultimo: new Date().toISOString() }));
+      } catch { /* riprovo al prossimo giro */ }
+    };
+    caricaTelegram();
+    giro();
+    const t = setInterval(giro, 60000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [telegram, datiPronti, caricaTelegram]);
+  const azioneTelegram = async (fn, ok) => {
+    setTgStato((x) => ({ ...x, attesa: "1", errore: "", esito: "" }));
+    try {
+      const r = await fn();
+      await caricaTelegram();
+      setTgStato((x) => ({ ...x, attesa: "", ...(typeof ok === "function" ? ok(r) : { esito: ok || "" }) }));
+    } catch (e) { setTgStato((x) => ({ ...x, attesa: "", errore: e.message || String(e) })); }
+  };
   const caricaMeta = useCallback(async (conDati = true, seguita = null) => {
     if (!meta) return null;
     try {
@@ -4489,6 +4536,69 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
               </td>
             </tr>
           </tbody></table>
+        )}
+      </section>
+    );
+  };
+
+  const PannelloTelegram = () => {
+    if (!telegram) return null;
+    const ore = Array.from({ length: 28 }, (_, i) => { const m = 7 * 60 + i * 30; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; });
+    return (
+      <section className="card">
+        <header>
+          <h2>Bot Telegram</h2>
+          <span className="sp eyebrow">{tgChat.length ? `collegato · ${tgChat.length} ${tgChat.length === 1 ? "chat" : "chat"}` : "non collegato"}</span>
+          <button className="btn ghost mini" disabled={!!tgStato.attesa} onClick={() => azioneTelegram(() => telegram.collega(), (r) => ({ link: r.link, esito: r.anthropic ? "" : "Manca ANTHROPIC_API_KEY tra i segreti di Supabase: il bot risponde ai pulsanti ma non capisce i messaggi." }))}>
+            {tgChat.length ? "Collega un'altra chat" : "Collega Telegram"}</button>
+          {tgChat.length > 0 && <button className="btn ghost mini" disabled={!!tgStato.attesa} onClick={() => azioneTelegram(() => telegram.prova(), (r) => ({ esito: `Messaggio di prova inviato a ${r.inviati} chat.` }))}>Manda una prova</button>}
+        </header>
+        <div className="meta-msg sub">
+          Scrivi al bot cosa fare e lui crea task, note nel diario e spostamenti; rispondi alle domande sui dati.
+          Ogni mattina manda il riepilogo dei task con i pulsanti Fatto e Domani, e avvisa prima dei task con un orario.
+          {tgStato.applicati > 0 ? ` In questa sessione ha già inserito ${tgStato.applicati} ${tgStato.applicati === 1 ? "elemento" : "elementi"}.` : ""}
+        </div>
+        {tgStato.errore && <div className="meta-msg" data-tipo="errore">{tgStato.errore}</div>}
+        {tgStato.esito && <div className="meta-msg" data-tipo="ok">{tgStato.esito}</div>}
+        {tgStato.link && (
+          <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <span>Apri il link dal telefono (o da Telegram sul computer) e premi <b>Avvia</b>: vale 30 minuti.</span>
+            <a className="btn ghost mini" href={tgStato.link} target="_blank" rel="noopener noreferrer">Apri Telegram</a>
+            <span className="sub mono" style={{ userSelect: "all" }}>{tgStato.link}</span>
+            <button className="btn ghost mini" onClick={() => { setTgStato((x) => ({ ...x, link: "" })); caricaTelegram(); }}>Fatto, ho premuto Avvia</button>
+          </div>
+        )}
+        {tgChat.length > 0 && (
+          <div className="wrap"><table className="tbl">
+            <thead><tr><th>Chat</th><th>Riepilogo del mattino</th><th>Sabato e domenica</th><th>Avviso prima dei task con orario</th><th className="r" /></tr></thead>
+            <tbody>
+              {tgChat.map((c) => (
+                <tr key={c.chat_id}>
+                  <td><b>{c.utente || "Telegram"}</b><div className="sub">{c.attivo ? "attiva" : "in pausa"} · dal {dataIt(String(c.collegato || "").slice(0, 10))}</div></td>
+                  <td>
+                    <select value={c.ora_riepilogo} aria-label="Ora del riepilogo" style={{ width: "auto" }}
+                      onChange={(e) => azioneTelegram(() => telegram.preferenze(c.chat_id, { ora_riepilogo: e.target.value }), "Ora del riepilogo salvata.")}>
+                      {[...new Set([...ore, c.ora_riepilogo])].sort().map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <label className="riga" style={{ gap: 6 }}><input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!c.weekend}
+                      onChange={(e) => azioneTelegram(() => telegram.preferenze(c.chat_id, { weekend: e.target.checked }), "Salvato.")} /> anche nel weekend</label>
+                  </td>
+                  <td>
+                    <select value={c.preavviso} aria-label="Preavviso" style={{ width: "auto" }}
+                      onChange={(e) => azioneTelegram(() => telegram.preferenze(c.chat_id, { preavviso: Number(e.target.value) }), "Preavviso salvato.")}>
+                      {[0, 10, 15, 30, 60, 120].map((v) => <option key={v} value={v}>{v ? `${v} minuti prima` : "all'ora esatta"}</option>)}
+                    </select>
+                  </td>
+                  <td className="r" style={{ whiteSpace: "nowrap" }}>
+                    <button className="btn ghost mini" onClick={() => azioneTelegram(() => telegram.preferenze(c.chat_id, { attivo: !c.attivo }), c.attivo ? "Chat in pausa: niente messaggi finché non la riattivi." : "Chat riattivata.")}>{c.attivo ? "Metti in pausa" : "Riattiva"}</button>
+                    <button className="btn danger mini" onClick={() => azioneTelegram(() => telegram.scollega(c.chat_id), "Chat scollegata.")}>Scollega</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
         )}
       </section>
     );
@@ -5201,6 +5311,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
       { k: "stima", label: "Stima (ore)", type: "num", ph: "0,5" },
       { k: "inizio", label: "Inizio", type: "date" },
       { k: "scadenza", label: "Scadenza", type: "date" },
+      { k: "ora", label: "Ora (facoltativa)", ph: "15:30", hint: "Con un orario il bot Telegram ti avvisa prima" },
       { k: "ricorrenza", label: "Si ripete", type: "select", opts: RICORRENZE },
       { k: "note", label: "Note", type: "textarea", wide: true },
       { k: "checklist", label: "Passaggi", type: "check", wide: true },
@@ -11764,6 +11875,7 @@ Regole:
             {!attivo && vista === "impostazioni" && (
               <>
                 {PannelloMetaAgenzia()}
+                {PannelloTelegram()}
                 <section className="card">
                   <header><h2>Identità dell'agenzia</h2><span className="sp" /><button className="btn ghost mini" onClick={() => apri("agenzia")}>Modifica</button></header>
                   <div style={{ padding: 18, display: "flex", alignItems: "center", gap: 16 }}>

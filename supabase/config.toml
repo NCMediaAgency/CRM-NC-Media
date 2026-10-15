@@ -5,3 +5,7 @@ project_id = "crm-nc-media"
 # La chiama anche il cron con la sua chiave: niente controllo del JWT di Supabase
 [functions.meta-sync]
 verify_jwt = false
+
+# La chiamano Telegram (webhook con il suo segreto) e il cron dei promemoria
+[functions.telegram]
+verify_jwt = false

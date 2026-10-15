@@ -1,4 +1,4 @@
-# Porta su Supabase le modifiche a database e funzione meta-sync, senza copiarle a mano.
+# Porta su Supabase le modifiche a database e funzioni (meta-sync, telegram), senza copiarle a mano.
 # Segreti del repository (Settings → Secrets and variables → Actions):
 #   SUPABASE_ACCESS_TOKEN  token personale di Supabase (Edge Functions, Migrations, Database)
 #   SUPABASE_DB_PASSWORD   password del database
@@ -71,5 +71,7 @@ jobs:
       - name: Migrazioni nuove
         run: supabase db push --db-url "$DB_URL" --yes
 
-      - name: Funzione meta-sync
-        run: supabase functions deploy meta-sync --project-ref "$PROGETTO" --no-verify-jwt --use-api
+      - name: Funzioni (meta-sync e telegram)
+        run: |
+          supabase functions deploy meta-sync --project-ref "$PROGETTO" --no-verify-jwt --use-api
+          supabase functions deploy telegram --project-ref "$PROGETTO" --no-verify-jwt --use-api
