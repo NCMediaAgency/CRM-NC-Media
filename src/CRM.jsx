@@ -1693,7 +1693,7 @@ const GUIDA = [
       { h: "Aggiorna ora", p: "Se non vuoi aspettare il mattino, Aggiorna ora scarica subito tutti i clienti collegati. Per uno solo usa il pulsante Aggiorna sulla sua riga in Impostazioni, oppure dalla sua scheda: se ha sottoclienti trovi due pulsanti, Aggiorna solo questo cliente (i suoi account e basta) e Aggiorna cliente e sottoclienti: utile quando un account si è fermato o ti serve un dato fresco. Con molti account ci vuole qualche minuto: puoi continuare a lavorare, i numeri arrivano alla fine. Meta ritocca gli ultimi giorni per qualche tempo, per questo ogni aggiornamento riscarica anche la settimana precedente." },
       { h: "Scegliere quali campagne scaricare", p: "Nella Scheda cliente, sotto ogni account collegato, c'è Campagne da scaricare. Normalmente il CRM prende le attive e quelle che hanno speso negli ultimi 90 giorni. Con Solo le attive prende solo quelle accese (quando una si spegne, la registra un'ultima volta in pausa e poi la lascia). Con Solo quelle che scelgo il CRM legge da Meta l'elenco delle campagne dell'account, accese prima e poi per spesa, e scarichi solo quelle che spunti; Cambia la scelta riapre l'elenco. Le campagne non scelte già presenti nel CRM restano dove sono: se non ti servono le elimini e non verranno ricaricate. La scelta vale dal prossimo aggiornamento; per vederla subito premi Aggiorna questo cliente." },
       { h: "Account che si aggiornano solo a mano", p: "Sempre sotto l'account, togliendo la spunta Nell'aggiornamento automatico l'account resta fuori dall'aggiornamento delle 9 e da Aggiorna ora: si aggiorna solo quando premi Aggiorna sulla sua riga in Impostazioni o Aggiorna questo cliente nella sua scheda. Serve per gli account pesanti, quelli fermi o quelli che ti basta caricare una volta: scarichi i dati, togli la spunta, e l'aggiornamento di tutti diventa più veloce. In Impostazioni, accanto al nome dell'account, compare la sua regola (solo attive, campagne scelte, solo a mano)." },
-      { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento; su un account disattivato, in revisione o chiuso passano rispettivamente in Account disattivato, Account in revisione o Account chiuso, con l'avviso critico e i giorni di fermo come per il pagamento. Sotto lo stato di ogni campagna dell'account compare anche lo stato su Meta, con il motivo della disattivazione quando Meta lo dà (per esempio violazione delle norme pubblicitarie o account compromesso)." },
+      { h: "Quando qualcosa non va", p: "Un account con un errore (pagamento in sospeso, accesso tolto, token scaduto) compare in rosso nel riquadro delle Impostazioni con il messaggio di Meta; gli altri si aggiornano lo stesso. Le campagne accese su un account con pagamento in sospeso passano in Errore pagamento; su un account disattivato, in revisione o chiuso passano rispettivamente in Account disattivato, Account in revisione o Account chiuso, con l'avviso critico e i giorni di fermo come per il pagamento. Sotto lo stato di ogni campagna dell'account compare in rosso anche lo stato su Meta, con il motivo della disattivazione quando Meta lo dà (per esempio violazione delle norme pubblicitarie o account compromesso). Le campagne che erano accese diventano ferme, con l'avviso; quelle che avevi già spento restano In pausa o Conclusa, con la scritta campagna già spenta: l'account non le ha fermate, ma se le riaccendi non erogheranno." },
       { h: "Il pulsante Chiedi i dati aggiornati", p: "Resta per i clienti che non hai collegato o per le piattaforme diverse da Meta: prepara la richiesta da incollare in chat, come prima." },
     ],
   },
@@ -2848,6 +2848,7 @@ position:sticky;top:0;z-index:20}
 .crm .adv-freccia{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-right:6px;border-radius:5px;color:var(--ink2);border:1px solid var(--line);font-size:11px;line-height:1;vertical-align:middle;background:var(--surf2)}
 .crm .adv-freccia:hover{color:var(--ink);border-color:var(--acc-t)}
 .adv-gruppo td{background:var(--surf2)}
+.crm .acc-bloccato{color:var(--acc-t);font-size:11.5px;margin-top:3px;line-height:1.35}
 .meta-msg{padding:10px 18px;font-size:13px;border-bottom:1px solid var(--line)}
 .meta-msg[data-tipo="errore"]{color:var(--acc-t)}
 .meta-msg[data-tipo="ok"]{color:var(--ok)}
@@ -5630,7 +5631,7 @@ export default function CRM({ onEsci, utente = "", meta = null } = {}) {
           return w ? <div className="sub" style={{ color: "#C99A3A" }}>in valutazione dopo modifica · fino al {dataIt(w.fino)}</div> : null;
         })()}
       </td>
-      <td><span className="tag" data-k={k.stato}>{etStato(k)}</span>{k.accountBloccato ? <div className="sub neg" title="Stato dell'account pubblicitario su Meta">account {k.accountBloccato}</div> : null}</td>
+      <td><span className="tag" data-k={k.stato}>{etStato(k)}</span>{k.accountBloccato ? <div className="acc-bloccato" title={k.stato === "errore" ? "La campagna era accesa: l'account l'ha fermata" : "La campagna era già spenta: l'account non la ferma, ma se la riaccendi non erogherà"}>⚠ account {k.accountBloccato}{k.stato !== "errore" ? " · campagna già spenta" : ""}</div> : null}</td>
       <td className="r">{eur(k.d.sp)}<div className="sub mono">di {eur(k.budget)}</div></td>
       <td className={"r " + (k.bmk.ctrMin && (k.d.ctrLink || k.d.ctr) < k.bmk.ctrMin ? "neg" : "")}>{pctv(k.d.ctrLink || k.d.ctr)}</td>
       <td className="r">{eur(k.d.cpcLink || k.d.cpc)}</td>
@@ -8810,7 +8811,7 @@ Regole:
                       <input type="checkbox" checked={mia} aria-label={`Collega ${k.nome}`}
                         onChange={(e) => imposta([k.id], e.target.checked ? f.id : "")} />
                       <span className="nm">{k.nome}</span>
-                      <span className="st"><span className="tag" data-k={k.stato}>{etStato(k)}</span>{k.accountBloccato ? <div className="sub neg" title="Stato dell'account pubblicitario su Meta">account {k.accountBloccato}</div> : null}</span>
+                      <span className="st"><span className="tag" data-k={k.stato}>{etStato(k)}</span>{k.accountBloccato ? <div className="acc-bloccato" title={k.stato === "errore" ? "La campagna era accesa: l'account l'ha fermata" : "La campagna era già spenta: l'account non la ferma, ma se la riaccendi non erogherà"}>⚠ account {k.accountBloccato}{k.stato !== "errore" ? " · campagna già spenta" : ""}</div> : null}</span>
                       <span className="st mono">{eur0(k.d.sp)}</span>
                       <span className="st mono">{k.d.ld ? int(k.d.ld) : "—"}</span>
                       <span className="alt">{altrove ? `già su ${altrove}` : ""}</span>
@@ -9782,7 +9783,7 @@ Regole:
                   <td className="sub">{k.funnelId ? (nomeFunnel(k.funnelId) || "—") : <span className="sub">—</span>}</td>
                   <td>
                     <span className="tag" data-k={k.stato}>{etStato(k)}</span>
-                    {k.accountBloccato ? <div className="sub neg" title="Stato dell'account pubblicitario su Meta">account {k.accountBloccato}</div> : null}
+                    {k.accountBloccato ? <div className="acc-bloccato" title={k.stato === "errore" ? "La campagna era accesa: l'account l'ha fermata" : "La campagna era già spenta: l'account non la ferma, ma se la riaccendi non erogherà"}>⚠ account {k.accountBloccato}{k.stato !== "errore" ? " · campagna già spenta" : ""}</div> : null}
                     <div className="sub">{fase === "totale" ? faseCampagna(k).l : f.quando}</div>
                     {(() => {
                       const pr = valutazionePronta(k);
