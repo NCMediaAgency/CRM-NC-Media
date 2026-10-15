@@ -906,10 +906,19 @@ function avvisi(k, ctx = {}) {
   /* In fase Matura nessun giudizio è definitivo: resta un'attenzione,
      tranne dove il problema è tecnico o economico e non di rendimento. */
   const tecnici = ["Conversioni", "Erogazione", "Margine"];
-  const push = (o) => out.push({
-    ...o, campagnaId: k.id, clienteId: k.clienteId,
-    gravita: F.fase === "matura" && o.gravita === "critica" && !tecnici.includes(o.metrica) ? "attenzione" : o.gravita,
-  });
+  /* Cliente in attivo: se il Ciclo di vendita dice che i contratti superano la spesa (oltre il
+     pareggio, quando il margine è noto), i numeri della singola campagna non sono un allarme.
+     Restano segnalati, ma come attenzione e con il motivo; critici solo i fermi (pagamento, account). */
+  const R = ctx.redditivita;
+  const push = (o) => {
+    const matura = F.fase === "matura" && o.gravita === "critica" && !tecnici.includes(o.metrica);
+    const inAttivo = R && o.gravita === "critica";
+    out.push({
+      ...o, campagnaId: k.id, clienteId: k.clienteId,
+      gravita: matura || inAttivo ? "attenzione" : o.gravita,
+      ...(inAttivo ? { cosa: `${o.cosa} Il cliente però è in attivo: negli ultimi ${R.mesi} ${R.mesi === 1 ? "mese" : "mesi"} del Ciclo di vendita i contratti valgono ${fmt(R.ritorno)} volte la spesa, quindi non è un allarme ma un margine di miglioramento.`, inAttivo: true } : {}),
+    });
+  };
   const z = ctx.cliente;
   const iv = intervallo(k, ctx.prec);
   /* Su una campagna matura si giudica la finestra recente, non la media da sempre */
@@ -1162,11 +1171,14 @@ function avvisi(k, ctx = {}) {
   }
 
   /* --- tracciamento e pagina --- */
-  if (V.cv === 0 && V.sp > 0) push({
+  /* Nelle campagne a lead il risultato è il lead: le conversioni di acquisto non arrivano mai
+     da Meta e contarle dava un allarme critico a tutte le campagne a contatti */
+  const aLead = k.obiettivo === "lead";
+  if ((aLead ? V.ld : V.cv) === 0 && V.sp > 0) push({
     gravita: "critica",
     metrica: "Conversioni", valore: "0", soglia: "> 0",
-    titolo: "Spesa oltre soglia senza conversioni",
-    cosa: `${eur(V.sp)} spesi ${dove} e nessuna conversione registrata, con ${int(V.cl)} click arrivati a destinazione.`,
+    titolo: aLead ? "Spesa oltre soglia senza lead" : "Spesa oltre soglia senza conversioni",
+    cosa: `${eur(V.sp)} spesi ${dove} e ${aLead ? "nessun lead registrato" : "nessuna conversione registrata"}, con ${int(V.cl)} click arrivati a destinazione.`,
     causa: "Superata la soglia di valutazione, zero conversioni non è più pazienza: o il tracciamento non registra, o l'offerta non regge.",
     azione: "Fai una conversione di test e controlla che arrivi. Se il tracciamento è a posto, spegni: è il caso in cui aspettare costa e basta.",
   });
@@ -1450,6 +1462,8 @@ const GUIDA = [
     id: "adv", t: "Advertising e avvisi",
     intro: "Inserisci solo i dati grezzi che copi dalla piattaforma. CTR, CPC, CPM, CPA e ROAS li calcola l'app.",
     blocchi: [
+      { h: "Clienti in attivo: niente allarmi critici", p: "Gli avvisi tengono conto del Ciclo di vendita. Se negli ultimi tre mesi con numeri commerciali i contratti del cliente superano la spesa, oltre il punto di pareggio quando nella scheda è impostato il margine, altrimenti oltre 1×, il cliente è in attivo: CPL sopra il tetto, CTR basso, CPM alto e simili restano segnalati, ma come attenzione e con il motivo scritto nell'avviso, non come critici. Critici restano solo i fermi, cioè errore di pagamento e account disattivato. Un sottocliente senza ciclo di vendita suo segue il giudizio del cliente madre. Gli avvisi si ricalcolano a ogni apertura, quindi vale anche per quelli già comparsi." },
+      { h: "Campagne a lead", p: "Nelle campagne con obiettivo Lead il risultato è il lead: l'avviso di spesa senza risultati scatta solo se mancano i lead, non le conversioni d'acquisto, che Meta su queste campagne non registra." },
       { h: "Più account pubblicitari per lo stesso cliente", p: "Un cliente può avere quanti account vuoi: li colleghi dalla sua scheda, sezione Meta Ads. Dentro il cliente, Advertising mostra allora la tabella Per obiettivo e account: per ogni obiettivo una riga di totale, con spesa, lead, CPL, conversioni, CPA, ROAS e contratti sommati su tutti gli account, e sotto una riga per ogni account con i suoi numeri. Obiettivi diversi restano separati, perché un CPL di lead e un CPA di vendite non si sommano. Un clic su un account filtra l'elenco delle campagne su quell'account e quell'obiettivo; nei filtri c'è anche la scelta Account pubblicitario, e sotto ogni campagna compare il nome dell'account da cui arriva." },
       { h: "Clienti principali e sottoclienti", p: "In Advertising si vedono a colpo d'occhio solo i clienti principali, con i numeri loro e dei sottoclienti sommati. La freccia accanto al nome apre i sottoclienti, uno per riga, più la riga dell'account principale da solo. Dentro un cliente vale lo stesso: prima le sue campagne, poi una riga chiusa per ogni sottocliente con i suoi totali, che la freccia apre sulle sue campagne." },
       { h: "Dentro e fuori dal cliente", p: "Con Tutti i clienti selezionato, Advertising mostra una riga per cliente con i totali: campagne e quante sono accese, spesa, lead, CPL, conversioni, ROAS, contratti e incassato, ognuno nella valuta del suo cliente. Contratti e incassato arrivano dalle schede chiusura collegate alle campagne o dagli importi scritti nelle campagne; se non ce ne sono, dal Ciclo di vendita del cliente (sotto il numero è indicato quanti mesi), e in quel caso il ROAS, quando la piattaforma non dichiara ricavi, è il rapporto fra contratti e spesa di quei soli mesi. Campagne, ad set, annunci, finestre, ritmo di erogazione e totali per funnel e linea si guardano dentro il cliente: un clic sulla riga ti porta lì." },
@@ -2416,7 +2430,36 @@ const semaforoBase = (data, k) => {
    indicatori e avvisi. Usata sia dalle schermate sia dalle automazioni, così le due cose
    giudicano sempre gli stessi numeri. Esclude i clienti archiviati; le campagne archiviate
    restano (senza avvisi) perché le schermate le mostrano a parte. */
+/* Redditività del cliente dal Ciclo di vendita: contratti (o, se mancano, incassato) sulla spesa
+   degli ultimi tre mesi che hanno numeri commerciali. La spesa è quella del periodo; se non è scritta,
+   quella delle finestre delle sue campagne in quei mesi. In attivo se supera il pareggio (o 1×).
+   Un sottocliente senza ciclo suo eredita il giudizio del cliente madre. */
+const redditivitaClienti = (data) => {
+  const out = {};
+  const spesaFin = {};
+  const cliDiCamp = new Map(data.campagne.map((k) => [k.id, k.clienteId]));
+  (data.periodi || []).forEach((pz) => {
+    const cid = cliDiCamp.get(pz.campagnaId); if (!cid || !pz.inizio) return;
+    const key = `${cid}|${pz.inizio.slice(0, 7)}`; spesaFin[key] = (spesaFin[key] || 0) + (pz.spesa || 0);
+  });
+  const perCli = {};
+  (data.vendite || []).forEach((v) => { (perCli[v.clienteId] = perCli[v.clienteId] || []).push(v); });
+  Object.entries(perCli).forEach(([cid, l]) => {
+    const mesi = l.filter((v) => (v.valoreContratto || 0) + (v.incassato || 0) > 0).sort((a, b) => (a.periodo < b.periodo ? 1 : -1)).slice(0, 3);
+    if (!mesi.length) return;
+    const ct = mesi.reduce((x, v) => x + ((v.valoreContratto || 0) || (v.incassato || 0)), 0);
+    const sp = mesi.reduce((x, v) => x + ((v.spesa || 0) || spesaFin[`${cid}|${v.periodo}`] || 0), 0);
+    if (!sp) return;
+    const z = data.clienti.find((x) => x.id === cid);
+    const soglia = Math.max(1, roasPareggio(z));
+    if (ct / sp >= soglia) out[cid] = { ritorno: ct / sp, mesi: mesi.length };
+  });
+  data.clienti.forEach((z) => { if (!out[z.id] && z.padreId && out[z.padreId] && !perCli[z.id]) out[z.id] = out[z.padreId]; });
+  return out;
+};
+
 const campagneCalcolate = (data) => {
+  const redd = redditivitaClienti(data);
   const perCli = {};
   data.campagne.forEach((k) => {
     if (!["attiva", "test"].includes(k.stato)) return;
@@ -2459,6 +2502,7 @@ const campagneCalcolate = (data) => {
       serie: (data.rilevazioni || []).filter((r) => r.campagnaId === k.id).sort((a, b) => (a.data < b.data ? -1 : 1)),
       finestra: finestraAnalisi(data, k),
       erogazione: erogazioneAttesa(data, k),
+      redditivita: redd[k.clienteId] || null,
     }) })));
 };
 
