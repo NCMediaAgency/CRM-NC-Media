@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import * as XLSX from "xlsx";
 import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
 import { trovaTabelleKpi, applicaKpi, VOCI_KPI } from "./lib/kpi.js";
-import { applicaComandi } from "./lib/comandi.js";
+import { applicaComandi, statoEsterno, nomeChiave } from "./lib/comandi.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
   AlertTriangle, Clock, BarChart3, Percent, Layers, Briefcase, Gauge,
@@ -690,6 +690,7 @@ const normalizza = (d) => ({
   snapshots: d.snapshots || [],
   profili: d.profili || [],
   aiKey: d.aiKey || "",
+  integrazioni: d.integrazioni || [],
   vendite: (d.vendite || []).map((r) => {
     if (r.valoreContratto !== undefined) return r;
     const { valore = 0, ...resto } = r;           /* prima esisteva un solo importo */
@@ -1708,6 +1709,17 @@ const GUIDA = [
       { h: "Il riepilogo del mattino", p: "All'ora che scegli (predefinita 9:10, dopo l'aggiornamento di Meta) arrivano i task in ritardo, quelli di oggi, quelli di domani a priorità alta o urgente e le campagne ferme. Sotto, per ogni task di oggi o in ritardo, i pulsanti Fatto e Domani. Nel weekend solo se lo attivi." },
       { h: "Task con orario", p: "Se un task ha un orario (campo Ora nella scheda del task, o detto al bot), il bot ti avvisa prima, con il preavviso che scegli, e ti dà i pulsanti Fatto, Domani e Lunedì. Chiudere da Telegram un task che si ripete fa nascere il successivo, come la spunta nel CRM." },
       { h: "Cosa serve", p: "Due segreti nelle Edge Functions di Supabase: TELEGRAM_TOKEN, il token del bot creato con @BotFather, e ANTHROPIC_API_KEY, la chiave con cui il bot usa Claude per capire i messaggi. I vocali arriveranno in un secondo momento." },
+    ],
+  },
+  {
+    id: "integrazioni", t: "Task da altri software",
+    intro: "Un software esterno, per esempio Boschetto di Kesia, manda al CRM le task che ti assegna: le trovi nei Task sotto il sottocliente giusto e, quando le cambi qui, il cambio torna al software di origine.",
+    blocchi: [
+      { h: "Collegarlo", p: "In Impostazioni, riquadro Software esterni: scrivi il nome del software, scegli il cliente principale (per Kesia, il suo cliente) e premi Collega un software. Compare una chiave che si vede una volta sola: copia le istruzioni con la chiave e mandale a chi gestisce il software. Se la chiave va persa o finisce nelle mani sbagliate, Nuova chiave la sostituisce e la vecchia smette subito di funzionare." },
+      { h: "Il sottocliente giusto", p: "Ogni task porta con sé il nome del cliente o progetto che ha nel software di origine. Quei nomi compaiono nel riquadro, sotto «Clienti di …», man mano che arrivano le prime task: accanto a ciascuno scegli il sottocliente del CRM. Le task già arrivate con quel nome si spostano subito; quelle senza abbinamento restano sul cliente principale. Se sposti a mano una singola task su un altro sottocliente, gli aggiornamenti successivi non la riportano indietro." },
+      { h: "Andata", p: "Quando nel software una task viene creata o modificata, arriva al CRM e il CRM aperto la inserisce entro un minuto, come i comandi del bot Telegram. Rimandare la stessa task la aggiorna, non la duplica. Una task eliminata alla fonte viene segnata come fatta. Nei Task ha l'etichetta «da Boschetto»: se il software manda il link, cliccandola apri la task nell'originale." },
+      { h: "Ritorno", p: "Quando cambi una di queste task nel CRM (stato, scadenza, ora, priorità o titolo), il CRM lo comunica dopo pochi secondi. Il software può leggere i cambi quando vuole, oppure darti un suo indirizzo https: lo metti in Ritorno e il CRM glieli manda subito. Se il software non risponde, il CRM smette di riprovare fino al prossimo caricamento della pagina e te lo segnala nel riquadro." },
+      { h: "Sicurezza", p: "La chiave permette solo di mandare task e di leggere i cambi di quelle task: non dà accesso al resto del CRM. Nel database ne resta solo un'impronta, per questo non si può rivedere. Metti in pausa per rifiutare temporaneamente le task in arrivo; Scollega elimina il collegamento ma lascia nel CRM le task già arrivate." },
     ],
   },
   {
@@ -3679,7 +3691,7 @@ const NUMERICI = {
 
 /* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
-export default function CRM({ onEsci, utente = "", meta = null, telegram = null } = {}) {
+export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null } = {}) {
   const [data, setData] = useState(null);
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
@@ -3916,6 +3928,61 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null 
       await caricaTelegram();
       setTgStato((x) => ({ ...x, attesa: "", ...(typeof ok === "function" ? ok(r) : { esito: ok || "" }) }));
     } catch (e) { setTgStato((x) => ({ ...x, attesa: "", errore: e.message || String(e) })); }
+  };
+  /* ---------- Software esterni (Boschetto): le task arrivano dalla coda dei comandi;
+     qui il ritorno, cioè i cambi fatti nel CRM che tornano al software di origine ---------- */
+  const [intLista, setIntLista] = useState([]);
+  const [intStato, setIntStato] = useState({ attesa: "", errore: "", esito: "", chiave: null, indirizzo: "", nome: "Boschetto", base: "" });
+  const intSospese = useRef({});
+  const caricaIntegrazioni = useCallback(async () => {
+    if (!integrazioni) return;
+    try {
+      const r = await integrazioni.stato(), lista = r.integrazioni || [];
+      setIntLista(lista); setIntStato((x) => ({ ...x, indirizzo: r.indirizzo || "" }));
+      /* Ogni integrazione del server ha la sua scheda nei dati (cliente principale e abbinamenti) */
+      setData((d) => (!d || lista.every((x) => (d.integrazioni || []).some((l) => l.id === x.id)) ? d
+        : { ...d, integrazioni: [...(d.integrazioni || []), ...lista.filter((x) => !(d.integrazioni || []).some((l) => l.id === x.id)).map((x) => ({ id: x.id, nome: x.nome, clienteBase: "", abbinamenti: {}, nomiVisti: {} }))] }));
+    }
+    catch { /* funzione non ancora pubblicata */ }
+  }, [integrazioni]);
+  useEffect(() => { if (integrazioni && datiPronti) caricaIntegrazioni(); }, [integrazioni, datiPronti, caricaIntegrazioni]);
+  const taskEsterne = data ? data.task.filter((t) => t.esterno && !t.esterno.eliminata) : [];
+  const firmaRitorno = taskEsterne.map((t) => t.id + JSON.stringify(statoEsterno(t)) + JSON.stringify(t.esterno.ultimo)).join("|");
+  useEffect(() => {
+    if (!integrazioni || !firmaRitorno) return;
+    const t = setTimeout(async () => {
+      const gruppi = new Map();
+      taskEsterne.forEach((x) => {
+        const ora = statoEsterno(x), prima = x.esterno.ultimo || {};
+        const cambiati = Object.keys(ora).filter((k) => ora[k] !== (prima[k] || ""));
+        if (!cambiati.length || intSospese.current[x.esterno.integrazioneId]) return;
+        const g = gruppi.get(x.esterno.integrazioneId) || [];
+        g.push({ task: x.id, ora, m: { esternoId: x.esterno.id, ...ora, cambiati } });
+        gruppi.set(x.esterno.integrazioneId, g);
+      });
+      for (const [id, lista] of gruppi) {
+        try {
+          await integrazioni.notifica(id, lista.map((x) => x.m));
+          const inviati = new Map(lista.map((x) => [x.task, x.ora]));
+          setData((d) => (d ? { ...d, task: d.task.map((x) => (inviati.has(x.id) && x.esterno ? { ...x, esterno: { ...x.esterno, ultimo: inviati.get(x.id) } } : x)) } : d));
+        } catch (e) {
+          /* Non riprovo a ogni modifica: fino al prossimo caricamento della pagina resta in sospeso */
+          intSospese.current[id] = true;
+          setIntStato((x) => ({ ...x, errore: `Non riesco a mandare i cambi al software esterno: ${e.message || e}` }));
+        }
+      }
+    }, 3000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [integrazioni, firmaRitorno]);
+  const azioneIntegrazione = async (fn, ok) => {
+    setIntStato((x) => ({ ...x, attesa: "1", errore: "", esito: "" }));
+    try {
+      const r = await fn();
+      await caricaIntegrazioni();
+      setIntStato((x) => ({ ...x, attesa: "", ...(typeof ok === "function" ? ok(r) : { esito: ok || "" }) }));
+      return r;
+    } catch (e) { setIntStato((x) => ({ ...x, attesa: "", errore: e.message || String(e) })); return null; }
   };
   const caricaMeta = useCallback(async (conDati = true, seguita = null) => {
     if (!meta) return null;
@@ -4600,6 +4667,173 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null 
             </tbody>
           </table></div>
         )}
+      </section>
+    );
+  };
+
+  /* Software esterni che mandano task al CRM (il primo: Boschetto, di Kesia) */
+  const cambiaInteg = (id, fn) => setData((d) => ({ ...d, integrazioni: (d.integrazioni || []).map((x) => (x.id === id ? fn(x) : x)) }));
+  /* Abbinamento "nome del cliente nel software esterno → sottocliente del CRM":
+     sposta anche le task già arrivate che non hai spostato a mano */
+  const abbinaInteg = (integ, chiave, clienteId) => setData((d) => {
+    const vecchio = ((integ.abbinamenti || {})[chiave]) || integ.clienteBase || "";
+    const abbinamenti = { ...(integ.abbinamenti || {}) };
+    if (clienteId) abbinamenti[chiave] = clienteId; else delete abbinamenti[chiave];
+    const nuovo = clienteId || integ.clienteBase || "";
+    return {
+      ...d,
+      integrazioni: (d.integrazioni || []).map((x) => (x.id === integ.id ? { ...x, abbinamenti } : x)),
+      task: d.task.map((t) => (t.esterno && t.esterno.integrazioneId === integ.id && nomeChiave(t.esterno.cliente) === chiave && (t.clienteId || "") === vecchio
+        ? { ...t, clienteId: nuovo } : t)),
+    };
+  });
+  const baseInteg = (integ, clienteId) => setData((d) => {
+    const vecchio = integ.clienteBase || "";
+    const ab = integ.abbinamenti || {};
+    return {
+      ...d,
+      integrazioni: (d.integrazioni || []).map((x) => (x.id === integ.id ? { ...x, clienteBase: clienteId } : x)),
+      task: d.task.map((t) => (t.esterno && t.esterno.integrazioneId === integ.id && !ab[nomeChiave(t.esterno.cliente)] && (t.clienteId || "") === vecchio
+        ? { ...t, clienteId } : t)),
+    };
+  });
+  const istruzioniIntegrazione = (nome, indirizzo, chiave) => `Collegamento ${nome} → CRM NC Media
+
+Ogni volta che in ${nome} una task assegnata a me viene creata, modificata, completata o eliminata, manda una richiesta HTTP:
+
+POST ${indirizzo}
+Authorization: Bearer ${chiave || "<LA CHIAVE CHE TI HO MANDATO A PARTE>"}
+Content-Type: application/json
+
+{
+  "evento": "task.creata",          // oppure "task.aggiornata" o "task.eliminata"
+  "task": {
+    "id": "id della task in ${nome} (sempre lo stesso per la stessa task)",
+    "titolo": "Testo della task",
+    "descrizione": "Dettagli (facoltativo)",
+    "cliente": "Nome del cliente o progetto in ${nome}",
+    "scadenza": "2026-10-23",       // AAAA-MM-GG, facoltativa; va bene anche 2026-10-23T15:30
+    "ora": "15:30",                 // facoltativa
+    "priorita": "alta",             // urgente | alta | media | bassa
+    "stato": "da fare",             // da fare | in corso | in attesa | fatto
+    "url": "https://… link alla task in ${nome} (facoltativo)"
+  }
+}
+
+Per mandarne più di una insieme: { "tasks": [ {…}, {…} ] }. Al primo collegamento conviene mandare tutte le task aperte assegnate a me.
+Mandare di nuovo la stessa task (stesso id) la aggiorna, non la duplica. Risposta: { "ok": true, "ricevute": N }.
+
+Ritorno (i cambi che faccio io nel CRM: stato, scadenza, ora, priorità, titolo). Due modi, si può usare uno o l'altro:
+1) ${nome} chiede periodicamente (per esempio ogni 5 minuti):
+   POST ${indirizzo}   con la stessa chiave
+   { "azione": "modifiche", "dal": <ultimo numero ricevuto, 0 la prima volta> }
+   Risposta: { "ok": true, "modifiche": [ { "id": 12, "esternoId": "id della task", "titolo", "scadenza", "ora", "priorita", "stato", "cambiati": ["stato"], "quando" } ], "ultimo": 12 }
+   Gli stati arrivano come: dafare | incorso | attesa | fatto. Salva "ultimo" e usalo come "dal" la volta dopo.
+2) Oppure ${nome} mi dà un suo indirizzo https (e se vuole una chiave): il CRM ci manda subito
+   POST { "evento": "task.modificata_nel_crm", "modifiche": [ … come sopra … ] }   con Authorization: Bearer <la vostra chiave>.
+
+La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile dal browser).`;
+  const PannelloIntegrazioni = () => {
+    if (!integrazioni) return null;
+    const locali = data.integrazioni || [];
+    const copia = (testo, esito) => { try { navigator.clipboard.writeText(testo); setIntStato((x) => ({ ...x, esito })); } catch { /* selezione manuale */ } };
+    const crea = async () => {
+      const nome = (intStato.nome || "").trim() || "Boschetto";
+      const r = await azioneIntegrazione(() => integrazioni.crea(nome), "");
+      if (!r) return;
+      setData((d) => ({ ...d, integrazioni: [...(d.integrazioni || []).filter((x) => x.id !== r.id), { id: r.id, nome, clienteBase: intStato.base || "", abbinamenti: {}, nomiVisti: {} }] }));
+      setIntStato((x) => ({ ...x, chiave: { id: r.id, chiave: r.chiave }, indirizzo: r.indirizzo || x.indirizzo }));
+    };
+    const opzioniCli = (base) => (base ? ordinaGerarchia().filter(({ z }) => gruppo(base).includes(z.id)) : ordinaGerarchia());
+    const selCli = (valore, onChange, vuoto, base = "", etichetta = "") => (
+      <select value={valore || ""} aria-label={etichetta} onChange={(e) => onChange(e.target.value)} style={{ width: "auto", maxWidth: 280 }}>
+        <option value="">{vuoto}</option>
+        {opzioniCli(base).map(({ z, liv }) => <option key={z.id} value={z.id}>{liv ? `${"\u00A0".repeat(liv * 4)}↳ ` : ""}{z.nome}</option>)}
+      </select>
+    );
+    return (
+      <section className="card">
+        <header>
+          <h2>Software esterni</h2>
+          <span className="sp eyebrow">{intLista.length ? `${intLista.length} ${intLista.length === 1 ? "collegato" : "collegati"}` : "nessuno"}</span>
+        </header>
+        <div className="meta-msg sub">
+          Un altro software (per esempio Boschetto di Kesia) manda qui le task che ti assegna: entrano nei Task sotto il sottocliente giusto,
+          e quando le cambi nel CRM (fatto, scadenza, priorità) il cambio torna indietro.
+        </div>
+        {intStato.errore && <div className="meta-msg" data-tipo="errore">{intStato.errore}</div>}
+        {intStato.esito && <div className="meta-msg" data-tipo="ok">{intStato.esito}</div>}
+        {intStato.chiave && (() => {
+          const integ = intLista.find((x) => x.id === intStato.chiave.id) || { nome: "" };
+          return (
+            <div className="meta-msg" style={{ display: "grid", gap: 8 }}>
+              <div><b>Chiave di {integ.nome}</b>: si vede solo adesso. Copiala e mandala a chi gestisce il software (meglio in un messaggio separato dalle istruzioni).</div>
+              <div className="sub mono" style={{ userSelect: "all", wordBreak: "break-all" }}>{intStato.chiave.chiave}</div>
+              <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
+                <button className="btn ghost mini" onClick={() => copia(intStato.chiave.chiave, "Chiave copiata.")}>Copia la chiave</button>
+                <button className="btn ghost mini" onClick={() => copia(istruzioniIntegrazione(integ.nome, intStato.indirizzo, intStato.chiave.chiave), "Istruzioni con la chiave copiate.")}>Copia istruzioni con la chiave</button>
+                <button className="btn ghost mini" onClick={() => setIntStato((x) => ({ ...x, chiave: null }))}>Fatto, l'ho salvata</button>
+              </div>
+            </div>
+          );
+        })()}
+        {intLista.map((x) => {
+          const loc = locali.find((l) => l.id === x.id) || { id: x.id, nome: x.nome, clienteBase: "", abbinamenti: {}, nomiVisti: {} };
+          const nomi = Object.entries(loc.nomiVisti || {}).sort((a, b) => a[1].localeCompare(b[1]));
+          const quante = data.task.filter((t) => t.esterno && t.esterno.integrazioneId === x.id && !t.esterno.eliminata);
+          const aperte = quante.filter((t) => t.stato !== "fatto").length;
+          const base = loc.clienteBase || "";
+          return (
+            <div key={x.id} style={{ borderTop: "1px solid var(--line)", padding: "12px 18px", display: "grid", gap: 10 }}>
+              <div className="riga" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <b>{x.nome}</b>
+                <span className="pill">{x.attiva ? "attivo" : "in pausa"}</span>
+                <span className="sub">chiave …{x.chiave_fine} · {x.ultimo_contatto ? `ultimo contatto ${dataIt(String(x.ultimo_contatto).slice(0, 10))} ${String(x.ultimo_contatto).slice(11, 16)}` : "non ha ancora mandato niente"} · {quante.length} task ({aperte} aperte)</span>
+                <span className="sp" />
+                <button className="btn ghost mini" disabled={!!intStato.attesa} onClick={() => copia(istruzioniIntegrazione(x.nome, intStato.indirizzo, ""), "Istruzioni copiate (senza chiave).")}>Copia istruzioni</button>
+                <button className="btn ghost mini" disabled={!!intStato.attesa} onClick={async () => { if (!window.confirm(`Nuova chiave per ${x.nome}? Quella di adesso smette subito di funzionare.`)) return; const r = await azioneIntegrazione(() => integrazioni.rigenera(x.id), ""); if (r) setIntStato((s2) => ({ ...s2, chiave: { id: x.id, chiave: r.chiave } })); }}>Nuova chiave</button>
+                <button className="btn ghost mini" disabled={!!intStato.attesa} onClick={() => azioneIntegrazione(() => integrazioni.attiva(x.id, !x.attiva), x.attiva ? "In pausa: le task in arrivo vengono rifiutate." : "Riattivato.")}>{x.attiva ? "Metti in pausa" : "Riattiva"}</button>
+                <button className="btn danger mini" disabled={!!intStato.attesa} onClick={async () => { if (!window.confirm(`Scollegare ${x.nome}? Le task già arrivate restano nel CRM.`)) return; const r = await azioneIntegrazione(() => integrazioni.elimina(x.id), "Scollegato."); if (r) setData((d) => ({ ...d, integrazioni: (d.integrazioni || []).filter((l) => l.id !== x.id) })); }}>Scollega</button>
+              </div>
+              <label className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
+                <span className="sub">Cliente principale (dove vanno le task senza abbinamento)</span>
+                {selCli(base, (v) => baseInteg(loc, v), "— nessuno (task dell'agenzia) —", "", "Cliente principale")}
+              </label>
+              <div>
+                <div className="sub" style={{ marginBottom: 6 }}>Clienti di {x.nome} → sottoclienti del CRM {nomi.length ? "" : "· i nomi compaiono qui quando arriva la prima task"}</div>
+                {nomi.length > 0 && (
+                  <div className="wrap"><table className="tbl">
+                    <thead><tr><th>In {x.nome}</th><th>Nel CRM</th><th className="r">Task</th></tr></thead>
+                    <tbody>
+                      {nomi.map(([k, originale]) => (
+                        <tr key={k}>
+                          <td>{originale}</td>
+                          <td>{selCli((loc.abbinamenti || {})[k], (v) => abbinaInteg(loc, k, v), base ? `${nomeCli(base)} (principale)` : "— cliente principale —", base, `Sottocliente per ${originale}`)}</td>
+                          <td className="r">{quante.filter((t) => nomeChiave(t.esterno.cliente) === k).length}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table></div>
+                )}
+              </div>
+              <details>
+                <summary className="sub" style={{ cursor: "pointer" }}>Ritorno: {x.ritorno ? `il CRM avvisa ${x.url_ritorno}` : `${x.nome} legge i cambi quando vuole (nessun indirizzo di ritorno)`}</summary>
+                <form className="riga" style={{ gap: 8, flexWrap: "wrap", marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget);
+                  const chiave = String(f.get("chiave") || "");
+                  azioneIntegrazione(() => integrazioni.ritorno(x.id, String(f.get("url") || ""), chiave ? chiave : undefined), "Indirizzo di ritorno salvato."); }}>
+                  <input name="url" defaultValue={x.url_ritorno || ""} placeholder="https://… indirizzo di Boschetto (facoltativo)" style={{ minWidth: 280, flex: 1 }} />
+                  <input name="chiave" type="password" autoComplete="off" placeholder="chiave che vuole ricevere (facoltativa)" style={{ width: 240 }} />
+                  <button className="btn ghost mini" disabled={!!intStato.attesa}>Salva</button>
+                </form>
+              </details>
+            </div>
+          );
+        })}
+        <div className="riga" style={{ gap: 8, flexWrap: "wrap", padding: "12px 18px", borderTop: "1px solid var(--line)" }}>
+          <input value={intStato.nome} onChange={(e) => setIntStato((x) => ({ ...x, nome: e.target.value }))} placeholder="Nome del software" aria-label="Nome del software" style={{ width: 180 }} />
+          {selCli(intStato.base, (v) => setIntStato((x) => ({ ...x, base: v })), "— cliente principale —", "", "Cliente principale")}
+          <button className="btn" disabled={!!intStato.attesa} onClick={crea}>Collega un software</button>
+        </div>
       </section>
     );
   };
@@ -5760,6 +5994,10 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null 
     </tr>
   ));
 
+  /* Task arrivate da un software esterno (Boschetto): da dove vengono, con il link se c'è */
+  const badgeEsterno = (t) => (!t.esterno ? null : t.esterno.url
+    ? <a className="pill" href={t.esterno.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title={`Apri in ${t.esterno.fonte}${t.esterno.cliente ? ` (${t.esterno.cliente})` : ""}`}>da {t.esterno.fonte} ↗</a>
+    : <span className="pill" title={t.esterno.cliente ? `In ${t.esterno.fonte}: ${t.esterno.cliente}` : ""}>da {t.esterno.fonte}</span>);
   const CartaTask = ({ t }) => {
     const done = (t.checklist || []).filter((r) => r.fatto).length, tot = (t.checklist || []).length;
     const late = t.scadenza && t.scadenza < oggi() && t.stato !== "fatto";
@@ -5773,6 +6011,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null 
           {!attivo && <span className="pill">{t.clienteId ? nomeCli(t.clienteId) : "Agenzia"}</span>}
           <span className="pill">{nomeArea(t.areaId)}</span>
           {t.ricorrenza !== "no" && <span className="pill">↻</span>}
+          {badgeEsterno(t)}
         </div>
         {tot > 0 && (
           <>
@@ -5808,6 +6047,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null 
             <span className="pill">{et(STATI_TASK, t.stato)}</span>
             {tot > 0 && <span className="pill">{done}/{tot}</span>}
             {t.ricorrenza !== "no" && <span className="pill">↻</span>}
+            {badgeEsterno(t)}
           </div>
         </div>
         <span className="pill" data-late={late ? "1" : "0"}>{t.scadenza ? dataIt(t.scadenza) : "—"}</span>
@@ -11876,6 +12116,7 @@ Regole:
               <>
                 {PannelloMetaAgenzia()}
                 {PannelloTelegram()}
+                {PannelloIntegrazioni()}
                 <section className="card">
                   <header><h2>Identità dell'agenzia</h2><span className="sp" /><button className="btn ghost mini" onClick={() => apri("agenzia")}>Modifica</button></header>
                   <div style={{ padding: 18, display: "flex", alignItems: "center", gap: 16 }}>

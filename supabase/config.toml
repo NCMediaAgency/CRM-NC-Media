@@ -9,3 +9,7 @@ verify_jwt = false
 # La chiamano Telegram (webhook con il suo segreto) e il cron dei promemoria
 [functions.telegram]
 verify_jwt = false
+
+# La chiamano i software esterni (Boschetto) con la loro chiave, non con il JWT di Supabase
+[functions.integrazioni]
+verify_jwt = false

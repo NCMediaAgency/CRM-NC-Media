@@ -71,7 +71,8 @@ jobs:
       - name: Migrazioni nuove
         run: supabase db push --db-url "$DB_URL" --yes
 
-      - name: Funzioni (meta-sync e telegram)
+      - name: Funzioni (meta-sync, telegram, integrazioni)
         run: |
           supabase functions deploy meta-sync --project-ref "$PROGETTO" --no-verify-jwt --use-api
           supabase functions deploy telegram --project-ref "$PROGETTO" --no-verify-jwt --use-api
+          supabase functions deploy integrazioni --project-ref "$PROGETTO" --no-verify-jwt --use-api

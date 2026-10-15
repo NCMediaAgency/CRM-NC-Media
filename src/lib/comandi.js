@@ -3,6 +3,11 @@
    con una funzione pura come applicaMeta. */
 
 const PRIORITA = ["urgente", "alta", "media", "bassa"];
+/* Nomi dei clienti di un software esterno: confronto senza maiuscole, accenti e spazi doppi */
+export const nomeChiave = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+/* Campi di una task che viaggiano verso il software esterno (canale di ritorno) */
+export const CAMPI_RITORNO = ["titolo", "scadenza", "ora", "priorita", "stato"];
+export const statoEsterno = (t) => Object.fromEntries(CAMPI_RITORNO.map((k) => [k, t[k] || ""]));
 const STATI = ["dafare", "incorso", "attesa", "fatto"];
 
 const somma = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
@@ -11,6 +16,7 @@ const somma = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.g
 export function applicaComandi(data, comandi, { uid, oggi, giorniRicorrenza = () => 0 }) {
   let task = [...(data.task || [])];
   let annotazioni = [...(data.annotazioni || [])];
+  let integrazioni = [...(data.integrazioni || [])];
   const esiti = [];
   const cliOk = (id) => (id && (data.clienti || []).some((z) => z.id === id) ? id : "");
   for (const c of comandi) {
@@ -46,7 +52,38 @@ export function applicaComandi(data, comandi, { uid, oggi, giorniRicorrenza = ()
           checklist: (t.checklist || []).map((r) => ({ ...r, fatto: false })), creato: oggi });
       }
       esiti.push({ id: c.id, esito: "task aggiornato" });
+    } else if (c.tipo === "importa_task") {
+      /* Task da un software esterno (Boschetto): una sola task per id esterno, aggiornata a ogni invio */
+      let ii = integrazioni.findIndex((x) => x.id === d.integrazioneId);
+      if (ii < 0) { integrazioni.push({ id: d.integrazioneId, nome: d.fonte || "Integrazione", clienteBase: "", abbinamenti: {}, nomiVisti: {} }); ii = integrazioni.length - 1; }
+      const integ = integrazioni[ii];
+      const chiave = nomeChiave(d.cliente);
+      if (chiave && !(integ.nomiVisti || {})[chiave]) integrazioni[ii] = { ...integ, nomiVisti: { ...(integ.nomiVisti || {}), [chiave]: d.cliente } };
+      const abbinato = chiave && (integ.abbinamenti || {})[chiave];
+      const cliente = cliOk(abbinato) || cliOk(integ.clienteBase) || "";
+      const i = task.findIndex((t) => t.esterno && t.esterno.integrazioneId === d.integrazioneId && t.esterno.id === d.esternoId);
+      const campi = {
+        titolo: String(d.titolo || "Task"), note: d.descrizione || "", scadenza: d.scadenza || "", ora: d.ora || "",
+        priorita: PRIORITA.includes(d.priorita) ? d.priorita : "media", stato: STATI.includes(d.stato) ? d.stato : "dafare",
+      };
+      const esterno = { integrazioneId: d.integrazioneId, fonte: d.fonte || integ.nome, id: d.esternoId, cliente: d.cliente || "", url: d.url || "",
+        ultimo: statoEsterno(campi), eliminata: !!d.eliminata };
+      if (d.eliminata) {
+        if (i > -1) { task[i] = { ...task[i], stato: "fatto", esterno: { ...task[i].esterno, eliminata: true } }; esiti.push({ id: c.id, esito: "task eliminata alla fonte" }); }
+        else esiti.push({ id: c.id, esito: "eliminata, mai arrivata" });
+        continue;
+      }
+      if (i > -1) {
+        // Il cliente si aggiorna solo se non l'hai spostata tu su un altro sottocliente
+        const vecchio = task[i].clienteId;
+        const tuo = vecchio && vecchio !== (integ.clienteBase || "") && vecchio !== cliOk((integ.abbinamenti || {})[nomeChiave(task[i].esterno.cliente)]);
+        task[i] = { ...task[i], ...campi, clienteId: tuo ? vecchio : cliente, esterno };
+        esiti.push({ id: c.id, esito: "task aggiornata" });
+      } else {
+        task.push({ id: uid(), clienteId: cliente, areaId: "", ...campi, inizio: oggi, stima: 0, ricorrenza: "no", checklist: [], creato: oggi, origine: esterno.fonte, esterno });
+        esiti.push({ id: c.id, esito: "task importata" });
+      }
     } else esiti.push({ id: c.id, esito: "sconosciuto" });
   }
-  return { data: { ...data, task, annotazioni }, esiti };
+  return { data: { ...data, task, annotazioni, integrazioni }, esiti };
 }
