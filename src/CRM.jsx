@@ -1428,7 +1428,7 @@ const GUIDA = [
     intro: "Lo strumento non serve a niente se i dati invecchiano. Questa è la cadenza minima perché i numeri restino affidabili.",
     blocchi: [
       { h: "La panoramica", p: "In cima ci sono sei indicatori del mese in corso — spesa, lead, CPL, costo per cliente acquisito, contratti firmati e ritorno — ciascuno con la variazione rispetto al mese precedente. Sulle metriche di costo la freccia in giù è verde: scendere è un miglioramento. Sotto, l'andamento di contratti e spesa negli ultimi dodici mesi e la distribuzione della spesa per piattaforma." },
-      { h: "Cosa entra nei totali dell'agenzia", p: "La panoramica e il riepilogo mensile a livello agenzia contano solo i clienti principali: spesa, lead, CPL, contratti e andamento escludono i sottoclienti, e nella tabella Performance i sottoclienti non compaiono come righe. Sotto il nome di chi ne ha leggi quanti sono esclusi. Per vedere i loro numeri entri nel cliente madre e usi l'interruttore consolidato." },
+      { h: "Cosa entra nei totali dell'agenzia", p: "La panoramica e il riepilogo mensile a livello agenzia contano solo i clienti principali: spesa, lead, CPL, contratti e andamento escludono i sottoclienti, e nella tabella Performance la riga del cliente principale ha solo i suoi numeri: sotto il nome leggi quanti sottoclienti sono esclusi, e la freccia li apre uno per riga. Per i numeri del gruppo sommati entri nel cliente madre e usi l'interruttore consolidato." },
       { h: "L'eccezione degli avvisi", p: "Gli avvisi restano su tutti gli account, sottoclienti compresi, e nella riga del cliente principale è indicato quanti arrivano da loro. È una scelta deliberata: un problema critico sulla campagna di un sottocliente non deve restare invisibile solo perché i suoi numeri non entrano nei totali." },
       { h: "Sforzo/Resa", p: "Quanto incassi per ogni tentativo di contatto: incassato diviso chiamate fatte, nel mese. È il valore medio che ogni contatto gestito porta davvero in cassa, e si legge accanto al CPL. Se è più alto del CPL il funnel è in profitto e aumentare il volume ha senso; se è più basso, ogni contatto in più costa più di quanto rende, e la colonna diventa bordeaux. Scomposto, quel numero è tasso di conversione per scontrino medio: tanti contatti con poco incassato vuol dire lead fuori target o vendita inefficace; pochi contatti con molto incassato vuol dire un funnel di qualità da scalare tenendo fermo il target. Se nel ciclo di vendita non hai registrato le chiamate, la colonna usa i contatti entrati nel funnel e lo dichiara sotto il numero: le due basi non sono confrontabili fra loro, quindi tienine conto quando metti due clienti a fianco." },
       { h: "Performance dei clienti", p: "La tabella riporta per ogni cliente la spesa, i lead e il CPL dell'ultimo mese con dati, e le demo, le chiusure, i contratti e lo Sforzo/Resa dell'ultimo mese che ha numeri commerciali: spesso il mese in corso ha già la spesa di Meta ma non ancora il ciclo di vendita, e in quel caso sotto il numero compare il mese da cui arriva. Più la resa rispetto all'obiettivo pubblicitario. Il pallino dello stato riassume il giudizio sui risultati: rosso (Critico) se ha avvisi critici sulle campagne, rosso con la scritta Campagne ferme se l'unico problema è un fermo per pagamento o account, ambra se ha avvisi di attenzione o è sotto obiettivo, verde se regge. I task in ritardo restano negli Avvisi ma non decidono lo stato. Sotto lo stato compare la lettura del Ciclo di vendita: «in attivo» con quante volte i contratti superano la spesa, oppure il rapporto e il pareggio quando il cliente non lo supera. Cliccando entri nel cliente." },
@@ -1449,7 +1449,8 @@ const GUIDA = [
       { h: "Il selettore nella barra", p: "Nella colonna di sinistra, sopra le sezioni, c'è il menu Account: scegli un cliente per entrare nel suo account, o “Tutti i clienti” per tornare alla vista agenzia. I sottoclienti compaiono rientrati sotto il loro cliente principale. Con il menu ridotto a icone resta il logo dell'account aperto: cliccandolo il menu si riapre." },
       { h: "In gestione dal", p: "Nella scheda del cliente, sotto la sede, c'è la data da cui lo segui. All'inizio è quella in cui hai creato la scheda, ma puoi cambiarla: se un avvocato è entrato nel portafoglio a marzo e l'hai inserito a settembre, metti marzo. La colonna Data partenza negli elenchi mostra invece il primo giorno di attività pubblicitaria, e ripiega su questa data quando non ci sono ancora campagne. È anche importabile da foglio, con una colonna \"In gestione dal\", \"Onboarding\" o \"Cliente dal\"." },
       { h: "Data contratto", p: "Accanto c’è la data di firma, che è un’altra cosa: il contratto può essere firmato prima dell’avvio o dopo un periodo di prova. Quando le due date differiscono, la scheda ti dice di quanti giorni e in che verso. Anche questa si importa, con una colonna \"Data contratto\", \"Firma\" o \"Firmato il\"." },
-      { h: "Due elenchi distinti", p: "La sezione Clienti conta e mostra solo i clienti principali: se ne segui tre, il menu dice tre, anche quando sotto di loro ci sono ottanta account. I sottoclienti hanno la loro sezione, raggruppati per cliente principale, con spesa, lead, CPL, resa e avvisi di ciascuno e i pulsanti per archiviarli o eliminarli. In cima trovi i totali del gruppo, che restano esclusi dai totali dell'agenzia." },
+      { h: "Due elenchi distinti", p: "La sezione Clienti conta e mostra solo i clienti principali: se ne segui tre, il menu dice tre, anche quando sotto di loro ci sono ottanta account. La freccia accanto al nome apre i suoi sottoclienti nella stessa tabella; cercando un nome compaiono già aperti. I sottoclienti hanno anche la loro sezione, con un riquadro chiuso per ogni cliente principale: cliccandolo vedi spesa, lead, CPL, resa e avvisi di ciascuno e i pulsanti per archiviarli o eliminarli. In cima trovi i totali del gruppo, che restano esclusi dai totali dell'agenzia." },
+      { h: "La freccia dei sottoclienti", p: "Ovunque una tabella elenca più clienti si vedono a colpo d'occhio i clienti principali, e la freccia ▸ accanto al nome apre i loro sottoclienti: in Clienti, Advertising, Ciclo di vendita, Chiusure, Economia, nella tabella Performance della Panoramica e nel collegamento con Meta in Impostazioni. Dove la tabella mostra totali (Advertising, Ciclo di vendita, Chiusure, Economia) la riga chiusa somma tutto il gruppo e, aperta, mostra il cliente principale da solo e ogni sottocliente. In Performance la riga del principale resta con i suoi numeri, come nei totali dell'agenzia, e aperta mostra i numeri di ogni sottocliente. In Impostazioni, sotto il nome, leggi quanti sottoclienti hanno già un account collegato. Ogni sezione ricorda le sue frecce aperte finché non ricarichi la pagina." },
       { h: "Le campagne nel cruscotto", p: "La scheda Campagne del cruscotto cliente parte dalla più recente e ha i suoi filtri: ordinamento, stato, fase e segnale del semaforo. Sono indipendenti da quelli della sezione Advertising, così puoi tenere il cruscotto su \"solo i rossi\" senza cambiare come guardi l'altra schermata. Anche qui ogni riga ha il pallino del semaforo all'inizio." },
       { h: "Sottoclienti", p: "Un cliente può contenerne altri. Li crei da tre punti: la scheda Sottoclienti nel cruscotto del cliente, il pulsante in fondo alla riga nell’elenco Clienti, oppure il campo \"Sottocliente di\" nel modulo, che serve anche a spostare sotto un altro un cliente già esistente. Serve quando gestisci l'azienda madre e insieme i suoi clienti finali — per esempio una società di consulenza e i singoli professionisti che entrano nel suo portafoglio. Ogni sottocliente ha la struttura completa: campagne, funnel, messaggio, ciclo di vendita, chiusure, task e file suoi." },
       { h: "Ordinati per cognome", p: "I sottoclienti compaiono sempre in ordine di cognome, non di nome: l'app ignora i titoli come Avv. o Studio Legale, tiene attaccate le particelle — De Luca sotto la D, Di Marco sotto la D — e scarta le forme societarie, così \"Studio Legale Rossi & Partners\" si ordina su Rossi. Se un nome è scritto al contrario — cognome prima, come in “Laudando Antonio” — la deduzione sbaglia: in quel caso compila il campo “Cognome per l\u2019ordinamento” nella scheda del cliente, che vince sempre sulla deduzione. Si importa anche da foglio, con una colonna Cognome." },
@@ -4848,7 +4849,7 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
       <section className="card">
         <header>
           <h2>Collegamento con Meta Ads</h2>
-          <span className="sp eyebrow">{collegati} di {righe.length} clienti collegati · {metaAccount.length} account visibili</span>
+          <span className="sp eyebrow">{collegati} di {righe.length} clienti collegati · {metaAccount.length} account visibili · ▸ apre i sottoclienti</span>
           {metaPulsanti()}
         </header>
         <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -4893,11 +4894,17 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
           <div className="wrap"><table className="tbl">
             <thead><tr><th>Cliente</th><th>Account collegati</th><th>Collega</th><th className="r">Dati</th></tr></thead>
             <tbody>
-              {righe.map(({ z, liv }) => {
+              {alberoCli("meta", righe).map(({ z, liv, nSotto }) => {
                 const miei = metaDelCliente(z.id);
+                const sotto = nSotto ? gruppo(z.id).slice(1) : [];
+                const sottoColl = sotto.filter((id) => metaColl.some((c) => c.cliente_id === id)).length;
                 return (
                   <tr key={z.id}>
-                    <td style={{ paddingLeft: 14 + liv * 18 }}>{liv ? <span className="sub">↳ </span> : null}<b>{z.nome}</b></td>
+                    <td style={{ paddingLeft: 14 + liv * 18 }}>
+                      {frecciaCli("meta", z.id, nSotto)}
+                      {liv ? <span className="sub">↳ </span> : null}<b>{z.nome}</b>
+                      {nSotto > 0 && <div className="sub">con {int(sotto.length)} {sotto.length === 1 ? "sottocliente" : "sottoclienti"} · {sottoColl ? `${int(sottoColl)} collegati` : "nessuno collegato"}</div>}
+                    </td>
                     <td>{miei.length ? miei.map(metaChip) : <span className="sub">nessuno</span>}</td>
                     <td style={{ minWidth: 260 }}>{metaCollega(z)}</td>
                     <td className="r" style={{ whiteSpace: "nowrap" }}>
@@ -4964,6 +4971,51 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
     attivi.filter((z) => (z.padreId || "") === padre)
       .sort((a, b) => (padre ? perCognome(a, b) : 0))   /* i sottoclienti per cognome, i principali nell'ordine tuo */
       .flatMap((z) => [{ z, liv }, ...ordinaGerarchia(z.id, liv + 1)]);
+  /* Menù a tendina dei sottoclienti, come in Advertising: nelle tabelle con più clienti si vedono
+     i clienti principali e la freccia apre i loro sottoclienti. sez distingue le sezioni. */
+  const apertoCli = (sez, id) => !!apertiCli[sez + ":" + id];
+  const frecciaCli = (sez, id, n) => (n > 0 ? (
+    <button type="button" className="adv-freccia" aria-expanded={apertoCli(sez, id)} aria-label={apertoCli(sez, id) ? "Chiudi i sottoclienti" : "Apri i sottoclienti"}
+      title={apertoCli(sez, id) ? "Chiudi i sottoclienti" : "Apri i sottoclienti"}
+      onClick={(e) => { e.stopPropagation(); setApertiCli((x) => ({ ...x, [sez + ":" + id]: !x[sez + ":" + id] })); }}>{apertoCli(sez, id) ? "▾" : "▸"}</button>
+  ) : null);
+  /* Da un elenco gerarchico ({ z, liv } in ordine) alle righe visibili, ognuna con quanti sottoclienti ha */
+  const alberoCli = (sez, righe) => {
+    const out = [];
+    let chiuso = Infinity;
+    righe.forEach((r, i) => {
+      if (r.liv > chiuso) return;
+      let n = 0;
+      for (let j = i + 1; j < righe.length && righe[j].liv > r.liv; j++) n++;
+      chiuso = apertoCli(sez, r.z.id) ? Infinity : r.liv;
+      out.push({ ...r, nSotto: n });
+    });
+    return out;
+  };
+  /* Tabelle di totali: una riga per cliente principale con i numeri di tutto il gruppo; aperta,
+     sotto compaiono il solo cliente principale e ogni sottocliente. calc(ids) → numeri o null. */
+  const righeGruppi = (sez, calc, ordina = null) => {
+    const gruppi = ordinaGerarchia().filter((x) => x.liv === 0).map(({ z }) => {
+      const sotto = ordinaGerarchia(z.id, 1);
+      const tot = calc([z.id, ...sotto.map((x) => x.z.id)]);
+      if (!tot) return null;
+      const r = { z, liv: 0, key: z.id, nSotto: sotto.length, ...tot };
+      if (!sotto.length || !apertoCli(sez, z.id)) return [r];
+      const propria = calc([z.id]);
+      return [r, ...(propria ? [{ z, liv: 1, key: z.id + ":solo", solo: true, ...propria }] : []),
+        ...sotto.map((x) => { const d = calc([x.z.id]); return d ? { z: x.z, liv: x.liv, key: x.z.id, ...d } : null; }).filter(Boolean)];
+    }).filter(Boolean);
+    if (ordina) gruppi.sort((a, b) => ordina(a[0], b[0]));
+    return gruppi.flat();
+  };
+  const nomeGruppo = (sez, r) => (
+    <>
+      {r.liv === 0 && frecciaCli(sez, r.z.id, r.nSotto)}
+      {r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b>
+      {r.solo && <div className="sub">solo il cliente principale</div>}
+      {r.liv === 0 && r.nSotto > 0 && <div className="sub">con {int(r.nSotto)} {r.nSotto === 1 ? "sottocliente" : "sottoclienti"}</div>}
+    </>
+  );
   const logoAgenzia = data.agenzia.logo || LOGO_AG;
 
   const S = {
@@ -9556,14 +9608,24 @@ Regole:
         )}
 
         <section className="card">
-          <header><h2>Conto economico per cliente</h2><span className="sp eyebrow">ore dai task conclusi negli ultimi 30 giorni</span></header>
+          <header><h2>Conto economico per cliente</h2><span className="sp eyebrow">ore dai task conclusi negli ultimi 30 giorni · ▸ apre i sottoclienti</span></header>
           <div className="wrap">
             <table className="tbl">
               <thead><tr><th>Cliente</th><th className="r">Compenso</th><th className="r">Ore</th><th className="r">Costo tempo</th><th className="r">Margine</th><th className="r">Margine %</th><th className="r">Quota</th></tr></thead>
               <tbody>
-                {mapCon(righe.sort((a, b) => b.margine - a.margine), (z) => valutaCompenso(data, z.id), (z) => (
-                  <tr key={z.id} className="clic" onClick={() => cambiaAccount(z.id)}>
-                    <td><div className="riga"><Logo src={z.logo} nome={z.nome} size={28} /><div><b>{z.nome}</b><div className="sub">{z.padreId ? `sottocliente di ${nomeCli(z.padreId)} · ` : ""}{z.aperti} task aperti</div></div></div></td>
+                {mapCon(righeGruppi("economia", (ids) => {
+                  const l = righe.filter((z) => ids.includes(z.id));
+                  return l.length ? ["fee", "ore", "costo", "margine", "aperti"].reduce((o, k) => ({ ...o, [k]: l.reduce((x, z) => x + (z[k] || 0), 0) }), {}) : null;
+                }, (a, b) => b.margine - a.margine), (r) => valutaCompenso(data, r.z.id), (z) => (
+                  <tr key={z.key} className="clic" onClick={() => cambiaAccount(z.z.id)}>
+                    <td style={{ paddingLeft: 14 + z.liv * 18 }}><div className="riga">
+                      {z.liv === 0 && frecciaCli("economia", z.z.id, z.nSotto)}
+                      {z.liv > 0 && <span className="sub">↳</span>}
+                      <Logo src={z.z.logo} nome={z.z.nome} size={z.liv ? 22 : 28} />
+                      <div><b>{z.z.nome}</b><div className="sub">
+                        {z.solo ? "solo il cliente principale · " : z.liv === 0 && z.nSotto ? `con ${int(z.nSotto)} ${z.nSotto === 1 ? "sottocliente" : "sottoclienti"} · ` : ""}{z.aperti} task aperti
+                      </div></div>
+                    </div></td>
                     <td className="r">{eur(z.fee)}</td>
                     <td className="r">{fmt(z.ore, 1)}</td>
                     <td className="r">{eur(z.costo)}</td>
@@ -10980,22 +11042,22 @@ Regole:
 
         {!attivo && (() => {
           /* Fuori dai clienti solo i totali per account: le singole schede sono dentro il cliente */
-          const perCli = ordinaGerarchia().map(({ z, liv }) => {
-            const l = righeMensili([z.id]).filter((r) => r.chiusure || r.contratto || r.incassato);
+          const perCli = righeGruppi("chiusure", (ids) => {
+            const l = righeMensili(ids).filter((r) => r.chiusure || r.contratto || r.incassato);
             if (!l.length) return null;
-            const sc = righe.filter((c) => c.clienteId === z.id);
-            return { z, liv, n: l.reduce((x, r) => x + r.chiusure, 0), ct: l.reduce((x, r) => x + r.contratto, 0), ic: l.reduce((x, r) => x + r.incassato, 0),
+            const sc = righe.filter((c) => ids.includes(c.clienteId));
+            return { n: l.reduce((x, r) => x + r.chiusure, 0), ct: l.reduce((x, r) => x + r.contratto, 0), ic: l.reduce((x, r) => x + r.incassato, 0),
               ultima: l[l.length - 1].mm, schede: sc.length };
-          }).filter(Boolean);
+          });
           return (
             <section className="card">
-              <header><h2>Chiusure per cliente</h2><span className="sp eyebrow">totali · le singole schede sono dentro ogni cliente</span></header>
+              <header><h2>Chiusure per cliente</h2><span className="sp eyebrow">totali · ▸ apre i sottoclienti · le singole schede sono dentro ogni cliente</span></header>
               <div className="wrap"><table className="tbl">
                 <thead><tr><th>Account</th><th className="r">Chiusure</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Residuo</th><th className="r">Ultimo mese</th></tr></thead>
                 <tbody>
                   {mapValuta(perCli, (r) => r.z.id, (r) => (
-                    <tr key={r.z.id} className="clic" onClick={() => { cambiaAccount(r.z.id); setVista("chiusure"); }} title="Apri le chiusure del cliente">
-                      <td style={{ paddingLeft: 14 + r.liv * 18 }}>{r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b></td>
+                    <tr key={r.key} className="clic" onClick={() => { cambiaAccount(r.z.id); setVista("chiusure"); }} title="Apri le chiusure del cliente">
+                      <td style={{ paddingLeft: 14 + r.liv * 18 }}>{nomeGruppo("chiusure", r)}</td>
                       <td className="r">{int(r.n)}<div className="sub">{r.schede ? `${int(r.schede)} schede` : "dal ciclo di vendita"}</div></td>
                       <td className="r">{eur0(r.ct)}</td>
                       <td className="r">{eur0(r.ic)}</td>
@@ -11394,19 +11456,20 @@ Regole:
 
         {!attivo && (() => {
           /* Fuori dai clienti solo i totali per cliente: i mesi nel dettaglio sono dentro il cliente */
-          const perCli = ordinaGerarchia().map(({ z, liv }) => {
-            const l = righe.filter((r) => r.clienteId === z.id);
-            return l.length ? { z, liv, mesi: l.length, ultimo: l[0].periodo, ...sommaVendite(l) } : null;
-          }).filter(Boolean);
+          const perCli = righeGruppi("vendite", (ids) => {
+            const l = righe.filter((r) => ids.includes(r.clienteId));
+            const periodi = [...new Set(l.map((r) => r.periodo))].sort();
+            return l.length ? { mesi: periodi.length, ultimo: periodi[periodi.length - 1], ...sommaVendite(l) } : null;
+          });
           return (
             <section className="card">
-              <header><h2>Ciclo di vendita per cliente</h2><span className="sp eyebrow">totali dei mesi registrati · il dettaglio è dentro ogni cliente</span></header>
+              <header><h2>Ciclo di vendita per cliente</h2><span className="sp eyebrow">totali dei mesi registrati · ▸ apre i sottoclienti · il dettaglio è dentro ogni cliente</span></header>
               <div className="wrap"><table className="tbl">
                 <thead><tr><th>Cliente</th><th className="r">Mesi</th><th className="r">Lead</th><th className="r">Demo svolte</th><th className="r">Chiusure</th><th className="r">Chiusura</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Costo/chiusura</th></tr></thead>
                 <tbody>
                   {mapValuta(perCli, (r) => r.z.id, (r) => (
-                    <tr key={r.z.id} className="clic" onClick={() => { cambiaAccount(r.z.id); setVista("vendite"); }} title="Apri il ciclo di vendita del cliente">
-                      <td style={{ paddingLeft: 14 + r.liv * 18 }}>{r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b></td>
+                    <tr key={r.key} className="clic" onClick={() => { cambiaAccount(r.z.id); setVista("vendite"); }} title="Apri il ciclo di vendita del cliente">
+                      <td style={{ paddingLeft: 14 + r.liv * 18 }}>{nomeGruppo("vendite", r)}</td>
                       <td className="r">{int(r.mesi)}<div className="sub mono">fino a {meseIt(r.ultimo)}</div></td>
                       <td className="r">{int(r.lead)}</td>
                       <td className="r">{int(r.demoSvolte)}</td>
@@ -11708,7 +11771,7 @@ Regole:
               const spesaPiatt = perPiatt.reduce((s, x) => s + x.v, 0);
 
               /* Una riga per cliente, con lo stato che riassume il giudizio */
-              const perf = m.portafoglio.filter((p) => idsPrinc.includes(p.id)).map((p) => {
+              const rigaPerf = (p) => {
                 const r = righeMensili([p.id]);
                 const u = r[r.length - 1] || { lead: 0, cpl: 0, demo: 0, chiusure: 0, contratto: 0, resa: 0, tentativi: 0, suChiamate: false };
                 /* I numeri commerciali arrivano spesso dopo la spesa (il mese in corso ha già Meta ma
@@ -11731,7 +11794,15 @@ Regole:
                 const redNo = redd[p.id] && !redd[p.id].attivo ? redd[p.id] : null;
                 const stato = critici ? "critico" : fermi ? "fermo" : attenz ? (red ? "buono" : "attenzione") : p.modo === "nd" ? (red ? "ottimo" : "nd") : p.perf >= 1 || red ? "ottimo" : p.perf >= 0.8 ? "buono" : "attenzione";
                 return { ...p, ...u, ...vend, stato, critici, attenz, daFigli, fermi, red, redNo };
-              }).sort((a, b) => b.sp - a.sp);
+              };
+              const perf = m.portafoglio.filter((p) => idsPrinc.includes(p.id)).map(rigaPerf).sort((a, b) => b.sp - a.sp);
+              /* Con la freccia, sotto il cliente principale compaiono i suoi sottoclienti con i loro numeri */
+              const perfVisibili = perf.flatMap((p) => {
+                const sotto = ordinaGerarchia(p.id, 1);
+                const r = { ...p, liv: 0, nSotto: sotto.length };
+                if (!sotto.length || !apertoCli("perf", p.id)) return [r];
+                return [r, ...sotto.map((x) => m.portafoglio.find((q) => q.id === x.z.id)).filter(Boolean).map((q) => ({ ...rigaPerf(q), liv: 1, nSotto: 0 }))];
+              });
               const colore = { ottimo: "var(--ok)", buono: "var(--ok)", attenzione: "var(--warn)", critico: "var(--acc-t)", fermo: "var(--acc-t)", nd: "var(--ink3)" };
               const testoStato = { ottimo: "Ottimo", buono: "Buono", attenzione: "Attenzione", critico: "Critico", fermo: "Campagne ferme", nd: "Senza obiettivo" };
 
@@ -11800,7 +11871,7 @@ Regole:
                   <section className="card">
                     <header>
                       <h2>Performance dei clienti</h2>
-                      <span className="sp eyebrow">solo clienti principali · ultimo mese con dati, per spesa e per vendite</span>
+                      <span className="sp eyebrow">clienti principali · ▸ apre i sottoclienti · ultimo mese con dati, per spesa e per vendite</span>
                       <button className="btn ghost mini" onClick={() => setVista("mesi")}>Riepilogo mensile</button>
                     </header>
                     <div className="wrap">
@@ -11811,13 +11882,16 @@ Regole:
                           <th className="r">Sforzo/Resa</th><th className="r">Resa ads</th><th>Stato</th>
                         </tr></thead>
                         <tbody>
-                          {mapValuta(perf, (p) => p.id, (p) => (
+                          {mapValuta(perfVisibili, (p) => p.id, (p) => (
                             <tr key={p.id} className="clic" onClick={() => cambiaAccount(p.id)}>
-                              <td><div className="riga"><Logo src={p.logo} nome={p.nome} size={26} /><div>
+                              <td style={{ paddingLeft: 14 + p.liv * 18 }}><div className="riga">
+                                {p.liv === 0 && frecciaCli("perf", p.id, p.nSotto)}
+                                {p.liv > 0 && <span className="sub">↳</span>}
+                                <Logo src={p.logo} nome={p.nome} size={p.liv ? 22 : 26} /><div>
                                 <b>{p.nome}</b>
                                 <div className="sub">
                                   {p.nCamp} campagne
-                                  {figli(p.id).length > 0 && ` · ${figli(p.id).length} sottoclienti esclusi dai numeri`}
+                                  {p.liv === 0 && p.nSotto > 0 && ` · ${p.nSotto} sottoclienti esclusi dai numeri`}
                                 </div></div></div></td>
                               <td className="r">{p.sp ? eur0(p.sp) : "—"}</td>
                               <td className="r">{p.lead ? int(p.lead) : "—"}</td>
@@ -11876,7 +11950,10 @@ Regole:
                   <table className="tbl">
                     <thead><tr><th>Cliente</th><th>Stato</th><th className="r">Compenso</th><th className="r">Campagne</th><th className="r">Speso</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Sforzo/Resa</th><th className="r">Resa ads</th><th className="r">Task</th><th className="r">Avvisi</th><th /></tr></thead>
                     <tbody>
-                      {mapValuta(ordinaGerarchia().filter(({ z, liv }) => liv === 0 && cerca(z.nome + " " + z.settore)), (x) => x.z.id, ({ z, liv }) => {
+                      {mapValuta(q
+                        /* Cercando si vedono il cliente trovato, il suo principale e i suoi sottoclienti, senza tendina */
+                        ? ordinaGerarchia().filter(({ z }) => [z.id, ...discendenti(z.id), z.padreId].some((id) => { const y = cliente(id); return y && cerca(y.nome + " " + y.settore); }))
+                        : alberoCli("clienti", ordinaGerarchia()), (x) => x.z.id, ({ z, liv, nSotto = 0 }) => {
                         const p = m.portafoglio.find((x) => x.id === z.id) || { sp: 0, nCamp: 0, nAvvisi: 0, testo: "—", modo: "nd", perf: 0 };
                         const nt = data.task.filter((t) => t.clienteId === z.id && t.stato !== "fatto").length;
                         const nf = figli(z.id).length;
@@ -11886,6 +11963,7 @@ Regole:
                           <tr key={z.id} className="clic" onClick={() => cambiaAccount(z.id)}>
                             <td style={{ paddingLeft: 14 + liv * 26 }}>
                               <div className="riga">
+                                {frecciaCli("clienti", z.id, nSotto)}
                                 {liv > 0 && <span className="sub" style={{ marginLeft: -14 }}>↳</span>}
                                 <Logo src={z.logo} nome={z.nome} size={liv ? 24 : 30} />
                                 <div><b>{z.nome}</b><div className="sub">
@@ -12039,13 +12117,14 @@ Regole:
                     const suoi = figli(z.id);
                     return (
                       <section className="card" key={z.id}>
-                        <header>
+                        <header className="clic" onClick={() => setApertiCli((x) => ({ ...x, ["sotto:" + z.id]: !x["sotto:" + z.id] }))}>
+                          {frecciaCli("sotto", z.id, suoi.length)}
                           <h2>{z.nome}</h2>
-                          <span className="sp eyebrow">{suoi.length} {suoi.length === 1 ? "sottocliente" : "sottoclienti"} · in ordine di cognome</span>
-                          <button className="btn ghost mini" onClick={() => cambiaAccount(z.id)}>Apri il cliente</button>
-                          <button className="btn ghost mini" onClick={() => apri("clienti", { padreId: z.id }, true)}>+ Sottocliente</button>
+                          <span className="sp eyebrow">{suoi.length} {suoi.length === 1 ? "sottocliente" : "sottoclienti"}{apertoCli("sotto", z.id) ? " · in ordine di cognome" : " · ▸ per vederli"}</span>
+                          <button className="btn ghost mini" onClick={(e) => { e.stopPropagation(); cambiaAccount(z.id); }}>Apri il cliente</button>
+                          <button className="btn ghost mini" onClick={(e) => { e.stopPropagation(); apri("clienti", { padreId: z.id }, true); }}>+ Sottocliente</button>
                         </header>
-                        <div className="wrap">
+                        {apertoCli("sotto", z.id) && <div className="wrap">
                           <table className="tbl">
                             <thead><tr>
                               <th>Account</th><th>Stato</th><th className="r">Campagne</th><th>Data partenza</th><th className="r">Speso</th>
@@ -12095,7 +12174,7 @@ Regole:
                               })}
                             </tbody>
                           </table>
-                        </div>
+                        </div>}
                       </section>
                     );
                   })}
