@@ -1689,7 +1689,7 @@ const GUIDA = [
     intro: "Ogni mattina alle 9 il CRM scarica da Meta Ads i dati fino a ieri per tutti gli account collegati ai clienti: campagne, ad set, annunci e finestre di valutazione. Non serve importare file.",
     blocchi: [
       { h: "Una volta sola: collegare Facebook", p: "In Impostazioni, nel riquadro Collegamento con Meta Ads, premi Collega Facebook e accedi con il tuo profilo: il CRM ottiene un accesso in sola lettura agli account pubblicitari che gestisci, senza bisogno di un Business Manager unico. Meta fa durare l'accesso 60 giorni: una settimana prima della scadenza il riquadro diventa rosso e basta premere Rinnova il collegamento." },
-      { h: "Poi: collegare gli account ai clienti", p: "Nello stesso riquadro, Aggiorna l'elenco degli account mostra tutti gli account a cui il tuo profilo ha accesso. Accanto a ogni cliente il CRM propone quello che gli somiglia per nome (anche per iniziali: BDF per Boutique Del Fitness); controlli e premi Collega. Lo stesso si fa dalla Scheda cliente. Un cliente può avere più account; un account appartiene a un solo cliente." },
+      { h: "Poi: collegare gli account ai clienti", p: "Nello stesso riquadro, Aggiorna l'elenco degli account mostra tutti gli account a cui il tuo profilo ha accesso. Accanto a ogni cliente il menu parte da «scegli un account»: aprendolo, in cima trovi i Suggeriti per nome, quelli che gli somigliano (anche per iniziali: BDF per Boutique Del Fitness), e sotto tutti gli altri. Scegli e premi Collega. Lo stesso si fa dalla Scheda cliente. Un cliente può avere più account; un account appartiene a un solo cliente." },
       { h: "Cosa arriva", p: "Le campagne attive o che hanno speso negli ultimi 90 giorni, con stato, budget giornaliero, date, spesa, impression, clic, clic sul link, lead, acquisti e ricavi. Sotto ogni campagna i suoi ad set e annunci con i totali. Le finestre Test, Matura e le settimane Attive sono già sommate da Meta, con la frequenza vera di ciascuna." },
       { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
       { h: "Cosa resta tuo", p: "Lo stato In test, le soglie, la linea, il funnel, le note, lo stadio dei creativi e, se l'hai segnato come scritto a mano, l'esito commerciale (conversioni e ricavi). Il budget giornaliero cambiato su Meta entra nello storico con la data del giorno, come quando lo cambi dalla scheda." },
@@ -4522,7 +4522,8 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   /* Menu per collegare un account: prima i suggeriti per nome, poi tutti; quelli già di un altro cliente non si scelgono */
   const metaCollega = (z) => {
     const sugg = metaSuggeriti(z);
-    const scelto = metaScelta[z.id] !== undefined ? metaScelta[z.id] : (sugg[0] ? sugg[0].account_id : "");
+    /* Nessuna scelta già fatta: i suggeriti stanno in cima al menu, ma l'account lo sceglie l'utente */
+    const scelto = metaScelta[z.id] || "";
     const tutti = [...metaAccount].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     return (
       <div className="meta-riga">
