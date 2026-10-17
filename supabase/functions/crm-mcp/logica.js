@@ -4,7 +4,7 @@
 export const nomeChiave = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 
 /* Valori predefiniti delle winner ads: gli stessi del CRM (src/lib/winner.js) */
-export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "" };
+export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "", raggruppa: true };
 
 const NUM = { type: "number" };
 export const STRUMENTI = [
@@ -28,7 +28,7 @@ export const STRUMENTI = [
   },
   {
     name: "salva_dati_ads",
-    description: "Salva nel CRM i numeri di ogni annuncio di un cliente (per esempio dal report di attribuzione di Hyros). Ogni invio è la fotografia di una data: rimandare la stessa data la sostituisce. Il CRM calcola da qui la classifica delle winner ads. Manda tutti gli annunci con spesa nel periodo, attivi e non, con i numeri attribuiti all'annuncio.",
+    description: "Salva nel CRM i numeri di ogni annuncio di un cliente (per esempio dal report di attribuzione di Hyros). Ogni invio è la fotografia di una data: rimandare la stessa data la sostituisce. Il CRM calcola da qui la classifica delle winner ads, separata per traffico freddo e retargeting, sommando le copie della stessa creatività (anche in pausa). Manda tutti gli annunci con spesa nel periodo, attivi e in pausa, ciascuno con pubblico e creativa.",
     inputSchema: {
       type: "object",
       properties: {
@@ -42,8 +42,10 @@ export const STRUMENTI = [
             type: "object",
             properties: {
               id: { type: "string", description: "Id dell'annuncio (quello di Meta se c'è)" },
-              nome: { type: "string" }, campagna: { type: "string" }, adset: { type: "string" },
-              pubblico: { type: "string", enum: ["freddo", "retargeting", "altro"] },
+              nome: { type: "string" },
+              creativa: { type: "string", description: "Nome o codice della creatività, uguale per tutte le sue copie (es. '71' per '71 - tempo perso' in più campagne o ad set): il CRM somma le copie, anche quelle in pausa" },
+              campagna: { type: "string" }, adset: { type: "string" },
+              pubblico: { type: "string", enum: ["freddo", "retargeting", "altro"], description: "Traffico freddo o retargeting: il CRM fa una classifica per ciascuno" },
               attiva: { type: "boolean" },
               spesa: NUM, lead: NUM, appuntamenti: NUM, clienti: NUM, incassato: NUM,
               note: { type: "string" },
@@ -166,7 +168,7 @@ export function righeAds(args, { ws, clienteId, oggi }) {
     viste.add(id);
     righe.push({
       workspace_id: ws, cliente_id: clienteId, fonte, data, ad_id: id,
-      nome: testo(a.nome, 300) || id, campagna: testo(a.campagna, 300), adset: testo(a.adset, 300),
+      nome: testo(a.nome, 300) || id, creativa: testo(a.creativa, 120), campagna: testo(a.campagna, 300), adset: testo(a.adset, 300),
       pubblico: ["freddo", "retargeting", "altro"].includes(a.pubblico) ? a.pubblico : "",
       attiva: a.attiva !== false,
       spesa: numero(a.spesa), lead: numero(a.lead), appuntamenti: numero(a.appuntamenti), clienti: numero(a.clienti), incassato: numero(a.incassato),

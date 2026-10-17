@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import assert from "node:assert/strict";
-import { classifica, valutaAd, fotografie, conAndamento, benchmarkDi } from "../src/lib/winner.js";
+import { classifica, valutaAd, fotografie, conAndamento, benchmarkDi, chiaveCreativa, raggruppaCopie } from "../src/lib/winner.js";
 import { trovaCliente, riassuntoCliente, righeAds, STRUMENTI } from "../supabase/functions/crm-mcp/logica.js";
 import { applicaComandi } from "../src/lib/comandi.js";
 
@@ -34,6 +34,25 @@ const foto = fotografie([{ data: "2026-10-01", fonte: "Hyros" }, { data: "2026-1
 assert.deepEqual(foto.map((f) => [f.data, f.n]), [["2026-10-16", 2], ["2026-10-01", 1]]);
 const and = conAndamento([{ ad_id: "a", pos: 1 }, { ad_id: "b", pos: 2 }, { ad_id: "n", pos: 3 }], [{ ad_id: "b", pos: 1 }, { ad_id: "a", pos: 4 }]);
 assert.deepEqual(and.map((x) => x.salita), [3, -1, null]);
+
+// ---------- copie della stessa creatività ----------
+assert.equal(chiaveCreativa({ nome: "71 - tempo perso" }), "71");
+assert.equal(chiaveCreativa({ nome: "71 - tempo perso – Copia 2" }), "71");
+assert.equal(chiaveCreativa({ nome: "Box domande - Copy" }), "box domande");
+assert.equal(chiaveCreativa({ nome: "Box domande" }), "box domande");
+assert.equal(chiaveCreativa({ nome: "71 - x", creativa: "Tempo Perso" }), "tempo perso");
+const copie = raggruppaCopie([
+  { ad_id: "a1", nome: "71 - tempo perso", pubblico: "freddo", attiva: false, spesa: 500, lead: 50, appuntamenti: 25, clienti: 10, campagna: "C1" },
+  { ad_id: "a2", nome: "71 - tempo perso - Copia", pubblico: "freddo", attiva: true, spesa: 30, lead: 2, appuntamenti: 1, clienti: 0, campagna: "C2" },
+  { ad_id: "a3", nome: "71 - tempo perso", pubblico: "retargeting", attiva: false, spesa: 100, lead: 10, appuntamenti: 5, clienti: 2, campagna: "R" },
+]);
+assert.equal(copie.length, 2);
+const fr = copie.find((x) => x.pubblico === "freddo");
+assert.deepEqual([fr.spesa, fr.clienti, fr.copie, fr.copieAttive, fr.attiva, fr.nome], [530, 10, 2, 1, true, "71 - tempo perso"]);
+assert.equal(copie.find((x) => x.pubblico === "retargeting").attiva, false);
+// singolarmente la copia accesa non ha clienti: fuori; raggruppata entra con i numeri di quelle in pausa
+assert.equal(classifica([{ ad_id: "a2", nome: "x", attiva: true, spesa: 30, lead: 2, appuntamenti: 1, clienti: 0 }], {}).righe.length, 0);
+assert.equal(classifica([fr], {}).righe.length, 1);
 
 // ---------- logica del connettore ----------
 const clienti = [{ id: "z1", nome: "Boutique Del Fitness LLC", winner: { minClienti: 10 } }, { id: "s1", nome: "BDF Milano", padreId: "z1" }, { id: "z2", nome: "Oliva Consulting" }, { id: "z3", nome: "Vecchio", archiviato: "si" }];

@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
 import { trovaTabelleKpi, applicaKpi, VOCI_KPI } from "./lib/kpi.js";
 import { applicaComandi, statoEsterno, nomeChiave } from "./lib/comandi.js";
-import { BENCH_BASE, benchmarkDi, classifica, fotografie, conAndamento } from "./lib/winner.js";
+import { BENCH_BASE, benchmarkDi, classifica, fotografie, conAndamento, raggruppaCopie } from "./lib/winner.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
   AlertTriangle, Clock, BarChart3, Percent, Layers, Briefcase, Gauge,
@@ -1720,6 +1720,7 @@ const GUIDA = [
       { h: "Creare il connettore", p: "In Impostazioni, riquadro Connettore per Claude, premi Crea il connettore: compaiono l'indirizzo del server e la chiave, che si vede una volta sola. Su claude.ai apri Impostazioni → Connettori → Aggiungi connettore personalizzato, chiamalo «CRM NC Media», incolla l'indirizzo, lascia «Nessun accesso» e in Intestazioni della richiesta aggiungi Authorization con valore «Bearer» seguito dalla chiave: così la chiave resta cifrata in claude.ai e non sta nell'indirizzo. Nuovo indirizzo sostituisce la chiave (quello vecchio smette subito di funzionare e va cambiato anche su claude.ai); Metti in pausa blocca il connettore senza eliminarlo." },
       { h: "Il Progetto del cliente", p: "Copia le istruzioni per il Progetto e incollale nelle istruzioni del Progetto di Boutique del Fitness su claude.ai. Da lì basta chiedere «aggiorna le winner ads nel CRM»: Claude legge i benchmark del CRM, prende da Hyros i numeri di ogni annuncio, li salva, scrive la sua analisi e, se serve, crea i task. Per farlo ogni mattina senza scrivere niente, crea un'attività in Pianificate su claude.ai dentro quel Progetto, con la stessa richiesta." },
       { h: "La classifica", p: "Per ogni annuncio il CRM calcola il costo per lead, per appuntamento e per cliente, li divide per i benchmark (predefiniti 9 €, 20 € e 100 €) e fa la media: è il punteggio. Sotto 1 l'annuncio batte i riferimenti, più è basso meglio è. In verde i costi sotto il benchmark, in rosso quelli oltre il 30% sopra. I filtri, cioè minimo di clienti (predefinito 5, perché un annuncio con due clienti può essere primo per caso), minimo di spesa, pubblico e solo attive, valgono per il cliente e li legge anche Claude." },
+      { h: "Freddo e retargeting, copie raggruppate", p: "Le classifiche sono due, una per il traffico freddo e una per il retargeting, perché i costi dei due pubblici non si confrontano. Con «raggruppa le copie» (acceso di base) le copie della stessa creatività in campagne o ad set diversi, anche in pausa, diventano una riga sola con i numeri sommati: così una creatività appena duplicata non sparisce perché la copia nuova ha uno o due giorni di vita. La creatività è riconosciuta dal codice che Claude indica, altrimenti dal numero all'inizio del nome (71 per «71 - tempo perso»), altrimenti dal nome senza «copia». Con il raggruppamento, «solo con una copia accesa» tiene le creatività che hanno almeno una copia attiva; sotto il nome leggi quante copie ci sono e quante sono accese." },
       { h: "Fotografie e andamento", p: "Ogni salvataggio è la fotografia di un giorno: dal menu sopra la classifica scegli quale vedere. Accanto alla posizione la freccia dice quanti posti ha guadagnato o perso rispetto alla fotografia precedente; «nuovo» vuol dire che prima non era in classifica. Salvare di nuovo lo stesso giorno sostituisce la fotografia." },
       { h: "Le analisi", p: "Sotto la classifica trovi le analisi scritte dal Claude del cliente, la più recente aperta. Restano anche quando cambiano i numeri, così puoi rileggere cosa diceva un mese fa. Dentro un cliente con sottoclienti, in consolidato vedi anche quelle dei sottoclienti." },
       { h: "Cosa può fare Claude con il connettore", p: "Leggere l'elenco dei clienti, i dati di un cliente (campagne, ciclo di vendita, task aperti) e le analisi precedenti; salvare numeri degli annunci e analisi; creare task. Non può modificare né cancellare il resto del CRM." },
@@ -4875,7 +4876,7 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
   /* Connettore del CRM per Claude (funzione crm-mcp): il Claude di un cliente legge il CRM e ci salva le analisi */
   const istruzioniProgetto = (nome) => `Nel CRM NC Media c'è il connettore «CRM NC Media». Quando analizzi le winner ads di ${nome || "questo cliente"}:
 1. leggi_benchmark con cliente "${nome || "nome del cliente"}" e usa quei riferimenti (costo per lead, per appuntamento e per cliente chiuso, minimo di clienti);
-2. prendi da Hyros il report di attribuzione per annuncio del periodo (ultimi 30 giorni, salvo richiesta diversa) e chiama salva_dati_ads con TUTTI gli annunci con spesa, attivi e spenti: id, nome, campagna, adset, pubblico (freddo o retargeting), attiva, spesa, lead, appuntamenti, clienti, incassato, e "periodo" con le date;
+2. prendi da Hyros il report di attribuzione per annuncio del periodo (ultimi 30 giorni, salvo richiesta diversa) e chiama salva_dati_ads con TUTTI gli annunci con spesa, attivi e in pausa: id, nome, creativa (il nome o il numero comune a tutte le copie della stessa creatività, es. "71"), campagna, adset, pubblico ("freddo" o "retargeting", sempre indicato), attiva, spesa, lead, appuntamenti, clienti, incassato, e "periodo" con le date. Il CRM somma le copie della stessa creatività e fa una classifica per il freddo e una per il retargeting;
 3. scrivi la tua analisi (winner ads, cosa scalare, cosa spegnere, cosa rifare) e salvala con salva_analisi, tipo "winner_ads";
 4. se serve un'azione concreta, crea un task con crea_task.
 Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, task) e le analisi precedenti con leggi_analisi.`;
@@ -9768,8 +9769,17 @@ Regole:
     const scelta = foto.find((f) => `${f.data}|${f.fonte}` === winFoto) || foto[0];
     const diFoto = (f) => (f ? winDati.ads.filter((r) => r.data === f.data && r.fonte === f.fonte) : []);
     const precedente = scelta ? foto.find((f) => f.fonte === scelta.fonte && f.data < scelta.data) : null;
-    const { righe, esclusi } = classifica(diFoto(scelta), bm);
-    const lista = conAndamento(righe, precedente ? classifica(diFoto(precedente), bm).righe : []);
+    /* Le copie della stessa creatività (anche in pausa) si sommano; una classifica per pubblico */
+    const base = (f) => (bm.raggruppa ? raggruppaCopie(diFoto(f)) : diFoto(f));
+    const PUBBLICI = [["freddo", "Traffico freddo"], ["retargeting", "Retargeting"], ["altro", "Altro"], ["", "Pubblico non indicato"]];
+    const perPubblico = (l, pub) => l.filter((a) => (a.pubblico || "") === pub);
+    const oraBase = base(scelta), primaBase = precedente ? base(precedente) : [];
+    const sezioni = PUBBLICI.filter(([pub]) => (!bm.pubblico || bm.pubblico === pub) && perPubblico(oraBase, pub).length).map(([pub, titolo]) => {
+      const { righe, esclusi } = classifica(perPubblico(oraBase, pub), { ...bm, pubblico: "" });
+      return { pub, titolo, esclusi, lista: conAndamento(righe, classifica(perPubblico(primaBase, pub), { ...bm, pubblico: "" }).righe) };
+    });
+    const lista = sezioni.flatMap((x) => x.lista);
+    const esclusi = sezioni.reduce((x, y) => x + y.esclusi, 0);
     const tot = lista.reduce((x, a) => ({ sp: x.sp + a.spesa, cli: x.cli + a.clienti, app: x.app + a.appuntamenti }), { sp: 0, cli: 0, app: 0 });
     const colore = (r) => (r <= 1 ? "pos" : r > 1.3 ? "neg" : "");
     const campo = (k, etichetta, passo = 1) => (
@@ -9800,8 +9810,11 @@ Regole:
                 <option value="">tutti</option><option value="freddo">freddo</option><option value="retargeting">retargeting</option><option value="altro">altro</option>
               </select>
             </label>
+            <label className="riga" style={{ gap: 6, paddingBottom: 8 }} title="Somma i numeri di tutte le copie della stessa creatività, anche quelle in pausa">
+              <input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!bm.raggruppa} onChange={(e) => cambiaBm({ raggruppa: e.target.checked })} /> raggruppa le copie
+            </label>
             <label className="riga" style={{ gap: 6, paddingBottom: 8 }}>
-              <input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!bm.soloAttive} onChange={(e) => cambiaBm({ soloAttive: e.target.checked })} /> solo attive
+              <input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!bm.soloAttive} onChange={(e) => cambiaBm({ soloAttive: e.target.checked })} /> {bm.raggruppa ? "solo con una copia accesa" : "solo attive"}
             </label>
           </div>
         </section>
@@ -9824,43 +9837,54 @@ Regole:
             </div>
             <section className="card">
               <header>
-                <h2>Classifica</h2>
-                <span className="sp eyebrow">{scelta.fonte} · {scelta.periodo || "periodo non indicato"}{precedente ? ` · confronto con il ${dataIt(precedente.data)}` : ""}</span>
+                <h2>Fotografia</h2>
+                <span className="sp eyebrow">{scelta.fonte} · {scelta.periodo || "periodo non indicato"}{precedente ? ` · confronto con il ${dataIt(precedente.data)}` : ""}{bm.raggruppa ? " · copie raggruppate" : ""}</span>
                 <select value={`${scelta.data}|${scelta.fonte}`} onChange={(e) => setWinFoto(e.target.value)} aria-label="Fotografia" style={{ width: "auto" }}>
                   {foto.map((f) => <option key={`${f.data}|${f.fonte}`} value={`${f.data}|${f.fonte}`}>{dataIt(f.data)} · {f.fonte} · {f.n} annunci</option>)}
                 </select>
                 <button className="btn ghost mini" disabled={winDati.carico} onClick={() => setWinGiro((x) => x + 1)}>{winDati.carico ? "Carico…" : "Ricarica"}</button>
               </header>
-              <div className="wrap"><table className="tbl">
-                <thead><tr>
-                  <th className="r">#</th><th>Annuncio</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th>
-                  <th className="r">Appunt.</th><th className="r">Costo/app.</th><th className="r">Clienti</th><th className="r">Costo/cliente</th>
-                  <th className="r">Chiusura</th><th className="r" title="Media dei tre costi divisi per i benchmark">Punteggio</th>
-                </tr></thead>
-                <tbody>
-                  {lista.map((a) => (
-                    <tr key={a.cliente_id + a.ad_id}>
-                      <td className="r mono">{a.pos}{a.salita ? <div className={"sub " + (a.salita > 0 ? "pos" : "neg")}>{a.salita > 0 ? `▲${a.salita}` : `▼${-a.salita}`}</div> : a.salita === null && precedente ? <div className="sub">nuovo</div> : null}</td>
-                      <td>
-                        <b>{a.nome}</b>
-                        <div className="sub">{[a.pubblico, a.campagna, nomeCliAd(a.cliente_id), a.attiva ? "" : "spento"].filter(Boolean).join(" · ")}</div>
-                        {a.note && <div className="sub" style={{ maxWidth: 420 }}>{a.note}</div>}
-                      </td>
-                      <td className="r">{eur0(a.spesa)}</td>
-                      <td className="r">{int(a.lead)}</td>
-                      <td className={"r " + colore(a.rCpl)}>{a.cpl ? eur(a.cpl) : "—"}</td>
-                      <td className="r">{int(a.appuntamenti)}</td>
-                      <td className={"r " + colore(a.rApp)}>{a.cpa ? eur(a.cpa) : "—"}</td>
-                      <td className="r">{int(a.clienti)}</td>
-                      <td className={"r " + colore(a.rCli)}>{a.cpc ? eur(a.cpc) : "—"}</td>
-                      <td className="r">{a.chiusura ? pctv(a.chiusura * 100, 0) : "—"}</td>
-                      <td className={"r mono " + colore(a.punteggio)}><b>{fmt(a.punteggio)}</b></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div>
-              {!lista.length && <div className="empty"><b>Nessun annuncio dentro i filtri</b>Abbassa il minimo di clienti o di spesa, o togli «solo attive».</div>}
             </section>
+            {sezioni.map((sz) => (
+              <section className="card" key={sz.pub || "nessuno"}>
+                <header>
+                  <h2>Winner ads · {sz.titolo}</h2>
+                  <span className="sp eyebrow">{int(sz.lista.length)} in classifica{sz.esclusi ? ` · ${int(sz.esclusi)} fuori dai filtri` : ""}</span>
+                </header>
+                <div className="wrap"><table className="tbl">
+                  <thead><tr>
+                    <th className="r">#</th><th>{bm.raggruppa ? "Creatività" : "Annuncio"}</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th>
+                    <th className="r">Appunt.</th><th className="r">Costo/app.</th><th className="r">Clienti</th><th className="r">Costo/cliente</th>
+                    <th className="r">Chiusura</th><th className="r" title="Media dei tre costi divisi per i benchmark">Punteggio</th>
+                  </tr></thead>
+                  <tbody>
+                    {sz.lista.map((a) => (
+                      <tr key={a.cliente_id + a.ad_id}>
+                        <td className="r mono">{a.pos}{a.salita ? <div className={"sub " + (a.salita > 0 ? "pos" : "neg")}>{a.salita > 0 ? `▲${a.salita}` : `▼${-a.salita}`}</div> : a.salita === null && precedente ? <div className="sub">nuovo</div> : null}</td>
+                        <td>
+                          <b>{a.nome}</b>
+                          <div className="sub">{[
+                            a.copie > 1 ? `${a.copie} copie · ${a.copieAttive ? `${a.copieAttive} ${a.copieAttive === 1 ? "accesa" : "accese"}` : "tutte in pausa"}` : a.attiva ? "" : "in pausa",
+                            a.campagna, nomeCliAd(a.cliente_id),
+                          ].filter(Boolean).join(" · ")}</div>
+                          {a.note && <div className="sub" style={{ maxWidth: 420 }}>{a.note}</div>}
+                        </td>
+                        <td className="r">{eur0(a.spesa)}</td>
+                        <td className="r">{int(a.lead)}</td>
+                        <td className={"r " + colore(a.rCpl)}>{a.cpl ? eur(a.cpl) : "—"}</td>
+                        <td className="r">{int(a.appuntamenti)}</td>
+                        <td className={"r " + colore(a.rApp)}>{a.cpa ? eur(a.cpa) : "—"}</td>
+                        <td className="r">{int(a.clienti)}</td>
+                        <td className={"r " + colore(a.rCli)}>{a.cpc ? eur(a.cpc) : "—"}</td>
+                        <td className="r">{a.chiusura ? pctv(a.chiusura * 100, 0) : "—"}</td>
+                        <td className={"r mono " + colore(a.punteggio)}><b>{fmt(a.punteggio)}</b></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table></div>
+                {!sz.lista.length && <div className="empty"><b>Nessuna creatività dentro i filtri</b>Abbassa il minimo di clienti o di spesa, o togli «solo con una copia accesa».</div>}
+              </section>
+            ))}
           </>
         )}
 

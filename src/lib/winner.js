@@ -3,7 +3,7 @@
    costo per cliente / benchmark: sotto 1 l'annuncio fa meglio dei riferimenti, più è basso meglio è.
    Funzioni pure, provate con node (tests/winner.test.mjs). */
 
-export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "" };
+export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "", raggruppa: true };
 export const benchmarkDi = (cliente) => ({ ...BENCH_BASE, ...((cliente && cliente.winner) || {}) });
 
 const costo = (spesa, n) => (n > 0 ? spesa / n : 0);
@@ -30,6 +30,40 @@ export function classifica(ads, bm) {
     && a.clienti >= (Number(b.minClienti) || 0) && a.spesa >= (Number(b.minSpesa) || 0) && a.punteggio > 0);
   dentro.sort((x, y) => x.punteggio - y.punteggio || y.clienti - x.clienti);
   return { righe: dentro.map((a, i) => ({ ...a, pos: i + 1 })), esclusi: tutti.length - dentro.length };
+}
+
+/* La creatività di un annuncio: quella indicata da chi salva i dati, altrimenti il numero
+   iniziale del nome ("71 - tempo perso" → 71), altrimenti il nome senza "copia"/"copy" */
+export function chiaveCreativa(a) {
+  const c = String(a.creativa || "").trim().toLowerCase();
+  if (c) return c;
+  const nome = String(a.nome || a.ad_id || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const num = /^\s*#?(\d+)\b/.exec(nome);
+  if (num) return num[1];
+  return nome.replace(/[\s\-–—_]*(\(|\[)?\s*(copia|copy)\b.*$/i, "").replace(/\s+/g, " ").trim() || String(a.ad_id);
+}
+
+/* Una riga per creatività e pubblico, con i numeri sommati di tutte le copie, accese e in pausa.
+   È attiva se almeno una copia è accesa; il nome è quello della copia che ha speso di più. */
+export function raggruppaCopie(ads) {
+  const m = new Map();
+  (ads || []).forEach((a) => {
+    const k = `${a.cliente_id || ""}|${a.pubblico || ""}|${chiaveCreativa(a)}`;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(a);
+  });
+  return [...m.entries()].map(([k, l]) => {
+    const somma = (c) => l.reduce((x, a) => x + (Number(a[c]) || 0), 0);
+    const accese = l.filter((a) => a.attiva !== false);
+    const perSpesa = (x) => [...x].sort((a, b) => (Number(b.spesa) || 0) - (Number(a.spesa) || 0))[0];
+    const guida = perSpesa(l);
+    return {
+      ...guida, ad_id: "g:" + k, copie: l.length, copieAttive: accese.length, attiva: accese.length > 0,
+      campagna: [...new Set(l.map((a) => a.campagna).filter(Boolean))].join(" · "),
+      spesa: somma("spesa"), lead: somma("lead"), appuntamenti: somma("appuntamenti"), clienti: somma("clienti"), incassato: somma("incassato"),
+      note: guida.note || "",
+    };
+  });
 }
 
 /* Le fotografie disponibili (data e fonte), dalla più recente */
