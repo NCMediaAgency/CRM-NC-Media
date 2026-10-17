@@ -1717,7 +1717,7 @@ const GUIDA = [
     id: "winner", t: "Winner ads e connettore per Claude",
     intro: "Il Claude di un cliente (per Boutique del Fitness quello collegato a Hyros, con tutto il second brain) salva nel CRM i numeri di ogni annuncio e le sue analisi. Il CRM ne fa la classifica sui tuoi benchmark, nella sezione Winner ads del cliente.",
     blocchi: [
-      { h: "Creare il connettore", p: "In Impostazioni, riquadro Connettore per Claude, premi Crea il connettore: compare un indirizzo che si vede una volta sola e contiene la chiave. Su claude.ai apri Impostazioni → Connettori → Aggiungi connettore personalizzato, chiamalo «CRM NC Media», incolla l'indirizzo e salva. Nuovo indirizzo sostituisce la chiave (quello vecchio smette subito di funzionare e va cambiato anche su claude.ai); Metti in pausa blocca il connettore senza eliminarlo." },
+      { h: "Creare il connettore", p: "In Impostazioni, riquadro Connettore per Claude, premi Crea il connettore: compaiono l'indirizzo del server e la chiave, che si vede una volta sola. Su claude.ai apri Impostazioni → Connettori → Aggiungi connettore personalizzato, chiamalo «CRM NC Media», incolla l'indirizzo, lascia «Nessun accesso» e in Intestazioni della richiesta aggiungi Authorization con valore «Bearer» seguito dalla chiave: così la chiave resta cifrata in claude.ai e non sta nell'indirizzo. Nuovo indirizzo sostituisce la chiave (quello vecchio smette subito di funzionare e va cambiato anche su claude.ai); Metti in pausa blocca il connettore senza eliminarlo." },
       { h: "Il Progetto del cliente", p: "Copia le istruzioni per il Progetto e incollale nelle istruzioni del Progetto di Boutique del Fitness su claude.ai. Da lì basta chiedere «aggiorna le winner ads nel CRM»: Claude legge i benchmark del CRM, prende da Hyros i numeri di ogni annuncio, li salva, scrive la sua analisi e, se serve, crea i task. Per farlo ogni mattina senza scrivere niente, crea un'attività in Pianificate su claude.ai dentro quel Progetto, con la stessa richiesta." },
       { h: "La classifica", p: "Per ogni annuncio il CRM calcola il costo per lead, per appuntamento e per cliente, li divide per i benchmark (predefiniti 9 €, 20 € e 100 €) e fa la media: è il punteggio. Sotto 1 l'annuncio batte i riferimenti, più è basso meglio è. In verde i costi sotto il benchmark, in rosso quelli oltre il 30% sopra. I filtri, cioè minimo di clienti (predefinito 5, perché un annuncio con due clienti può essere primo per caso), minimo di spesa, pubblico e solo attive, valgono per il cliente e li legge anche Claude." },
       { h: "Fotografie e andamento", p: "Ogni salvataggio è la fotografia di un giorno: dal menu sopra la classifica scegli quale vedere. Accanto alla posizione la freccia dice quanti posti ha guadagnato o perso rispetto alla fotografia precedente; «nuovo» vuol dire che prima non era in classifica. Salvare di nuovo lo stesso giorno sostituisce la fotografia." },
@@ -4904,11 +4904,25 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
         {intStato.esito && <div className="meta-msg" data-tipo="ok">{intStato.esito}</div>}
         {intStato.mcp && (
           <div className="meta-msg" style={{ display: "grid", gap: 8 }}>
-            <div><b>Indirizzo del connettore</b>: si vede solo adesso e contiene la chiave, quindi non condividerlo.</div>
-            <div className="sub mono" style={{ userSelect: "all", wordBreak: "break-all" }}>{intStato.mcp.url}</div>
-            <div>In claude.ai: <b>Impostazioni → Connettori → Aggiungi connettore personalizzato</b>, nome «CRM NC Media», incolla l'indirizzo e salva. Poi, nella chat o nel Progetto del cliente, attiva il connettore dal menu degli strumenti.</div>
+            {(() => {
+              /* La chiave va nell'intestazione Authorization (claude.ai la conserva cifrata), l'indirizzo resta senza chiave */
+              const base = intStato.mcp.url.replace(/\/crmnc_[^/]*$/, ""), chiave = (intStato.mcp.url.match(/crmnc_[^/]*$/) || [""])[0];
+              return (
+                <>
+                  <div>In claude.ai: <b>Impostazioni → Connettori → Aggiungi connettore personalizzato</b>, nome «CRM NC Media».</div>
+                  <div><b>1. Indirizzo del server</b> (senza chiave):</div>
+                  <div className="sub mono" style={{ userSelect: "all", wordBreak: "break-all" }}>{base}</div>
+                  <div><b>2. Autenticazione</b>: «Nessun accesso». <b>3. Intestazioni della richiesta → Aggiungi intestazione</b>: nome <span className="mono">Authorization</span>, valore:</div>
+                  <div className="sub mono" style={{ userSelect: "all", wordBreak: "break-all" }}>Bearer {chiave}</div>
+                  <div className="sub">Il valore si vede solo adesso: è la chiave, non mandarla a nessuno. Poi salva e, nella chat o nel Progetto del cliente, attiva il connettore dal menu degli strumenti.</div>
+                  <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
+                    <button className="btn ghost mini" onClick={() => copia(base, "Indirizzo copiato.")}>Copia l'indirizzo</button>
+                    <button className="btn ghost mini" onClick={() => copia("Bearer " + chiave, "Valore dell'intestazione copiato.")}>Copia il valore dell'intestazione</button>
+                  </div>
+                </>
+              );
+            })()}
             <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
-              <button className="btn ghost mini" onClick={() => copia(intStato.mcp.url, "Indirizzo copiato.")}>Copia l'indirizzo</button>
               <button className="btn ghost mini" onClick={() => copia(istruzioniProgetto(nomeBdf), "Istruzioni per il Progetto copiate.")}>Copia istruzioni per il Progetto</button>
               <button className="btn ghost mini" onClick={() => setIntStato((x) => ({ ...x, mcp: null }))}>Fatto, l'ho aggiunto</button>
             </div>

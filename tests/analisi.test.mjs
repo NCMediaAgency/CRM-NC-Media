@@ -110,6 +110,10 @@ assert.ok(init.corpo.result.capabilities.tools);
 const notifica = await gestore(new Request(`https://db.test/functions/v1/crm-mcp/${CHIAVE}`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) }));
 assert.equal(notifica.status, 202);
 assert.equal((await rpc("tools/list")).corpo.result.tools.length, STRUMENTI.length);
+// chiave nell'intestazione Authorization e indirizzo senza chiave (come la conserva claude.ai)
+const conIntestazione = await gestore(new Request("https://db.test/functions/v1/crm-mcp", { method: "POST", headers: { Authorization: `Bearer ${CHIAVE}`, "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 99, method: "tools/list" }) }));
+assert.equal(conIntestazione.status, 200);
+assert.equal((await gestore(new Request("https://db.test/functions/v1/crm-mcp", { method: "POST", body: "{}" }))).status, 401);
 assert.equal((await rpc("metodo/strano")).corpo.error.code, -32601);
 assert.match((await usa("elenco_clienti", {})).testo, /BDF Milano/);
 assert.ok(!(await usa("elenco_clienti", {})).testo.includes("Vecchio"));
