@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/meta-applica.test.mjs && node tests/meta-sync.test.mjs && node tests/kpi.test.mjs && node tests/telegram.test.mjs && node --no-warnings tests/telegram-funzione.test.mjs && node --no-warnings tests/integrazioni.test.mjs"
+    "test": "node tests/meta-applica.test.mjs && node tests/meta-sync.test.mjs && node tests/kpi.test.mjs && node tests/telegram.test.mjs && node --no-warnings tests/telegram-funzione.test.mjs && node --no-warnings tests/integrazioni.test.mjs && node --no-warnings tests/analisi.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -3,6 +3,7 @@
 //      POST { evento: "task.creata" | "task.aggiornata" | "task.eliminata", task: {…} }  oppure { tasks: [ … ] }
 //      POST { azione: "modifiche", dal: <id> }  → i cambi fatti nel CRM sulle sue task (canale di ritorno)
 //  · dal CRM (utente collegato): crea, stato, ritorno, rigenera, elimina, notifica.
+//    Le chiavi di tipo 'mcp' sono del connettore per Claude (funzione crm-mcp): qui non valgono.
 // Le task in arrivo vanno in crm_comandi (tipo importa_task): il CRM aperto le inserisce.
 import { eventiDaCorpo } from "./logica.js";
 
@@ -65,7 +66,7 @@ async function gestisci(req: Request) {
   // ---------- dal software esterno ----------
   if (/^Bearer crmnc_/.test(auth)) {
     const [integ] = await db(`integrazioni?select=*&chiave_hash=eq.${await impronta(auth.slice(7).trim())}&attiva=eq.true`);
-    if (!integ) return risposta({ errore: "chiave non valida o integrazione disattivata" }, 401);
+    if (!integ || (integ.tipo && integ.tipo !== "task")) return risposta({ errore: "chiave non valida o integrazione disattivata" }, 401);
     await db(`integrazioni?id=eq.${integ.id}`, { metodo: "PATCH", corpo: { ultimo_contatto: new Date().toISOString() } });
     // Canale di ritorno a lettura: i cambi fatti nel CRM dopo un certo id
     if (corpo.azione === "modifiche") {
@@ -94,20 +95,21 @@ async function gestisci(req: Request) {
   };
   try {
     if (corpo.azione === "stato") {
-      const l = await db(`integrazioni?select=id,nome,chiave_fine,url_ritorno,attiva,creato,ultimo_contatto&workspace_id=eq.${ws}&order=creato.asc`);
+      const l = await db(`integrazioni?select=id,nome,tipo,chiave_fine,url_ritorno,attiva,creato,ultimo_contatto&workspace_id=eq.${ws}&order=creato.asc`);
       return risposta({ ok: true, indirizzo: indirizzo(), integrazioni: l.map((x: any) => ({ ...x, ritorno: !!x.url_ritorno })) });
     }
     if (corpo.azione === "crea") {
       const chiave = nuovaChiave();
       const [x] = await db("integrazioni", { metodo: "POST", prefer: "return=representation",
-        corpo: { workspace_id: ws, nome: String(corpo.nome || "Integrazione").slice(0, 60), chiave_hash: await impronta(chiave), chiave_fine: chiave.slice(-4) } });
-      return risposta({ ok: true, id: x.id, chiave, indirizzo: indirizzo() });
+        corpo: { workspace_id: ws, nome: String(corpo.nome || "Integrazione").slice(0, 60), chiave_hash: await impronta(chiave), chiave_fine: chiave.slice(-4),
+          ...(corpo.tipo === "mcp" ? { tipo: "mcp" } : {}) } });
+      return risposta({ ok: true, id: x.id, chiave, indirizzo: indirizzo(), connettore: `${ENV().url}/functions/v1/crm-mcp/${chiave}` });
     }
     if (corpo.azione === "rigenera") {
       const x = await mia(corpo.id);
       const chiave = nuovaChiave();
       await db(`integrazioni?id=eq.${x.id}`, { metodo: "PATCH", corpo: { chiave_hash: await impronta(chiave), chiave_fine: chiave.slice(-4) } });
-      return risposta({ ok: true, chiave, indirizzo: indirizzo() });
+      return risposta({ ok: true, chiave, indirizzo: indirizzo(), connettore: `${ENV().url}/functions/v1/crm-mcp/${chiave}` });
     }
     if (corpo.azione === "ritorno") {
       const x = await mia(corpo.id);

@@ -27,7 +27,7 @@ export function applicaComandi(data, comandi, { uid, oggi, giorniRicorrenza = ()
         id: d.id || uid(), clienteId: cliOk(d.clienteId), areaId: (data.aree || []).some((a) => a.id === d.areaId) ? d.areaId : "",
         titolo: String(d.titolo || "Task da Telegram"), note: d.note || "", stato: "dafare",
         priorita: PRIORITA.includes(d.priorita) ? d.priorita : "media",
-        inizio: oggi, scadenza: d.scadenza || "", ora: d.ora || "", stima: 0, ricorrenza: "no", checklist: [], creato: oggi, origine: "telegram",
+        inizio: oggi, scadenza: d.scadenza || "", ora: d.ora || "", stima: 0, ricorrenza: "no", checklist: [], creato: oggi, origine: d.origine || "telegram",
       });
       esiti.push({ id: c.id, esito: "task creato" });
     } else if (c.tipo === "crea_nota") {

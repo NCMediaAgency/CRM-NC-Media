@@ -3,13 +3,14 @@ import * as XLSX from "xlsx";
 import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
 import { trovaTabelleKpi, applicaKpi, VOCI_KPI } from "./lib/kpi.js";
 import { applicaComandi, statoEsterno, nomeChiave } from "./lib/comandi.js";
+import { BENCH_BASE, benchmarkDi, classifica, fotografie, conAndamento } from "./lib/winner.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
   AlertTriangle, Clock, BarChart3, Percent, Layers, Briefcase, Gauge,
   LayoutDashboard, Building2, Megaphone, CalendarRange, PieChart, PhoneCall,
   Handshake, Calculator, Filter, NotebookPen, FolderOpen, Sparkles, ListChecks,
   Zap, Upload, DownloadCloud, HelpCircle, Settings, FileText, PenLine, Contact,
-  KanbanSquare, Receipt, Code2, BellRing, LogOut,
+  KanbanSquare, Receipt, Code2, BellRing, LogOut, Trophy,
 } from "lucide-react";
 
 /* Logo dell'agenzia, incorporato: nessun file esterno da caricare */
@@ -85,7 +86,7 @@ const DIZ = {
     "nav.file": "File", "nav.economia": "Economia", "nav.ai": "Consulente", "nav.task": "Task",
     "nav.automazioni": "Automazioni", "nav.importa": "Importa dati", "nav.backup": "Backup",
     "nav.guida": "Guida", "nav.impostazioni": "Impostazioni", "nav.esci": "Esci", "nav.contatti": "Contatti",
-    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaggio", "nav.report": "Report",
+    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaggio", "nav.report": "Report", "nav.winner": "Winner ads",
     "nav.scheda": "Scheda cliente", "nav.campagne": "Advertising",
     /* azioni ricorrenti */
     "a.salva": "Salva", "a.annulla": "Annulla", "a.elimina": "Elimina", "a.aggiungi": "Aggiungi",
@@ -127,7 +128,7 @@ const DIZ = {
     "nav.file": "Files", "nav.economia": "Finances", "nav.ai": "Advisor", "nav.task": "Tasks",
     "nav.automazioni": "Automations", "nav.importa": "Import data", "nav.backup": "Backup",
     "nav.guida": "Guide", "nav.impostazioni": "Settings", "nav.esci": "Log out", "nav.contatti": "Contacts",
-    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaging", "nav.report": "Report",
+    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaging", "nav.report": "Report", "nav.winner": "Winner ads",
     "nav.scheda": "Client record", "nav.campagne": "Advertising",
     "a.salva": "Save", "a.annulla": "Cancel", "a.elimina": "Delete", "a.aggiungi": "Add",
     "a.chiudi": "Close", "a.apri": "Open", "a.copia": "Copy", "a.copiato": "Copied",
@@ -1713,6 +1714,18 @@ const GUIDA = [
     ],
   },
   {
+    id: "winner", t: "Winner ads e connettore per Claude",
+    intro: "Il Claude di un cliente (per Boutique del Fitness quello collegato a Hyros, con tutto il second brain) salva nel CRM i numeri di ogni annuncio e le sue analisi. Il CRM ne fa la classifica sui tuoi benchmark, nella sezione Winner ads del cliente.",
+    blocchi: [
+      { h: "Creare il connettore", p: "In Impostazioni, riquadro Connettore per Claude, premi Crea il connettore: compare un indirizzo che si vede una volta sola e contiene la chiave. Su claude.ai apri Impostazioni → Connettori → Aggiungi connettore personalizzato, chiamalo «CRM NC Media», incolla l'indirizzo e salva. Nuovo indirizzo sostituisce la chiave (quello vecchio smette subito di funzionare e va cambiato anche su claude.ai); Metti in pausa blocca il connettore senza eliminarlo." },
+      { h: "Il Progetto del cliente", p: "Copia le istruzioni per il Progetto e incollale nelle istruzioni del Progetto di Boutique del Fitness su claude.ai. Da lì basta chiedere «aggiorna le winner ads nel CRM»: Claude legge i benchmark del CRM, prende da Hyros i numeri di ogni annuncio, li salva, scrive la sua analisi e, se serve, crea i task. Per farlo ogni mattina senza scrivere niente, crea un'attività in Pianificate su claude.ai dentro quel Progetto, con la stessa richiesta." },
+      { h: "La classifica", p: "Per ogni annuncio il CRM calcola il costo per lead, per appuntamento e per cliente, li divide per i benchmark (predefiniti 9 €, 20 € e 100 €) e fa la media: è il punteggio. Sotto 1 l'annuncio batte i riferimenti, più è basso meglio è. In verde i costi sotto il benchmark, in rosso quelli oltre il 30% sopra. I filtri, cioè minimo di clienti (predefinito 5, perché un annuncio con due clienti può essere primo per caso), minimo di spesa, pubblico e solo attive, valgono per il cliente e li legge anche Claude." },
+      { h: "Fotografie e andamento", p: "Ogni salvataggio è la fotografia di un giorno: dal menu sopra la classifica scegli quale vedere. Accanto alla posizione la freccia dice quanti posti ha guadagnato o perso rispetto alla fotografia precedente; «nuovo» vuol dire che prima non era in classifica. Salvare di nuovo lo stesso giorno sostituisce la fotografia." },
+      { h: "Le analisi", p: "Sotto la classifica trovi le analisi scritte dal Claude del cliente, la più recente aperta. Restano anche quando cambiano i numeri, così puoi rileggere cosa diceva un mese fa. Dentro un cliente con sottoclienti, in consolidato vedi anche quelle dei sottoclienti." },
+      { h: "Cosa può fare Claude con il connettore", p: "Leggere l'elenco dei clienti, i dati di un cliente (campagne, ciclo di vendita, task aperti) e le analisi precedenti; salvare numeri degli annunci e analisi; creare task. Non può modificare né cancellare il resto del CRM." },
+    ],
+  },
+  {
     id: "integrazioni", t: "Task da altri software",
     intro: "Un software esterno, per esempio Boschetto di Kesia, manda al CRM le task che ti assegna: le trovi nei Task sotto il sottocliente giusto e, quando le cambi qui, il cambio torna al software di origine.",
     blocchi: [
@@ -2680,7 +2693,7 @@ const ICONE_NAV = {
   file: FolderOpen, economia: Euro, ai: Sparkles, task: ListChecks, automazioni: Zap,
   importa: Upload, backup: DownloadCloud, guida: HelpCircle, impostazioni: Settings, esci: LogOut,
   contatti: Contact, pipeline: KanbanSquare, messaggio: PenLine, report: FileText,
-  scheda: Receipt,
+  scheda: Receipt, winner: Trophy,
 };
 
 const IcoNav = ({ id }) => {
@@ -3692,7 +3705,7 @@ const NUMERICI = {
 
 /* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
-export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null } = {}) {
+export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null, analisi = null } = {}) {
   const [data, setData] = useState(null);
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
@@ -3941,8 +3954,9 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
       const r = await integrazioni.stato(), lista = r.integrazioni || [];
       setIntLista(lista); setIntStato((x) => ({ ...x, indirizzo: r.indirizzo || "" }));
       /* Ogni integrazione del server ha la sua scheda nei dati (cliente principale e abbinamenti) */
-      setData((d) => (!d || lista.every((x) => (d.integrazioni || []).some((l) => l.id === x.id)) ? d
-        : { ...d, integrazioni: [...(d.integrazioni || []), ...lista.filter((x) => !(d.integrazioni || []).some((l) => l.id === x.id)).map((x) => ({ id: x.id, nome: x.nome, clienteBase: "", abbinamenti: {}, nomiVisti: {} }))] }));
+      const task = lista.filter((x) => x.tipo !== "mcp");
+      setData((d) => (!d || task.every((x) => (d.integrazioni || []).some((l) => l.id === x.id)) ? d
+        : { ...d, integrazioni: [...(d.integrazioni || []), ...task.filter((x) => !(d.integrazioni || []).some((l) => l.id === x.id)).map((x) => ({ id: x.id, nome: x.nome, clienteBase: "", abbinamenti: {}, nomiVisti: {} }))] }));
     }
     catch { /* funzione non ancora pubblicata */ }
   }, [integrazioni]);
@@ -3985,6 +3999,24 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
       return r;
     } catch (e) { setIntStato((x) => ({ ...x, attesa: "", errore: e.message || String(e) })); return null; }
   };
+  /* ---------- Winner ads: numeri degli annunci e analisi salvati dal connettore per Claude ---------- */
+  const [winDati, setWinDati] = useState({ chiave: "", ads: [], testi: [], carico: false, errore: "" });
+  const [winFoto, setWinFoto] = useState("");
+  const [winGiro, setWinGiro] = useState(0);
+  const winIds = data && cliAtt ? (consolidato
+    ? [cliAtt, ...(function sotto(id) { return data.clienti.filter((z) => z.padreId === id && z.archiviato !== "si").flatMap((z) => [z.id, ...sotto(z.id)]); })(cliAtt)]
+    : [cliAtt]) : [];
+  const winChiave = vista === "winner" ? winIds.join(",") + "#" + winGiro : "";
+  useEffect(() => {
+    if (!analisi || !winChiave) return;
+    let vivo = true;
+    const ids = winChiave.split("#")[0].split(",").filter(Boolean);
+    setWinDati((x) => ({ ...x, carico: true, errore: "" }));
+    Promise.all([analisi.ads(ids), analisi.testi(ids)])
+      .then(([ads, testi]) => { if (vivo) setWinDati({ chiave: winChiave, ads, testi, carico: false, errore: "" }); })
+      .catch((e) => { if (vivo) setWinDati((x) => ({ ...x, carico: false, errore: e.message || String(e) })); });
+    return () => { vivo = false; };
+  }, [analisi, winChiave]);
   const caricaMeta = useCallback(async (conDati = true, seguita = null) => {
     if (!meta) return null;
     try {
@@ -4757,7 +4789,7 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
       <section className="card">
         <header>
           <h2>Software esterni</h2>
-          <span className="sp eyebrow">{intLista.length ? `${intLista.length} ${intLista.length === 1 ? "collegato" : "collegati"}` : "nessuno"}</span>
+          <span className="sp eyebrow">{(() => { const n = intLista.filter((x) => x.tipo !== "mcp").length; return n ? `${n} ${n === 1 ? "collegato" : "collegati"}` : "nessuno"; })()}</span>
         </header>
         <div className="meta-msg sub">
           Un altro software (per esempio Boschetto di Kesia) manda qui le task che ti assegna: entrano nei Task sotto il sottocliente giusto,
@@ -4779,7 +4811,7 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
             </div>
           );
         })()}
-        {intLista.map((x) => {
+        {intLista.filter((x) => x.tipo !== "mcp").map((x) => {
           const loc = locali.find((l) => l.id === x.id) || { id: x.id, nome: x.nome, clienteBase: "", abbinamenti: {}, nomiVisti: {} };
           const nomi = Object.entries(loc.nomiVisti || {}).sort((a, b) => a[1].localeCompare(b[1]));
           const quante = data.task.filter((t) => t.esterno && t.esterno.integrazioneId === x.id && !t.esterno.eliminata);
@@ -4836,6 +4868,64 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
           {selCli(intStato.base, (v) => setIntStato((x) => ({ ...x, base: v })), "— cliente principale —", "", "Cliente principale")}
           <button className="btn" disabled={!!intStato.attesa} onClick={crea}>Collega un software</button>
         </div>
+      </section>
+    );
+  };
+
+  /* Connettore del CRM per Claude (funzione crm-mcp): il Claude di un cliente legge il CRM e ci salva le analisi */
+  const istruzioniProgetto = (nome) => `Nel CRM NC Media c'è il connettore «CRM NC Media». Quando analizzi le winner ads di ${nome || "questo cliente"}:
+1. leggi_benchmark con cliente "${nome || "nome del cliente"}" e usa quei riferimenti (costo per lead, per appuntamento e per cliente chiuso, minimo di clienti);
+2. prendi da Hyros il report di attribuzione per annuncio del periodo (ultimi 30 giorni, salvo richiesta diversa) e chiama salva_dati_ads con TUTTI gli annunci con spesa, attivi e spenti: id, nome, campagna, adset, pubblico (freddo o retargeting), attiva, spesa, lead, appuntamenti, clienti, incassato, e "periodo" con le date;
+3. scrivi la tua analisi (winner ads, cosa scalare, cosa spegnere, cosa rifare) e salvala con salva_analisi, tipo "winner_ads";
+4. se serve un'azione concreta, crea un task con crea_task.
+Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, task) e le analisi precedenti con leggi_analisi.`;
+  const PannelloConnettore = () => {
+    if (!integrazioni) return null;
+    const miei = intLista.filter((x) => x.tipo === "mcp");
+    /* Il nome che il Claude di Boutique del Fitness deve usare (se il cliente c'è) */
+    const nomeBdf = (attivi.find((z) => /boutique/i.test(z.nome)) || {}).nome || "";
+    const crea = async () => {
+      const r = await azioneIntegrazione(() => integrazioni.crea("Claude", "mcp"), "");
+      if (r) setIntStato((x) => ({ ...x, mcp: { id: r.id, url: r.connettore } }));
+    };
+    const copia = (testo, esito) => { try { navigator.clipboard.writeText(testo); setIntStato((x) => ({ ...x, esito })); } catch { /* selezione manuale */ } };
+    return (
+      <section className="card">
+        <header>
+          <h2>Connettore per Claude</h2>
+          <span className="sp eyebrow">{miei.length ? (miei.some((x) => x.ultimo_contatto) ? "in uso" : "creato, mai usato") : "non creato"}</span>
+          {!miei.length && <button className="btn" disabled={!!intStato.attesa} onClick={crea}>Crea il connettore</button>}
+        </header>
+        <div className="meta-msg sub">
+          Il CRM diventa uno strumento dei tuoi Claude su claude.ai: il Claude di un cliente (per esempio quello di Boutique del Fitness, collegato a Hyros)
+          legge i dati del CRM e salva qui i numeri degli annunci e le sue analisi, che trovi nella sezione Winner ads del cliente. Può anche creare task.
+        </div>
+        {intStato.errore && <div className="meta-msg" data-tipo="errore">{intStato.errore}</div>}
+        {intStato.esito && <div className="meta-msg" data-tipo="ok">{intStato.esito}</div>}
+        {intStato.mcp && (
+          <div className="meta-msg" style={{ display: "grid", gap: 8 }}>
+            <div><b>Indirizzo del connettore</b>: si vede solo adesso e contiene la chiave, quindi non condividerlo.</div>
+            <div className="sub mono" style={{ userSelect: "all", wordBreak: "break-all" }}>{intStato.mcp.url}</div>
+            <div>In claude.ai: <b>Impostazioni → Connettori → Aggiungi connettore personalizzato</b>, nome «CRM NC Media», incolla l'indirizzo e salva. Poi, nella chat o nel Progetto del cliente, attiva il connettore dal menu degli strumenti.</div>
+            <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
+              <button className="btn ghost mini" onClick={() => copia(intStato.mcp.url, "Indirizzo copiato.")}>Copia l'indirizzo</button>
+              <button className="btn ghost mini" onClick={() => copia(istruzioniProgetto(nomeBdf), "Istruzioni per il Progetto copiate.")}>Copia istruzioni per il Progetto</button>
+              <button className="btn ghost mini" onClick={() => setIntStato((x) => ({ ...x, mcp: null }))}>Fatto, l'ho aggiunto</button>
+            </div>
+          </div>
+        )}
+        {miei.map((x) => (
+          <div key={x.id} className="riga" style={{ gap: 10, flexWrap: "wrap", alignItems: "center", padding: "12px 18px", borderTop: "1px solid var(--line)" }}>
+            <b>CRM NC Media</b>
+            <span className="pill">{x.attiva ? "attivo" : "in pausa"}</span>
+            <span className="sub">chiave …{x.chiave_fine} · {x.ultimo_contatto ? `ultimo uso ${dataIt(String(x.ultimo_contatto).slice(0, 10))} ${String(x.ultimo_contatto).slice(11, 16)}` : "mai usato"}</span>
+            <span className="sp" />
+            <button className="btn ghost mini" onClick={() => copia(istruzioniProgetto(nomeBdf), "Istruzioni per il Progetto copiate.")}>Copia istruzioni per il Progetto</button>
+            <button className="btn ghost mini" disabled={!!intStato.attesa} onClick={async () => { if (!window.confirm("Nuovo indirizzo per il connettore? Quello di adesso smette subito di funzionare e va sostituito in claude.ai.")) return; const r = await azioneIntegrazione(() => integrazioni.rigenera(x.id), ""); if (r) setIntStato((st) => ({ ...st, mcp: { id: x.id, url: r.connettore } })); }}>Nuovo indirizzo</button>
+            <button className="btn ghost mini" disabled={!!intStato.attesa} onClick={() => azioneIntegrazione(() => integrazioni.attiva(x.id, !x.attiva), x.attiva ? "Connettore in pausa: Claude riceve un rifiuto finché non lo riattivi." : "Connettore riattivato.")}>{x.attiva ? "Metti in pausa" : "Riattiva"}</button>
+            <button className="btn danger mini" disabled={!!intStato.attesa} onClick={() => { if (window.confirm("Eliminare il connettore? Le analisi già salvate restano.")) azioneIntegrazione(() => integrazioni.elimina(x.id), "Connettore eliminato: toglilo anche da claude.ai."); }}>Elimina</button>
+          </div>
+        ))}
       </section>
     );
   };
@@ -5892,6 +5982,7 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
     { id: "pipeline", l: t("nav.pipeline"), i: "≡", n: S.trattative.filter((t) => !["vinto", "perso"].includes(t.fase)).length },
     { id: "messaggio", l: t("nav.messaggio"), i: "✍", n: (attivo && attivo.msg && attivo.msg.mercato) ? undefined : "!", al: !(attivo && attivo.msg && attivo.msg.mercato) },
     { id: "campagne", l: t("nav.campagne"), i: "◈", n: S.campagne.length },
+    { id: "winner", l: t("nav.winner"), i: "★" },
     { id: "mesi", l: t("nav.mesi"), i: "▤" },
     { id: "semaforo", l: t("nav.semaforo"), i: "◉" },
     { id: "pixel", l: t("nav.pixel"), i: "◈" },
@@ -5918,6 +6009,7 @@ La chiave è riservata: va tenuta sul server di ${nome} (non nel codice visibile
     pipeline: ["Pipeline", "Le trattative aperte di questo cliente"],
     messaggio: ["Messaggio", "Chi è il mercato, cosa gli dici, e i quattro annunci"],
     campagne: ["Advertising", "Campagne, ritmo di spesa, ad set e annunci"],
+    winner: ["Winner ads", "La classifica degli annunci sui benchmark e le analisi del Claude del cliente"],
     mesi: ["Riepilogo mensile", "Spesa, vendite, contratti e incassato mese per mese"],
     semaforo: ["Sistema a semaforo", "Due indicatori, tre risposte: spegni, aspetta, scala"],
     pixel: ["Pixel facile", "Genera il codice degli eventi standard di Meta"],
@@ -9647,6 +9739,139 @@ Regole:
     ));
   };
 
+  /* ---------- Winner ads del cliente ---------- */
+  /* Markdown essenziale delle analisi: titoli, elenchi e grassetto */
+  const testoAnalisi = (t) => String(t || "").split("\n").map((riga, i) => {
+    const grassetto = (x) => x.split(/(\*\*[^*]+\*\*)/g).map((p, j) => (/^\*\*[^*]+\*\*$/.test(p) ? <b key={j}>{p.slice(2, -2)}</b> : p));
+    if (/^#{1,4}\s/.test(riga)) return <div key={i} style={{ fontWeight: 650, marginTop: 10 }}>{grassetto(riga.replace(/^#{1,4}\s/, ""))}</div>;
+    if (!riga.trim()) return <div key={i} style={{ height: 8 }} />;
+    return <div key={i} style={/^\s*([-*•]|\d+[.)])\s/.test(riga) ? { paddingLeft: 14 } : undefined}>{grassetto(riga)}</div>;
+  });
+  const SezioneWinner = () => {
+    const bm = benchmarkDi(attivo);
+    const cambiaBm = (campi) => setData((d) => ({ ...d, clienti: d.clienti.map((z) => (z.id === attivo.id ? { ...z, winner: { ...benchmarkDi(z), ...campi } } : z)) }));
+    const foto = fotografie(winDati.ads);
+    const scelta = foto.find((f) => `${f.data}|${f.fonte}` === winFoto) || foto[0];
+    const diFoto = (f) => (f ? winDati.ads.filter((r) => r.data === f.data && r.fonte === f.fonte) : []);
+    const precedente = scelta ? foto.find((f) => f.fonte === scelta.fonte && f.data < scelta.data) : null;
+    const { righe, esclusi } = classifica(diFoto(scelta), bm);
+    const lista = conAndamento(righe, precedente ? classifica(diFoto(precedente), bm).righe : []);
+    const tot = lista.reduce((x, a) => ({ sp: x.sp + a.spesa, cli: x.cli + a.clienti, app: x.app + a.appuntamenti }), { sp: 0, cli: 0, app: 0 });
+    const colore = (r) => (r <= 1 ? "pos" : r > 1.3 ? "neg" : "");
+    const campo = (k, etichetta, passo = 1) => (
+      <label style={{ display: "grid", gap: 4 }}>
+        <span className="eyebrow">{etichetta}</span>
+        <input type="number" min="0" step={passo} value={bm[k]} style={{ width: 110 }}
+          onChange={(e) => cambiaBm({ [k]: Math.max(0, Number(e.target.value) || 0) })} />
+      </label>
+    );
+    const nomeCliAd = (id) => (winIds.length > 1 ? nomeCli(id) : "");
+    return (
+      <>
+        <section className="card">
+          <header>
+            <h2>Benchmark</h2>
+            <span className="sp eyebrow">punteggio = media dei tre costi divisi per il loro riferimento · sotto 1 batte i riferimenti</span>
+            <button className="btn ghost mini" onClick={() => cambiaBm({ ...BENCH_BASE })}>Valori predefiniti</button>
+          </header>
+          <div className="riga" style={{ gap: 14, flexWrap: "wrap", padding: "14px 18px", alignItems: "flex-end" }}>
+            {campo("cpl", "Costo per lead")}
+            {campo("app", "Costo per appuntamento")}
+            {campo("cliente", "Costo per cliente")}
+            {campo("minClienti", "Minimo clienti")}
+            {campo("minSpesa", "Minimo spesa", 50)}
+            <label style={{ display: "grid", gap: 4 }}>
+              <span className="eyebrow">Pubblico</span>
+              <select value={bm.pubblico} onChange={(e) => cambiaBm({ pubblico: e.target.value })} style={{ width: "auto" }}>
+                <option value="">tutti</option><option value="freddo">freddo</option><option value="retargeting">retargeting</option><option value="altro">altro</option>
+              </select>
+            </label>
+            <label className="riga" style={{ gap: 6, paddingBottom: 8 }}>
+              <input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!bm.soloAttive} onChange={(e) => cambiaBm({ soloAttive: e.target.checked })} /> solo attive
+            </label>
+          </div>
+        </section>
+
+        {winDati.errore && <div className="meta-msg" data-tipo="errore">{winDati.errore}</div>}
+        {!foto.length ? (
+          <section className="card">
+            <div className="empty">
+              <b>{winDati.carico ? "Carico…" : "Ancora nessun dato sugli annunci"}</b>
+              {!winDati.carico && <>I numeri arrivano dal Claude del cliente attraverso il connettore del CRM: crealo in Impostazioni, riquadro «Connettore per Claude», aggiungilo in claude.ai e chiedi al Claude del cliente di salvare le winner ads nel CRM. La Guida, capitolo «Winner ads», ha tutti i passaggi.</>}
+            </div>
+          </section>
+        ) : (
+          <>
+            <div className="kpis">
+              <div className="kpi"><IcoKpi t="Annunci" /><div className="eyebrow">In classifica</div><div className="v">{int(lista.length)}</div><div className="s">{esclusi ? `${int(esclusi)} fuori dai filtri` : "tutti dentro i filtri"}</div></div>
+              <div className="kpi"><IcoKpi t="Spesa" /><div className="eyebrow">Spesa</div><div className="v">{eur0(tot.sp)}</div><div className="s">degli annunci in classifica</div></div>
+              <div className="kpi"><IcoKpi t="Clienti chiusi" /><div className="eyebrow">Clienti</div><div className="v">{int(tot.cli)}</div><div className="s">costo per cliente {tot.cli ? eur(tot.sp / tot.cli) : "—"}</div></div>
+              <div className="kpi"><IcoKpi t="Tasso" /><div className="eyebrow">Chiusura</div><div className="v">{tot.app ? pctv((tot.cli / tot.app) * 100, 0) : "—"}</div><div className="s">clienti su appuntamenti</div></div>
+            </div>
+            <section className="card">
+              <header>
+                <h2>Classifica</h2>
+                <span className="sp eyebrow">{scelta.fonte} · {scelta.periodo || "periodo non indicato"}{precedente ? ` · confronto con il ${dataIt(precedente.data)}` : ""}</span>
+                <select value={`${scelta.data}|${scelta.fonte}`} onChange={(e) => setWinFoto(e.target.value)} aria-label="Fotografia" style={{ width: "auto" }}>
+                  {foto.map((f) => <option key={`${f.data}|${f.fonte}`} value={`${f.data}|${f.fonte}`}>{dataIt(f.data)} · {f.fonte} · {f.n} annunci</option>)}
+                </select>
+                <button className="btn ghost mini" disabled={winDati.carico} onClick={() => setWinGiro((x) => x + 1)}>{winDati.carico ? "Carico…" : "Ricarica"}</button>
+              </header>
+              <div className="wrap"><table className="tbl">
+                <thead><tr>
+                  <th className="r">#</th><th>Annuncio</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th>
+                  <th className="r">Appunt.</th><th className="r">Costo/app.</th><th className="r">Clienti</th><th className="r">Costo/cliente</th>
+                  <th className="r">Chiusura</th><th className="r" title="Media dei tre costi divisi per i benchmark">Punteggio</th>
+                </tr></thead>
+                <tbody>
+                  {lista.map((a) => (
+                    <tr key={a.cliente_id + a.ad_id}>
+                      <td className="r mono">{a.pos}{a.salita ? <div className={"sub " + (a.salita > 0 ? "pos" : "neg")}>{a.salita > 0 ? `▲${a.salita}` : `▼${-a.salita}`}</div> : a.salita === null && precedente ? <div className="sub">nuovo</div> : null}</td>
+                      <td>
+                        <b>{a.nome}</b>
+                        <div className="sub">{[a.pubblico, a.campagna, nomeCliAd(a.cliente_id), a.attiva ? "" : "spento"].filter(Boolean).join(" · ")}</div>
+                        {a.note && <div className="sub" style={{ maxWidth: 420 }}>{a.note}</div>}
+                      </td>
+                      <td className="r">{eur0(a.spesa)}</td>
+                      <td className="r">{int(a.lead)}</td>
+                      <td className={"r " + colore(a.rCpl)}>{a.cpl ? eur(a.cpl) : "—"}</td>
+                      <td className="r">{int(a.appuntamenti)}</td>
+                      <td className={"r " + colore(a.rApp)}>{a.cpa ? eur(a.cpa) : "—"}</td>
+                      <td className="r">{int(a.clienti)}</td>
+                      <td className={"r " + colore(a.rCli)}>{a.cpc ? eur(a.cpc) : "—"}</td>
+                      <td className="r">{a.chiusura ? pctv(a.chiusura * 100, 0) : "—"}</td>
+                      <td className={"r mono " + colore(a.punteggio)}><b>{fmt(a.punteggio)}</b></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+              {!lista.length && <div className="empty"><b>Nessun annuncio dentro i filtri</b>Abbassa il minimo di clienti o di spesa, o togli «solo attive».</div>}
+            </section>
+          </>
+        )}
+
+        <section className="card">
+          <header><h2>Analisi</h2><span className="sp eyebrow">salvate dal Claude del cliente · le più recenti in alto</span></header>
+          {!winDati.testi.length && <div className="empty"><b>Nessuna analisi</b>Quando il Claude del cliente usa «salva_analisi», il testo compare qui con la data.</div>}
+          {winDati.testi.map((x, i) => (
+            <details key={x.id} open={i === 0} style={{ borderTop: "1px solid var(--line)", padding: "12px 18px" }}>
+              <summary style={{ cursor: "pointer" }}>
+                <b>{x.titolo}</b> <span className="sub">· {dataIt(String(x.creato).slice(0, 10))} {String(x.creato).slice(11, 16)}{winIds.length > 1 ? ` · ${nomeCli(x.cliente_id)}` : ""}{x.tipo && x.tipo !== "altro" ? ` · ${x.tipo.replace("_", " ")}` : ""}</span>
+              </summary>
+              <div style={{ marginTop: 10, lineHeight: 1.55, fontSize: 13.5 }}>{testoAnalisi(x.testo)}</div>
+              <div style={{ marginTop: 10 }}>
+                <button className="btn danger mini" onClick={async () => {
+                  if (!window.confirm(`Eliminare l'analisi «${x.titolo}»?`)) return;
+                  try { await analisi.eliminaTesto(x.id); setWinGiro((g) => g + 1); } catch (e) { setWinDati((w) => ({ ...w, errore: e.message || String(e) })); }
+                }}>Elimina</button>
+              </div>
+            </details>
+          ))}
+        </section>
+      </>
+    );
+  };
+
   const SezioneAdv = () => {
     const base = (attivo ? S.campagne : m.campagne).filter((k) =>
       (attivo || !fAdv.cli || k.clienteId === fAdv.cli) &&
@@ -12197,6 +12422,7 @@ Regole:
                 {PannelloMetaAgenzia()}
                 {PannelloTelegram()}
                 {PannelloIntegrazioni()}
+                {PannelloConnettore()}
                 <section className="card">
                   <header><h2>Identità dell'agenzia</h2><span className="sp" /><button className="btn ghost mini" onClick={() => apri("agenzia")}>Modifica</button></header>
                   <div style={{ padding: 18, display: "flex", alignItems: "center", gap: 16 }}>
@@ -12555,6 +12781,7 @@ Regole:
             {attivo && vista === "pixel" && SezionePixel()}
             {attivo && vista === "calendario" && SezioneCalendario()}
             {attivo && vista === "campagne" && SezioneAdv()}
+            {attivo && vista === "winner" && SezioneWinner()}
 
             {attivo && vista === "avvisi" && (
               <div className="alerts">

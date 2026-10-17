@@ -13,3 +13,7 @@ verify_jwt = false
 # La chiamano i software esterni (Boschetto) con la loro chiave, non con il JWT di Supabase
 [functions.integrazioni]
 verify_jwt = false
+
+# Connettore per Claude: la chiave è nell'indirizzo, non il JWT di Supabase
+[functions.crm-mcp]
+verify_jwt = false

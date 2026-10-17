@@ -16,7 +16,7 @@ export function apiIntegrazioniCloud() {
   };
   return {
     stato: () => funzione({ azione: "stato" }),
-    crea: (nome) => funzione({ azione: "crea", nome }),
+    crea: (nome, tipo) => funzione({ azione: "crea", nome, ...(tipo ? { tipo } : {}) }),
     rigenera: (id) => funzione({ azione: "rigenera", id }),
     ritorno: (id, url, chiave) => funzione({ azione: "ritorno", id, url, ...(chiave !== undefined ? { chiave } : {}) }),
     attiva: (id, attiva) => funzione({ azione: "attiva", id, attiva }),
@@ -36,12 +36,12 @@ export function apiIntegrazioniFinte() {
   const cambia = (id, campi) => scrivi(K, leggi(K, []).map((x) => (x.id === id ? { ...x, ...campi } : x)));
   return {
     async stato() { return { ok: true, indirizzo, integrazioni: leggi(K, []) }; },
-    async crea(nome) {
+    async crea(nome, tipo = "task") {
       const id = "int-" + Math.random().toString(36).slice(2, 10), chiave = "crmnc_prova" + Math.random().toString(36).slice(2, 14);
-      scrivi(K, [...leggi(K, []), { id, nome, chiave_fine: chiave.slice(-4), url_ritorno: "", ritorno: false, attiva: true, creato: new Date().toISOString(), ultimo_contatto: null }]);
-      return { ok: true, id, chiave, indirizzo };
+      scrivi(K, [...leggi(K, []), { id, nome, tipo, chiave_fine: chiave.slice(-4), url_ritorno: "", ritorno: false, attiva: true, creato: new Date().toISOString(), ultimo_contatto: null }]);
+      return { ok: true, id, chiave, indirizzo, connettore: `https://esempio.supabase.co/functions/v1/crm-mcp/${chiave}` };
     },
-    async rigenera(id) { const chiave = "crmnc_prova" + Math.random().toString(36).slice(2, 14); cambia(id, { chiave_fine: chiave.slice(-4) }); return { ok: true, chiave, indirizzo }; },
+    async rigenera(id) { const chiave = "crmnc_prova" + Math.random().toString(36).slice(2, 14); cambia(id, { chiave_fine: chiave.slice(-4) }); return { ok: true, chiave, indirizzo, connettore: `https://esempio.supabase.co/functions/v1/crm-mcp/${chiave}` }; },
     async ritorno(id, url) { cambia(id, { url_ritorno: url, ritorno: !!url }); return { ok: true }; },
     async attiva(id, attiva) { cambia(id, { attiva }); return { ok: true }; },
     async elimina(id) { scrivi(K, leggi(K, []).filter((x) => x.id !== id)); return { ok: true }; },
