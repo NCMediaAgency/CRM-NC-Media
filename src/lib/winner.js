@@ -3,7 +3,21 @@
    costo per cliente / benchmark: sotto 1 l'annuncio fa meglio dei riferimenti, più è basso meglio è.
    Funzioni pure, provate con node (tests/winner.test.mjs). */
 
-export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "", raggruppa: true };
+export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "", raggruppa: true, ordine: "punteggio" };
+
+/* Come ordinare la classifica, secondo l'obiettivo: i costi dal più basso, i volumi dal più alto */
+export const ORDINI = [
+  { v: "punteggio", l: "Equilibrio dei tre costi (punteggio)", k: "punteggio", su: true },
+  { v: "cpl", l: "Costo per lead più basso", k: "cpl", su: true },
+  { v: "cpa", l: "Costo per appuntamento più basso", k: "cpa", su: true },
+  { v: "cpc", l: "Costo per cliente più basso", k: "cpc", su: true },
+  { v: "clienti", l: "Più clienti chiusi", k: "clienti", su: false },
+  { v: "appuntamenti", l: "Più appuntamenti", k: "appuntamenti", su: false },
+  { v: "lead", l: "Più lead", k: "lead", su: false },
+  { v: "chiusura", l: "Chiusura più alta", k: "chiusura", su: false },
+  { v: "spesa", l: "Spesa più alta", k: "spesa", su: false },
+  { v: "incassato", l: "Incassato più alto", k: "incassato", su: false },
+];
 export const benchmarkDi = (cliente) => ({ ...BENCH_BASE, ...((cliente && cliente.winner) || {}) });
 
 const costo = (spesa, n) => (n > 0 ? spesa / n : 0);
@@ -22,13 +36,16 @@ export function valutaAd(a, bm) {
   };
 }
 
-/* Gli annunci che rispettano i filtri, dal migliore; esclusi = quanti non li rispettano */
+/* Gli annunci che rispettano i filtri, dal migliore secondo l'ordine scelto; esclusi = quanti non li rispettano */
 export function classifica(ads, bm) {
   const b = { ...BENCH_BASE, ...bm };
   const tutti = (ads || []).map((a) => valutaAd(a, b));
   const dentro = tutti.filter((a) => (!b.soloAttive || a.attiva !== false) && (!b.pubblico || a.pubblico === b.pubblico)
     && a.clienti >= (Number(b.minClienti) || 0) && a.spesa >= (Number(b.minSpesa) || 0) && a.punteggio > 0);
-  dentro.sort((x, y) => x.punteggio - y.punteggio || y.clienti - x.clienti);
+  const o = ORDINI.find((x) => x.v === b.ordine) || ORDINI[0];
+  /* Un costo a zero vuol dire che manca il dato (nessun lead, appuntamento o cliente): va in fondo */
+  const val = (a) => { const v = Number(a[o.k]) || 0; return o.su ? (v > 0 ? v : Infinity) : v; };
+  dentro.sort((x, y) => (o.su ? val(x) - val(y) : val(y) - val(x)) || x.punteggio - y.punteggio);
   return { righe: dentro.map((a, i) => ({ ...a, pos: i + 1 })), esclusi: tutti.length - dentro.length };
 }
 

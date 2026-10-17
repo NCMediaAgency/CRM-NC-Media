@@ -4,7 +4,7 @@
 export const nomeChiave = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 
 /* Valori predefiniti delle winner ads: gli stessi del CRM (src/lib/winner.js) */
-export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "", raggruppa: true };
+export const BENCH_BASE = { cpl: 9, app: 20, cliente: 100, minClienti: 5, minSpesa: 0, soloAttive: true, pubblico: "", raggruppa: true, ordine: "punteggio" };
 
 const NUM = { type: "number" };
 export const STRUMENTI = [

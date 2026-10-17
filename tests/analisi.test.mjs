@@ -28,6 +28,13 @@ assert.deepEqual(c.righe.map((a) => a.pos), [1, 2, 3]);
 assert.deepEqual(classifica(ads, { soloAttive: false }).righe.map((a) => a.ad_id), ["8", "71", "303", "7"]);
 assert.deepEqual(classifica(ads, { pubblico: "freddo" }).righe.map((a) => a.ad_id), ["71", "7"]);
 assert.deepEqual(classifica(ads, { minClienti: 0 }).righe.length, 4);
+// ordinare secondo l'obiettivo: costi dal più basso, volumi dal più alto, dato mancante in fondo
+assert.deepEqual(classifica(ads, { ordine: "cpl" }).righe.map((a) => a.ad_id), ["71", "303", "7"]);
+assert.deepEqual(classifica(ads, { ordine: "spesa" }).righe.map((a) => a.ad_id), ["7", "303", "71"]);
+assert.deepEqual(classifica(ads, { ordine: "clienti" }).righe.map((a) => a.ad_id), ["71", "303", "7"]);
+assert.deepEqual(classifica(ads, { ordine: "cpc" }).righe.map((a) => a.ad_id), ["71", "303", "7"]);
+assert.deepEqual(classifica([{ ad_id: "x", spesa: 100, lead: 10, appuntamenti: 0, clienti: 1 }, { ad_id: "y", spesa: 100, lead: 10, appuntamenti: 4, clienti: 1 }], { minClienti: 0, ordine: "cpa" }).righe.map((a) => a.ad_id), ["y", "x"]);
+assert.deepEqual(classifica(ads, { ordine: "sconosciuto" }).righe.map((a) => a.ad_id), ["71", "303", "7"]);
 assert.equal(benchmarkDi({ winner: { cpl: 12 } }).cpl, 12);
 assert.equal(benchmarkDi({ winner: { cpl: 12 } }).app, 20);
 const foto = fotografie([{ data: "2026-10-01", fonte: "Hyros" }, { data: "2026-10-16", fonte: "Hyros" }, { data: "2026-10-16", fonte: "Hyros" }]);
