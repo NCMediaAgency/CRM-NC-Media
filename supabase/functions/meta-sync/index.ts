@@ -309,7 +309,7 @@ async function lavora(ws, syncId, inizioMs) {
   try {
     const token = await tokenDi(ws);
     if (!token) {
-      await salvaSync({ esito: "errore", messaggio: "Facebook non è collegato: premi \"Collega Facebook\" nelle Impostazioni del CRM.", fine: new Date().toISOString() });
+      await salvaSync({ esito: "errore", messaggio: "Meta non è collegato: premi \"Collega a Meta\" nelle Impostazioni del CRM.", fine: new Date().toISOString() });
       return;
     }
     if (dettagli.giri === 1) dettagli.accountVisti = await aggiornaAccount(ws, token);
@@ -522,7 +522,7 @@ async function gestisci(req) {
   }
   if (corpo.azione === "account") {
     const token = await tokenDi(ws);
-    if (!token) return risposta({ errore: "Facebook non è collegato: premi \"Collega Facebook\"." }, 400);
+    if (!token) return risposta({ errore: "Meta non è collegato: premi \"Collega a Meta\"." }, 400);
     try { return risposta({ ok: true, account: await aggiornaAccount(ws, token) }); }
     catch (e) { return risposta({ errore: e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto: ricollegalo." : e.message }, 502); }
   }
@@ -532,7 +532,7 @@ async function gestisci(req) {
     const [acc] = idAcc ? await db(`meta_account?select=account_id&workspace_id=eq.${ws}&account_id=eq.${idAcc}`) : [];
     if (!acc) return risposta({ errore: "Account non trovato fra quelli di questo spazio." }, 404);
     const token = await tokenDi(ws);
-    if (!token) return risposta({ errore: "Facebook non è collegato: premi \"Collega Facebook\"." }, 400);
+    if (!token) return risposta({ errore: "Meta non è collegato: premi \"Collega a Meta\"." }, 400);
     try { return risposta({ ok: true, campagne: await elencoCampagne(idAcc, token) }); }
     catch (e) { return risposta({ errore: e instanceof ErroreMeta && e.scaduto ? "L'accesso a Facebook è scaduto: ricollegalo." : e.message }, 502); }
   }

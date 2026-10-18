@@ -61,7 +61,7 @@ export function apiMetaFinta() {
     async scollega(accountId) { const s = leggi(); s.collegamenti = (s.collegamenti || []).filter((c) => c.account_id !== accountId); scrivi(s); },
     async sincronizza(azione, extra = {}) {
       const s = leggi();
-      if (!s.facebook) throw new Error("Facebook non è collegato: premi \"Collega Facebook\".");
+      if (!s.facebook) throw new Error("Meta non è collegato: premi \"Collega a Meta\".");
       const prima = new Map((s.account || []).map((a) => [a.account_id, a]));
       const tocca = (a) => !azione && (!extra.account || extra.account.includes(a.account_id));
       s.account = ACCOUNT.map((a) => ({ ...a,

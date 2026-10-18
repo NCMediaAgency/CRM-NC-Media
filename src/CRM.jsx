@@ -1689,7 +1689,7 @@ const GUIDA = [
     id: "aggiornare", t: "Aggiornare i dati da Meta",
     intro: "Ogni mattina alle 9 il CRM scarica da Meta Ads i dati fino a ieri per tutti gli account collegati ai clienti: campagne, ad set, annunci e finestre di valutazione. Non serve importare file.",
     blocchi: [
-      { h: "Una volta sola: collegare Facebook", p: "In Impostazioni, nel riquadro Collegamento con Meta Ads, premi Collega Facebook e accedi con il tuo profilo: il CRM ottiene un accesso in sola lettura agli account pubblicitari che gestisci, senza bisogno di un Business Manager unico. Meta fa durare l'accesso 60 giorni: una settimana prima della scadenza il riquadro diventa rosso e basta premere Rinnova il collegamento." },
+      { h: "Una volta sola: collegare Meta", p: "In Impostazioni, nel riquadro Piattaforme pubblicitarie, premi Collega a Meta e accedi con il tuo profilo Facebook: il CRM ottiene un accesso in sola lettura agli account pubblicitari che gestisci, senza bisogno di un Business Manager unico. Meta fa durare l'accesso 60 giorni: una settimana prima della scadenza il riquadro diventa rosso e basta premere Rinnova il collegamento." },
       { h: "Poi: collegare gli account ai clienti", p: "Nello stesso riquadro, Aggiorna l'elenco degli account mostra tutti gli account a cui il tuo profilo ha accesso. Accanto a ogni cliente il menu parte da «scegli un account»: aprendolo, in cima trovi i Suggeriti per nome, quelli che gli somigliano (anche per iniziali: BDF per Boutique Del Fitness), e sotto tutti gli altri. Scegli e premi Collega. Lo stesso si fa dalla Scheda cliente. Un cliente può avere più account; un account appartiene a un solo cliente." },
       { h: "Cosa arriva", p: "Le campagne attive o che hanno speso negli ultimi 90 giorni, con stato, budget giornaliero, date, spesa, impression, clic, clic sul link, lead, acquisti e ricavi. Sotto ogni campagna i suoi ad set e annunci con i totali. Le finestre Test, Matura e le settimane Attive sono già sommate da Meta, con la frequenza vera di ciascuna." },
       { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
@@ -4062,8 +4062,8 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
     const q = new URLSearchParams(window.location.search);
     const esitoFb = q.get("meta");
     if (!esitoFb) return;
-    if (esitoFb === "collegato") setMetaStato({ attesa: "", errore: "", esito: "Facebook collegato. Ora collega gli account ai clienti e premi Aggiorna ora." });
-    else setMetaStato({ attesa: "", errore: `Collegamento a Facebook non riuscito: ${q.get("motivo") || "riprova"}`, esito: "" });
+    if (esitoFb === "collegato") setMetaStato({ attesa: "", errore: "", esito: "Meta collegato. Ora abbina gli account ai clienti e premi Aggiorna ora." });
+    else setMetaStato({ attesa: "", errore: `Collegamento a Meta non riuscito: ${q.get("motivo") || "riprova"}`, esito: "" });
     setCliAtt(""); setVista("impostazioni");
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
@@ -4075,7 +4075,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   };
   const scollegaFacebook = async () => {
     if (!meta) return;
-    try { await meta.scollegaFacebook(); await caricaMeta(false); setMetaStato({ attesa: "", errore: "", esito: "Facebook scollegato: gli aggiornamenti si fermano finché non lo ricolleghi." }); }
+    try { await meta.scollegaFacebook(); await caricaMeta(false); setMetaStato({ attesa: "", errore: "", esito: "Meta scollegato: gli aggiornamenti si fermano finché non lo ricolleghi." }); }
     catch (e) { setMetaStato({ attesa: "", errore: e.message || String(e), esito: "" }); }
   };
 
@@ -4946,6 +4946,71 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     );
   };
 
+  /* Piattaforme pubblicitarie collegabili al CRM: oggi Meta, le altre predisposte */
+  const PIATTAFORME_COLLEGABILI = [
+    { id: "meta", nome: "Meta", sotto: "Facebook e Instagram Ads", sigla: "M", colore: "#1877F2" },
+    { id: "google", nome: "Google Ads", sotto: "Search, Display, YouTube", sigla: "G", colore: "#EA4335" },
+    { id: "tiktok", nome: "TikTok Ads", sotto: "TikTok for Business", sigla: "T", colore: "#25F4EE" },
+    { id: "linkedin", nome: "LinkedIn Ads", sotto: "Campaign Manager", sigla: "in", colore: "#0A66C2" },
+  ];
+  const PannelloPiattaforme = () => {
+    if (!meta) return null;
+    const stato = (p) => {
+      if (p.id !== "meta") return { testo: "in arrivo", tipo: "" };
+      if (!metaInfo) return { testo: "verifico…", tipo: "" };
+      if (!metaFb) return { testo: "non collegato", tipo: "" };
+      if (metaFbGiorni !== null && metaFbGiorni < 0) return { testo: "accesso scaduto", tipo: "neg" };
+      return { testo: `collegato come ${metaFb.utente_meta || "—"}`, tipo: metaFbGiorni !== null && metaFbGiorni < 7 ? "neg" : "pos" };
+    };
+    return (
+      <section className="card">
+        <header>
+          <h2>Piattaforme pubblicitarie</h2>
+          <span className="sp eyebrow">collega i profili da cui il CRM legge campagne e risultati, in sola lettura</span>
+        </header>
+        {metaStato.attesa === "facebook" && <div className="meta-msg">Apro la pagina di accesso di Meta…</div>}
+        {metaFb && metaFbGiorni !== null && metaFbGiorni < 7 && (
+          <div className="meta-msg" data-tipo="errore">
+            {metaFbGiorni < 0 ? "L'accesso a Meta è scaduto: gli aggiornamenti sono fermi. Premi Rinnova il collegamento." : `L'accesso a Meta scade fra ${metaFbGiorni} ${metaFbGiorni === 1 ? "giorno" : "giorni"}: premi Rinnova il collegamento, bastano due clic.`}
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, padding: "14px 18px" }}>
+          {PIATTAFORME_COLLEGABILI.map((p) => {
+            const st = stato(p), attiva = p.id === "meta";
+            return (
+              <div key={p.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14, display: "grid", gap: 10, opacity: attiva ? 1 : 0.6 }}>
+                <div className="riga" style={{ gap: 10 }}>
+                  <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 8, background: p.colore, color: p.id === "tiktok" ? "#111" : "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700, flex: "none" }}>{p.sigla}</span>
+                  <div><b>{p.nome}</b><div className="sub">{p.sotto}</div></div>
+                </div>
+                <div className={"sub " + st.tipo}>{st.testo}
+                  {attiva && metaFb && metaFb.scadenza && metaFbGiorni !== null && metaFbGiorni >= 0 ? ` · scade il ${dataItA(metaFb.scadenza.slice(0, 10))}` : ""}</div>
+                {attiva ? (
+                  <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
+                    {!metaFb ? (
+                      <button className="btn" disabled={!!metaStato.attesa} onClick={collegaFacebook}>{metaStato.attesa === "facebook" ? "Apro Meta…" : "Collega a Meta"}</button>
+                    ) : (
+                      <>
+                        <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={collegaFacebook}>{metaFbGiorni !== null && metaFbGiorni < 7 ? "Rinnova il collegamento" : "Ricollega"}</button>
+                        <button className="btn danger mini" onClick={() => { if (window.confirm("Scollegare il profilo Meta? Gli aggiornamenti delle campagne si fermano finché non lo ricolleghi; i dati già scaricati restano.")) scollegaFacebook(); }}>Scollega</button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <button className="btn ghost mini" disabled title="Collegamento in preparazione">In arrivo</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="meta-msg sub">
+          Con «Collega a Meta» accedi con il tuo profilo Facebook: il CRM vede, in sola lettura, gli account pubblicitari che gestisci. Poi, nel riquadro qui sotto, abbini ogni account al suo cliente.
+          Il collegamento vale per questo spazio di lavoro e dura 60 giorni; una settimana prima della scadenza il CRM ti avvisa.
+        </div>
+      </section>
+    );
+  };
+
   const PannelloMetaAgenzia = () => {
     if (!meta) return null;
     const u = metaInfo && metaInfo.ultimaSync;
@@ -4959,29 +5024,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
           <span className="sp eyebrow">{collegati} di {righe.length} clienti collegati · {metaAccount.length} account visibili · ▸ apre i sottoclienti</span>
           {metaPulsanti()}
         </header>
-        <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          {metaFb ? (
-            <>
-              <span>Facebook collegato come <b>{metaFb.utente_meta || "—"}</b>
-                {metaFb.scadenza ? <span className={metaFbGiorni !== null && metaFbGiorni < 7 ? "neg" : "sub"}> · {metaFbGiorni !== null && metaFbGiorni < 0 ? "accesso scaduto" : `scade il ${dataItA(metaFb.scadenza.slice(0, 10))}`}</span> : null}
-              </span>
-              <span className="sp" />
-              <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={collegaFacebook}>{metaFbGiorni !== null && metaFbGiorni < 7 ? "Rinnova il collegamento" : "Ricollega"}</button>
-              <button className="btn danger mini" onClick={scollegaFacebook}>Scollega</button>
-            </>
-          ) : (
-            <>
-              <span>Per leggere i dati di Meta collega il tuo profilo Facebook: il CRM vedrà, in sola lettura, gli account pubblicitari a cui hai accesso.</span>
-              <span className="sp" />
-              <button className="btn ghost mini" disabled={!!metaStato.attesa} onClick={collegaFacebook}>{metaStato.attesa === "facebook" ? "Apro Facebook…" : "Collega Facebook"}</button>
-            </>
-          )}
-        </div>
-        {metaFb && metaFbGiorni !== null && metaFbGiorni < 7 && (
-          <div className="meta-msg" data-tipo="errore">
-            {metaFbGiorni < 0 ? "L'accesso a Facebook è scaduto: gli aggiornamenti sono fermi. Premi Rinnova il collegamento." : `L'accesso a Facebook scade fra ${metaFbGiorni} ${metaFbGiorni === 1 ? "giorno" : "giorni"}: premi Rinnova il collegamento, bastano due clic.`}
-          </div>
-        )}
+        {!metaFb && metaInfo && <div className="meta-msg">Il profilo Meta non è collegato: premi «Collega a Meta» nel riquadro Piattaforme pubblicitarie qui sopra.</div>}
         <div className="meta-msg sub">
           Ogni mattina alle 9 il CRM scarica da Meta i dati fino a ieri per tutti gli account collegati, tranne quelli segnati «solo a mano» nella scheda del cliente.
           {" "}Ultimo aggiornamento: <b>{u ? `${metaQuando(u.fine || u.avvio)} · ${u.esito === "in_corso" ? "in corso" : u.esito}` : "mai"}</b>{u && u.messaggio ? ` — ${u.messaggio}` : ""}
@@ -4995,7 +5038,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
         {!metaAccount.length ? (
           <div className="empty" style={{ padding: 18 }}>
             <b>Nessun account letto da Meta</b>
-            {metaFb ? "Premi \"Aggiorna l'elenco degli account\". Se resta vuoto, il profilo collegato non ha accesso ad account pubblicitari." : "Premi \"Collega Facebook\" qui sopra: appena collegato, il CRM legge gli account e ti propone i collegamenti con i clienti."}
+            {metaFb ? "Premi \"Aggiorna l'elenco degli account\". Se resta vuoto, il profilo collegato non ha accesso ad account pubblicitari." : "Premi \"Collega a Meta\" qui sopra: appena collegato, il CRM legge gli account e ti propone i collegamenti con i clienti."}
           </div>
         ) : (
           <div className="wrap"><table className="tbl">
@@ -12083,6 +12126,16 @@ Regole:
 
               return conValuta(valutaComune(idsPrinc), () => (
                 <>
+                  {meta && metaInfo && !metaFb && (
+                    <section className="card">
+                      <div className="riga" style={{ gap: 12, padding: "14px 18px", flexWrap: "wrap" }}>
+                        <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 8, background: "#1877F2", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>M</span>
+                        <div style={{ flex: 1, minWidth: 220 }}><b>Collega il tuo profilo Meta</b><div className="sub">Il CRM legge in sola lettura campagne, spesa e risultati dei tuoi account pubblicitari e li aggiorna ogni mattina.</div></div>
+                        <button className="btn" disabled={!!metaStato.attesa} onClick={collegaFacebook}>{metaStato.attesa === "facebook" ? "Apro Meta…" : "Collega a Meta"}</button>
+                        <button className="btn ghost mini" onClick={() => setVista("impostazioni")}>Altre piattaforme</button>
+                      </div>
+                    </section>
+                  )}
                   {valuteUsate.length > 1 && (
                     <article className="al" data-g="attenzione">
                       <div className="meta">
@@ -12468,6 +12521,7 @@ Regole:
 
             {!attivo && vista === "impostazioni" && (
               <>
+                {PannelloPiattaforme()}
                 {PannelloMetaAgenzia()}
                 {PannelloTelegram()}
                 {PannelloIntegrazioni()}
