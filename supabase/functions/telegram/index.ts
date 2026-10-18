@@ -73,6 +73,16 @@ async function segretoWebhook() {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 48);
 }
 
+/* Fuso orario dello spazio di lavoro (migrazione 0010; senza impostazioni: Roma) */
+const fusi = new Map<string, string>();
+async function fusoDi(ws: string) {
+  if (!fusi.has(ws)) {
+    const r = await db(`workspace_impostazioni?select=fuso&workspace_id=eq.${ws}`).catch(() => []);
+    fusi.set(ws, (r[0] && r[0].fuso) || "Europe/Rome");
+  }
+  return fusi.get(ws) as string;
+}
+
 // ---------- Claude ----------
 type Storico = { ruolo: string; testo: string };
 async function chiediAClaude(ws: string, chat: number, testo: string) {
@@ -80,7 +90,7 @@ async function chiediAClaude(ws: string, chat: number, testo: string) {
     datiCRM(ws), comandiInCoda(ws),
     db(`telegram_storico?select=ruolo,testo&chat_id=eq.${chat}&order=id.desc&limit=10`) as Promise<Storico[]>,
   ]);
-  const adesso = oraRoma();
+  const adesso = oraRoma(new Date(), await fusoDi(ws));
   const contesto = contestoCRM(data, adesso.data, inCoda);
   const client = new Anthropic({ apiKey: ENV().anthropic });
   // Storia come testo semplice (niente blocchi di ragionamento da rimandare); il contesto va solo nell'ultimo messaggio
@@ -121,7 +131,7 @@ async function gestisciAggiornamento(u: Record<string, any>) {
     const q = u.callback_query, chat = q.message?.chat?.id;
     const [c] = await db(`telegram_chat?select=workspace_id&chat_id=eq.${chat}&attivo=eq.true`);
     if (!c) { await tg("answerCallbackQuery", { callback_query_id: q.id, text: "Chat non collegata al CRM" }); return; }
-    const cmd = comandoDaPulsante(q.data, oraRoma().data);
+    const cmd = comandoDaPulsante(q.data, oraRoma(new Date(), await fusoDi(c.workspace_id)).data);
     if (!cmd) { await tg("answerCallbackQuery", { callback_query_id: q.id }); return; }
     await accoda(c.workspace_id, cmd.tipo, cmd.dati);
     await tg("answerCallbackQuery", { callback_query_id: q.id, text: cmd.testo });
@@ -185,12 +195,13 @@ const segnaInviato = (ws: string, chiave: string) =>
   db("telegram_inviati?on_conflict=workspace_id,chiave", { metodo: "POST", prefer: "resolution=ignore-duplicates,return=minimal", corpo: { workspace_id: ws, chiave } });
 
 async function promemoria() {
-  const adesso = oraRoma();
   const chats = await db("telegram_chat?select=*&attivo=eq.true");
   const perSpazio = new Map<string, any>();
   for (const chat of chats) {
     if (!perSpazio.has(chat.workspace_id)) perSpazio.set(chat.workspace_id, { data: await datiCRM(chat.workspace_id), coda: await comandiInCoda(chat.workspace_id) });
     const { data, coda } = perSpazio.get(chat.workspace_id);
+    // Riepilogo e promemoria all'ora locale dello spazio di lavoro
+    const adesso = oraRoma(new Date(), await fusoDi(chat.workspace_id));
     try {
       const chiaveR = `riepilogo:${chat.chat_id}:${adesso.data}`;
       if (oraDelRiepilogo(adesso, chat) && !(await giaInviato(chat.workspace_id, chiaveR))) {
@@ -272,7 +283,7 @@ async function gestisci(req: Request) {
     if (corpo.azione === "prova") {
       const chats = await db(`telegram_chat?select=chat_id&workspace_id=eq.${ws}&attivo=eq.true`);
       const data = await datiCRM(ws);
-      const r = riepilogo(data, oraRoma().data, await comandiInCoda(ws));
+      const r = riepilogo(data, oraRoma(new Date(), await fusoDi(ws)).data, await comandiInCoda(ws));
       for (const c of chats) await manda(c.chat_id, `Messaggio di prova dal CRM 👋\n\n${r.testo}`, r.bottoni);
       return risposta({ ok: true, inviati: chats.length });
     }

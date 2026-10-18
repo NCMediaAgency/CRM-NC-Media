@@ -7,11 +7,14 @@ const GIORNI = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "ve
 const PRIORITA = ["urgente", "alta", "media", "bassa"];
 const TIPI_NOTA = ["budget", "creativita", "pubblico", "offerta", "tracciamento", "esterno", "altro"];
 
-/* Data e ora a Roma: { data: "AAAA-MM-GG", hhmm: "HH:MM", dow: 0-6 } */
-export function oraRoma(adesso = new Date()) {
-  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short",
-  }).formatToParts(adesso).map((x) => [x.type, x.value]));
+/* Data e ora nel fuso dello spazio di lavoro (predefinito Roma): { data: "AAAA-MM-GG", hhmm: "HH:MM", dow: 0-6 } */
+export function oraRoma(adesso = new Date(), fuso = "Europe/Rome") {
+  const parti = (tz) => new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short",
+  }).formatToParts(adesso);
+  let l;
+  try { l = parti(fuso || "Europe/Rome"); } catch { l = parti("Europe/Rome"); }
+  const p = Object.fromEntries(l.map((x) => [x.type, x.value]));
   const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday);
   return { data: `${p.year}-${p.month}-${p.day}`, hhmm: `${p.hour}:${p.minute}`, dow };
 }

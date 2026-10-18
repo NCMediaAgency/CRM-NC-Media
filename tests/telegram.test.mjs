@@ -98,4 +98,9 @@ assert.equal(T("t2").scadenza, "2026-10-15");
 assert.deepEqual(ap.esiti.map((e) => e.esito), ["task creato", "nota creata", "task aggiornato", "task aggiornato", "task non trovato", "già presente"]);
 assert.equal(ap.data.task.filter((t) => t.id === "tg1").length, 1, "niente doppioni");
 
+// Fuso dello spazio di lavoro: New York sei ore indietro; un fuso sbagliato vale come Roma
+assert.deepEqual(oraRoma(new Date("2026-10-18T14:30:00Z"), "America/New_York").hhmm, "10:30");
+assert.deepEqual(oraRoma(new Date("2026-10-18T02:30:00Z"), "America/Los_Angeles").data, "2026-10-17");
+assert.deepEqual(oraRoma(new Date("2026-10-18T14:30:00Z"), "Fuso/Inesistente").hhmm, "16:30");
+assert.deepEqual(oraRoma(new Date("2026-10-18T14:30:00Z")).hhmm, "16:30");
 console.log("telegram: tutte le prove passate ✔");

@@ -15,8 +15,8 @@ await import("data:text/javascript;base64," + Buffer.from(sorgente).toString("ba
 assert.ok(gestore, "la funzione registra il gestore");
 
 // ---------- database finto (solo ciò che usa la funzione) ----------
-const tabelle = { meta_account: [], meta_collegamenti: [], meta_oggetti: [], meta_finestre: [], meta_sync: [], meta_token: [], meta_login: [] };
-const CHIAVI = { meta_account: ["workspace_id", "account_id"], meta_oggetti: ["workspace_id", "livello", "id"], meta_finestre: ["workspace_id", "campagna_id", "inizio"], meta_token: ["workspace_id"], meta_login: ["stato"] };
+const tabelle = { meta_account: [], meta_collegamenti: [], meta_oggetti: [], meta_finestre: [], meta_sync: [], meta_token: [], meta_login: [], workspace_impostazioni: [] };
+const CHIAVI = { workspace_impostazioni: ["workspace_id"], meta_account: ["workspace_id", "account_id"], meta_oggetti: ["workspace_id", "livello", "id"], meta_finestre: ["workspace_id", "campagna_id", "inizio"], meta_token: ["workspace_id"], meta_login: ["stato"] };
 let prossimoId = 1;
 const filtri = (q) => [...q.entries()].filter(([k]) => !["select", "on_conflict"].includes(k)).map(([k, v]) => {
   const [op, ...resto] = v.split("."); const val = resto.join(".");
@@ -150,10 +150,25 @@ const nuove = chiamate.slice(prima).filter((c) => /^c\d\/insights/.test(c)).leng
 assert.ok(nuove <= 2, `finestre: ${nuove} chiamate, ne bastano una per campagna`);
 assert.equal(tabelle.meta_sync.at(-1).esito, "ok");
 
-// ---------- 6. cron: fuori dalle 9 non fa niente, con forza lavora ----------
+// ---------- 6. cron di ogni ora: parte all'ora scelta nel fuso dello spazio, una volta al giorno; con forza lavora ----------
 r = await chiama({ origine: "programmato" }, { "x-cron-key": "chiave-cron" });
 const ora = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
-if (ora !== 9) assert.equal(r.corpo.saltato, "non sono le 9 a Roma");
+if (ora !== 9) assert.equal(r.corpo.saltato, "per nessuno spazio di lavoro è l'ora dell'aggiornamento");   // senza impostazioni: le 9 di Roma
+// Spazio a New York con l'aggiornamento all'ora attuale di New York: parte, e la seconda volta nello stesso giorno no
+const oraNY = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "America/New_York", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+tabelle.workspace_impostazioni.length = 0;
+tabelle.workspace_impostazioni.push({ workspace_id: "ws1", fuso: "America/New_York", ora_meta: oraNY, ultimo_meta: null });
+tabelle.meta_account.forEach((a) => { a.ultimo_sync = null; });
+r = await chiama({ origine: "programmato" }, { "x-cron-key": "chiave-cron" }); await finisci();
+assert.equal(r.stato, 202);
+assert.equal(tabelle.workspace_impostazioni[0].ultimo_meta, new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date()));
+assert.equal(tabelle.workspace_impostazioni[0].fuso, "America/New_York");
+r = await chiama({ origine: "programmato" }, { "x-cron-key": "chiave-cron" });
+assert.ok(r.corpo.saltato);
+// Ora diversa da quella scelta: niente
+tabelle.workspace_impostazioni[0] = { workspace_id: "ws1", fuso: "America/New_York", ora_meta: (oraNY + 1) % 24, ultimo_meta: null };
+r = await chiama({ origine: "programmato" }, { "x-cron-key": "chiave-cron" });
+assert.ok(r.corpo.saltato);
 tabelle.meta_account.forEach((a) => { a.ultimo_sync = null; });
 r = await chiama({ origine: "programmato", forza: true }, { "x-cron-key": "chiave-cron" }); await finisci();
 assert.equal(r.stato, 202); assert.equal(tabelle.meta_sync.at(-1).origine, "programmato"); assert.equal(tabelle.meta_sync.at(-1).esito, "ok");

@@ -1,7 +1,8 @@
 // meta-sync — scarica da Meta Ads i dati degli account collegati ai clienti del CRM.
 //
 // Tre modi di avvio:
-//  · dal cron delle 9 (intestazione x-cron-key, vedi migrazione 0002): tutti gli spazi di lavoro;
+//  · dal cron di ogni ora (intestazione x-cron-key, migrazioni 0002 e 0010): gli spazi di lavoro per cui è l'ora
+//    dell'aggiornamento nel loro fuso (workspace_impostazioni; predefinito le 9 di Roma);
 //  · dal CRM (utente collegato): "Collega Facebook", "Aggiorna ora", "Aggiorna l'elenco degli account";
 //  · da Facebook (GET con code e state): il ritorno dalla finestra di accesso.
 // Risponde subito e lavora in sottofondo. Se gli account sono tanti, a fine tempo si
@@ -101,7 +102,11 @@ const dataNelFuso = (fuso, spostamento = 0) => {
   try { return new Intl.DateTimeFormat("en-CA", { timeZone: fuso || "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit" }).format(d); }
   catch { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit" }).format(d); }
 };
-const oraRoma = () => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+/* Ora (0-23) nel fuso dello spazio di lavoro; un fuso non valido vale come Roma */
+const oraNelFuso = (fuso, adesso = new Date()) => {
+  try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: fuso || "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(adesso)); }
+  catch { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(adesso)); }
+};
 const sommaGiorni = (s, n) => { const d = new Date(s + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const minimo = (a, b) => (a < b ? a : b);
 
@@ -488,9 +493,20 @@ async function gestisci(req) {
     const giusta = await db("rpc/meta_cron_chiave", { metodo: "POST", corpo: {} });
     if (!giusta || chiaveCron !== giusta) return risposta({ errore: "chiave non valida" }, 401);
     if (corpo.continua) { sottofondo(lavora(corpo.workspace_id, corpo.continua, inizioMs)); return risposta({ ok: true, continua: corpo.continua }, 202); }
-    // Cron delle 7 e delle 8 UTC: lavora solo quello che cade alle 9 di Roma
-    if (corpo.origine === "programmato" && oraRoma() !== 9 && !corpo.forza) return risposta({ ok: true, saltato: "non sono le 9 a Roma" });
-    const spazi = [...new Set((await db("meta_collegamenti?select=workspace_id")).map((c) => c.workspace_id))];
+    // Cron di ogni ora: parte per gli spazi in cui è l'ora scelta nel loro fuso (predefinito: le 9 di Roma),
+    // una volta sola al giorno (il giorno locale resta segnato in workspace_impostazioni.ultimo_meta)
+    const tutti = [...new Set((await db("meta_collegamenti?select=workspace_id")).map((c) => c.workspace_id))];
+    const imp = new Map((await db("workspace_impostazioni?select=workspace_id,fuso,ora_meta,ultimo_meta").catch(() => []))
+      .map((r) => [r.workspace_id, r]));
+    const spazi = [];
+    for (const ws of tutti) {
+      const i = imp.get(ws) || { fuso: "Europe/Rome", ora_meta: 9, ultimo_meta: null };
+      const oggi = dataNelFuso(i.fuso);
+      if (corpo.origine === "programmato" && !corpo.forza && (oraNelFuso(i.fuso) !== Number(i.ora_meta ?? 9) || i.ultimo_meta === oggi)) continue;
+      await upsert("workspace_impostazioni", "workspace_id", [{ workspace_id: ws, fuso: i.fuso || "Europe/Rome", ora_meta: Number(i.ora_meta ?? 9), ultimo_meta: oggi }]).catch(() => {});
+      spazi.push(ws);
+    }
+    if (!spazi.length) return risposta({ ok: true, saltato: "per nessuno spazio di lavoro è l'ora dell'aggiornamento" });
     for (const ws of spazi) {
       const s = await nuovoSync(ws, "programmato");
       if (!s.giaInCorso) await richiamati({ continua: s.id, workspace_id: ws });

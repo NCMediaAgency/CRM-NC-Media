@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { applicaMeta, suggerisciAccount, ACCOUNT_STATI, accountUtilizzabile } from "./lib/meta.js";
 import { trovaTabelleKpi, applicaKpi, VOCI_KPI } from "./lib/kpi.js";
 import { applicaComandi, statoEsterno, nomeChiave } from "./lib/comandi.js";
+import { fusoDelBrowser } from "./lib/spazioApi.js";
 import { BENCH_BASE, ORDINI, benchmarkDi, classifica, fotografie, conAndamento, raggruppaCopie } from "./lib/winner.js";
 import {
   Wallet, Users, Target, MousePointerClick, TrendingUp, Euro, CheckCircle2,
@@ -1687,9 +1688,10 @@ const GUIDA = [
   },
   {
     id: "aggiornare", t: "Aggiornare i dati da Meta",
-    intro: "Ogni mattina alle 9 il CRM scarica da Meta Ads i dati fino a ieri per tutti gli account collegati ai clienti: campagne, ad set, annunci e finestre di valutazione. Non serve importare file.",
+    intro: "Ogni mattina, all'ora scelta in Impostazioni (predefinita le 9, nel fuso orario dell'agenzia), il CRM scarica da Meta Ads i dati fino a ieri per tutti gli account collegati ai clienti: campagne, ad set, annunci e finestre di valutazione. Non serve importare file.",
     blocchi: [
       { h: "Una volta sola: collegare Meta", p: "In Impostazioni, nel riquadro Piattaforme pubblicitarie, premi Collega a Meta e accedi con il tuo profilo Facebook: il CRM ottiene un accesso in sola lettura agli account pubblicitari che gestisci, senza bisogno di un Business Manager unico. Meta fa durare l'accesso 60 giorni: una settimana prima della scadenza il riquadro diventa rosso e basta premere Rinnova il collegamento." },
+      { h: "Fuso orario e ora dell'aggiornamento", p: "Nel riquadro Fuso orario delle Impostazioni scegli il fuso dell'agenzia e l'ora a cui il CRM scarica i dati di Meta ogni giorno (predefinita le 9). Per uno spazio di lavoro nuovo il CRM propone il fuso del computer di chi lo crea: un'agenzia di New York riceve i dati alle 9 di New York, non alle 3 di notte. Lo stesso fuso vale per il riepilogo e i promemoria del bot Telegram. I dati di ogni account restano divisi per giorno secondo il fuso dell'account pubblicitario, come in Gestione inserzioni." },
       { h: "Poi: collegare gli account ai clienti", p: "Nello stesso riquadro, Aggiorna l'elenco degli account mostra tutti gli account a cui il tuo profilo ha accesso. Accanto a ogni cliente il menu parte da «scegli un account»: aprendolo, in cima trovi i Suggeriti per nome, quelli che gli somigliano (anche per iniziali: BDF per Boutique Del Fitness), e sotto tutti gli altri. Scegli e premi Collega. Lo stesso si fa dalla Scheda cliente. Un cliente può avere più account; un account appartiene a un solo cliente." },
       { h: "Cosa arriva", p: "Le campagne attive o che hanno speso negli ultimi 90 giorni, con stato, budget giornaliero, date, spesa, impression, clic, clic sul link, lead, acquisti e ricavi. Sotto ogni campagna i suoi ad set e annunci con i totali. Le finestre Test, Matura e le settimane Attive sono già sommate da Meta, con la frequenza vera di ciascuna." },
       { h: "Come si agganciano", p: "Una campagna che avevi già scritto a mano si aggancia per nome la prima volta; da lì in poi per l'identificativo di Meta, quindi se la rinomini su Meta resta la stessa. Le campagne nuove nascono da sole sotto il cliente, con l'obiettivo dedotto da Meta. Le finestre di Meta prendono il posto di quelle scritte a mano che si sovrappongono; note e importi di contratto restano." },
@@ -1708,7 +1710,7 @@ const GUIDA = [
       { h: "Collegarlo", p: "In Impostazioni, riquadro Bot Telegram, premi Collega Telegram e apri il link che compare: Telegram apre il bot, premi Avvia e la chat è collegata. Il link vale 30 minuti e funziona una volta sola. Il bot risponde solo alle chat collegate così; con chiunque altro dice che è privato." },
       { h: "Cosa puoi chiedergli", p: "Scrivi come scriveresti a un collaboratore: «crea un task per BDF per venerdì: report di ottobre, priorità alta», «segna nel diario che oggi abbiamo spento le campagne Rottamazione», «sposta la call con Oliva a lunedì alle 15», «che scadenze ho domani?», «quali campagne sono ferme?». Capisce le date a parole, i nomi abbreviati dei clienti e più richieste nello stesso messaggio; se il cliente è ambiguo chiede quale. Se sbaglia, correggilo: «no, la data è il 24»." },
       { h: "Quando compare nel CRM", p: "Il bot non scrive direttamente nei dati: mette le richieste in coda e il CRM aperto le inserisce entro un minuto, oppure appena lo apri. Così nulla di quello che stai facendo nel CRM viene sovrascritto. La conferma su Telegram invece arriva subito." },
-      { h: "Il riepilogo del mattino", p: "All'ora che scegli (predefinita 9:10, dopo l'aggiornamento di Meta) arrivano i task in ritardo, quelli di oggi, quelli di domani a priorità alta o urgente e le campagne ferme. Sotto, per ogni task di oggi o in ritardo, i pulsanti Fatto e Domani. Nel weekend solo se lo attivi." },
+      { h: "Il riepilogo del mattino", p: "All'ora che scegli, nel fuso orario dell'agenzia (predefinita 9:10, dopo l'aggiornamento di Meta) arrivano i task in ritardo, quelli di oggi, quelli di domani a priorità alta o urgente e le campagne ferme. Sotto, per ogni task di oggi o in ritardo, i pulsanti Fatto e Domani. Nel weekend solo se lo attivi." },
       { h: "Task con orario", p: "Se un task ha un orario (campo Ora nella scheda del task, o detto al bot), il bot ti avvisa prima, con il preavviso che scegli, e ti dà i pulsanti Fatto, Domani e Lunedì. Chiudere da Telegram un task che si ripete fa nascere il successivo, come la spunta nel CRM." },
       { h: "Cosa serve", p: "Due segreti nelle Edge Functions di Supabase: TELEGRAM_TOKEN, il token del bot creato con @BotFather, e ANTHROPIC_API_KEY, la chiave con cui il bot usa Claude per capire i messaggi. I vocali arriveranno in un secondo momento." },
     ],
@@ -3707,7 +3709,7 @@ const NUMERICI = {
 
 /* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
-export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null, analisi = null } = {}) {
+export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null, analisi = null, spazio = null } = {}) {
   const [data, setData] = useState(null);
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
@@ -3770,6 +3772,8 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   const [erroreArchivio, setErroreArchivio] = useState("");
   const [erroreSalvataggio, setErroreSalvataggio] = useState("");
   const bloccaSalvataggio = useRef(false);
+  /* Spazio di lavoro appena creato (nessun archivio salvato): serve a proporre il fuso orario */
+  const primoAvvio = useRef(false);
   /* Dopo un ripristino o un reset voluto si torna a salvare normalmente */
   const sbloccaArchivio = () => { bloccaSalvataggio.current = false; setErroreArchivio(""); };
 
@@ -3806,6 +3810,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
       /* Anche i dati di esempio passano da normalizza: le raccolte aggiunte dopo
          (giornate, eventi, categorie, modelli, periodi…) non sono nel SEED, e
          senza questo passaggio il primo avvio trova collezioni inesistenti. */
+      primoAvvio.current = !d && !guasto;
       setData(normalizza(d || SEED()));
     })();
   }, []);
@@ -4019,6 +4024,32 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
       .catch((e) => { if (vivo) setWinDati((x) => ({ ...x, carico: false, errore: e.message || String(e) })); });
     return () => { vivo = false; };
   }, [analisi, winChiave]);
+  /* ---------- Fuso orario e ora dell'aggiornamento di Meta (migrazione 0010) ---------- */
+  const [orari, setOrari] = useState({ fuso: "Europe/Rome", ora_meta: 9, impostati: false, errore: "", esito: "" });
+  useEffect(() => {
+    if (!spazio || !datiPronti) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await spazio.leggi();
+        if (!vivo) return;
+        if (r) { setOrari((x) => ({ ...x, fuso: r.fuso, ora_meta: r.ora_meta, impostati: true })); return; }
+        // Spazio nuovo: il fuso del computer di chi lo crea; gli spazi esistenti restano su Roma alle 9
+        if (primoAvvio.current) {
+          const fuso = fusoDelBrowser();
+          await spazio.salva({ fuso, ora_meta: 9 });
+          if (vivo) setOrari((x) => ({ ...x, fuso, ora_meta: 9, impostati: true }));
+        }
+      } catch { /* prima della migrazione 0010: valgono Roma e le 9 */ }
+    })();
+    return () => { vivo = false; };
+  }, [spazio, datiPronti]);
+  const salvaOrari = async (campi) => {
+    const prima = orari;
+    setOrari((x) => ({ ...x, ...campi, errore: "", esito: "" }));
+    try { await spazio.salva({ fuso: campi.fuso ?? prima.fuso, ora_meta: campi.ora_meta ?? prima.ora_meta }); setOrari((x) => ({ ...x, impostati: true, esito: "Salvato." })); }
+    catch (e) { setOrari({ ...prima, errore: `Non riesco a salvare: ${e.message || e}` }); }
+  };
   const caricaMeta = useCallback(async (conDati = true, seguita = null) => {
     if (!meta) return null;
     try {
@@ -4953,6 +4984,54 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     { id: "tiktok", nome: "TikTok Ads", sotto: "TikTok for Business", sigla: "T", colore: "#25F4EE" },
     { id: "linkedin", nome: "LinkedIn Ads", sotto: "Campaign Manager", sigla: "in", colore: "#0A66C2" },
   ];
+  /* Fusi orari: i più usati in cima, poi tutti quelli che il browser conosce */
+  const FUSI_COMUNI = ["Europe/Rome", "Europe/London", "Europe/Madrid", "Europe/Paris", "Europe/Berlin", "America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles", "America/Anchorage", "Pacific/Honolulu", "America/Toronto", "America/Sao_Paulo", "America/Mexico_City", "Asia/Dubai", "Australia/Sydney"];
+  const etichettaFuso = (f) => {
+    try {
+      const ora = new Intl.DateTimeFormat("it-IT", { timeZone: f, hour: "2-digit", minute: "2-digit" }).format(new Date());
+      return `${f.replace(/_/g, " ")} · ora ${ora}`;
+    } catch { return f; }
+  };
+  const PannelloOrari = () => {
+    if (!spazio) return null;
+    let tutti = [];
+    try { tutti = Intl.supportedValuesOf("timeZone"); } catch { tutti = []; }
+    const altri = tutti.filter((f) => !FUSI_COMUNI.includes(f));
+    const ore = Array.from({ length: 24 }, (_, h) => h);
+    return (
+      <section className="card">
+        <header>
+          <h2>Fuso orario</h2>
+          <span className="sp eyebrow">vale per tutto lo spazio di lavoro</span>
+        </header>
+        {orari.errore && <div className="meta-msg" data-tipo="errore">{orari.errore}</div>}
+        {orari.esito && <div className="meta-msg" data-tipo="ok">{orari.esito}</div>}
+        <div className="riga" style={{ gap: 14, flexWrap: "wrap", padding: "14px 18px", alignItems: "flex-end" }}>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span className="eyebrow">Fuso orario dell'agenzia</span>
+            <select value={orari.fuso} onChange={(e) => salvaOrari({ fuso: e.target.value })} style={{ width: "auto", maxWidth: 360 }}>
+              <optgroup label="Più usati">{[...new Set([orari.fuso, ...FUSI_COMUNI])].map((f) => <option key={f} value={f}>{etichettaFuso(f)}</option>)}</optgroup>
+              {altri.length > 0 && <optgroup label="Tutti">{altri.map((f) => <option key={f} value={f}>{etichettaFuso(f)}</option>)}</optgroup>}
+            </select>
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span className="eyebrow">Aggiornamento di Meta</span>
+            <select value={orari.ora_meta} onChange={(e) => salvaOrari({ ora_meta: Number(e.target.value) })} style={{ width: "auto" }}>
+              {ore.map((h) => <option key={h} value={h}>ogni giorno alle {String(h).padStart(2, "0")}:00</option>)}
+            </select>
+          </label>
+          {fusoDelBrowser() !== orari.fuso && (
+            <button className="btn ghost mini" onClick={() => salvaOrari({ fuso: fusoDelBrowser() })}>Usa il fuso di questo computer ({fusoDelBrowser().replace(/_/g, " ")})</button>
+          )}
+        </div>
+        <div className="meta-msg sub">
+          All'ora scelta, nel fuso dell'agenzia, il CRM scarica da Meta i dati fino a ieri. Lo stesso fuso vale per il riepilogo e i promemoria del bot Telegram
+          e per la data delle analisi salvate dal connettore per Claude. Per uno spazio di lavoro nuovo il CRM propone il fuso del computer di chi lo crea.
+        </div>
+      </section>
+    );
+  };
+
   const PannelloPiattaforme = () => {
     if (!meta) return null;
     const stato = (p) => {
@@ -5026,7 +5105,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
         </header>
         {!metaFb && metaInfo && <div className="meta-msg">Il profilo Meta non è collegato: premi «Collega a Meta» nel riquadro Piattaforme pubblicitarie qui sopra.</div>}
         <div className="meta-msg sub">
-          Ogni mattina alle 9 il CRM scarica da Meta i dati fino a ieri per tutti gli account collegati, tranne quelli segnati «solo a mano» nella scheda del cliente.
+          Ogni giorno alle {String(orari.ora_meta).padStart(2, "0")}:00{orari.fuso !== "Europe/Rome" ? ` (${orari.fuso.replace(/_/g, " ")})` : ""} il CRM scarica da Meta i dati fino a ieri per tutti gli account collegati, tranne quelli segnati «solo a mano» nella scheda del cliente.
           {" "}Ultimo aggiornamento: <b>{u ? `${metaQuando(u.fine || u.avvio)} · ${u.esito === "in_corso" ? "in corso" : u.esito}` : "mai"}</b>{u && u.messaggio ? ` — ${u.messaggio}` : ""}
         </div>
         {metaMessaggi()}
@@ -12522,6 +12601,7 @@ Regole:
             {!attivo && vista === "impostazioni" && (
               <>
                 {PannelloPiattaforme()}
+                {PannelloOrari()}
                 {PannelloMetaAgenzia()}
                 {PannelloTelegram()}
                 {PannelloIntegrazioni()}

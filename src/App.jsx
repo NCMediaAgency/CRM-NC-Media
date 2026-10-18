@@ -7,6 +7,7 @@ import { apiTelegramCloud } from "./lib/telegramApi";
 import { apiTelegramFinto } from "./lib/telegramFinto";
 import { apiIntegrazioniCloud, apiIntegrazioniFinte } from "./lib/integrazioniApi";
 import { apiAnalisiCloud, apiAnalisiFinte } from "./lib/analisiApi";
+import { apiSpazioCloud, apiSpazioFinto } from "./lib/spazioApi";
 /* Il CRM è il pezzo pesante: si scarica solo dopo l'accesso, così il login appare subito */
 const CRM = lazy(() => import("./CRM.jsx"));
 
@@ -72,6 +73,7 @@ export default function App() {
   const [telegram, setTelegram] = useState(() => (LOCALE ? apiTelegramFinto() : null));
   const [integrazioni, setIntegrazioni] = useState(() => (LOCALE ? apiIntegrazioniFinte() : null));
   const [analisi, setAnalisi] = useState(() => (LOCALE ? apiAnalisiFinte() : null));
+  const [spazio, setSpazio] = useState(() => (LOCALE ? apiSpazioFinto() : null));
 
   useEffect(() => {
     if (LOCALE) { window.storage = archivioLocale(); return; }
@@ -95,6 +97,7 @@ export default function App() {
       setTelegram(apiTelegramCloud(data));
       setIntegrazioni(apiIntegrazioniCloud());
       setAnalisi(apiAnalisiCloud(data));
+      setSpazio(apiSpazioCloud(data));
       setPronto(true);
     });
     return () => { vivo = false; };
@@ -102,7 +105,7 @@ export default function App() {
 
   const caricamento = <Schermo><div className="box"><p>Carico il CRM…</p></div></Schermo>;
 
-  if (LOCALE) return <Suspense fallback={caricamento}><CRM meta={meta} telegram={telegram} integrazioni={integrazioni} analisi={analisi} /></Suspense>;
+  if (LOCALE) return <Suspense fallback={caricamento}><CRM meta={meta} telegram={telegram} integrazioni={integrazioni} analisi={analisi} spazio={spazio} /></Suspense>;
   if (sessione === undefined) return <Schermo><div className="box"><p>Caricamento…</p></div></Schermo>;
   if (!sessione) return <Accesso />;
   if (errore) return <Schermo><div className="box"><p className="err">{errore}</p><button onClick={() => supabase.auth.signOut()}>Esci</button></div></Schermo>;
@@ -112,7 +115,7 @@ export default function App() {
     <>
       <style>{STILE}</style>
       {/* key: cambiando utente il CRM riparte da zero e rilegge il suo archivio */}
-      <Suspense fallback={caricamento}><CRM key={utente} onEsci={() => supabase.auth.signOut()} utente={sessione.user.email || ""} meta={meta} telegram={telegram} integrazioni={integrazioni} analisi={analisi} /></Suspense>
+      <Suspense fallback={caricamento}><CRM key={utente} onEsci={() => supabase.auth.signOut()} utente={sessione.user.email || ""} meta={meta} telegram={telegram} integrazioni={integrazioni} analisi={analisi} spazio={spazio} /></Suspense>
     </>
   );
 }

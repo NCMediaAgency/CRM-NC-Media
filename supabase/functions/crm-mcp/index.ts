@@ -30,7 +30,12 @@ const impronta = async (s: string) => {
   const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
 };
-const oggiRoma = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
+/* Oggi nel fuso dello spazio di lavoro (migrazione 0010; senza impostazioni: Roma) */
+async function oggiDi(ws: string) {
+  const r = await db(`workspace_impostazioni?select=fuso&workspace_id=eq.${ws}`).catch(() => []);
+  try { return new Intl.DateTimeFormat("en-CA", { timeZone: (r[0] && r[0].fuso) || "Europe/Rome" }).format(new Date()); }
+  catch { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date()); }
+}
 const json = (corpo: unknown, stato = 200) => new Response(JSON.stringify(corpo), { status: stato, headers: { "Content-Type": "application/json" } });
 
 async function datiCRM(ws: string) {
@@ -53,7 +58,7 @@ async function strumento(ws: string, nome: string, args: Record<string, any>) {
   if (nome === "dati_cliente") return riassuntoCliente(data, z);
   if (nome === "leggi_benchmark") return { cliente: z.nome, ...benchmark(z) };
   if (nome === "salva_dati_ads") {
-    const { data: giorno, fonte, righe } = righeAds(args, { ws, clienteId: z.id, oggi: oggiRoma() });
+    const { data: giorno, fonte, righe } = righeAds(args, { ws, clienteId: z.id, oggi: await oggiDi(ws) });
     if (!righe.length) throw new Error("Nessun annuncio valido: ogni annuncio deve avere almeno id e nome.");
     await db(`analisi_ads?workspace_id=eq.${ws}&cliente_id=eq.${encodeURIComponent(z.id)}&fonte=eq.${encodeURIComponent(fonte)}&data=eq.${giorno}`, { metodo: "DELETE" });
     for (let i = 0; i < righe.length; i += 500) await db("analisi_ads", { metodo: "POST", prefer: "return=minimal", corpo: righe.slice(i, i + 500) });
