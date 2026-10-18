@@ -4,7 +4,7 @@ CRM per agenzie di media buying (clienti, campagne, funnel, vendite, task). Oggi
 
 ## Com'è fatto
 
-- **App**: React 18 + Vite. Tutto il CRM è in `src/CRM.jsx` (un unico file, ~11.000 righe, CSS incluso nella costante `CSS`). È nato come artifact in una chat di Claude: modificarlo con interventi mirati, senza riscritture.
+- **App**: React 18 + Vite. Tutto il CRM è in `src/CRM.jsx` (un unico file, ~12.000 righe, CSS incluso nella costante `CSS`; modalità scura predefinita e chiara con `.crm[data-tema="chiaro"]` in fondo al CSS, scelta in Impostazioni → Aspetto e salvata nel browser in `crm-tema`; #8E2039 uguale nelle due). È nato come artifact in una chat di Claude: modificarlo con interventi mirati, senza riscritture.
 - **Login e avvio**: `src/App.jsx` (accesso email/password con Supabase, poi apre lo spazio di lavoro con la funzione `my_workspace()` e monta il CRM).
 - **Archivio**: il CRM salva con `window.storage` (`get/set/list/delete`), l'interfaccia degli artifact di Claude. `src/lib/storage.js` la reimplementa sulla tabella `kv_store` di Supabase, filtrata per `workspace_id`. Chiavi:
   - `crm:data:v6`: tutti i dati del CRM in un unico JSON;

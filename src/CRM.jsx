@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Building2, Megaphone, CalendarRange, PieChart, PhoneCall,
   Handshake, Calculator, Filter, NotebookPen, FolderOpen, Sparkles, ListChecks,
   Zap, Upload, DownloadCloud, HelpCircle, Settings, FileText, PenLine, Contact,
-  KanbanSquare, Receipt, Code2, BellRing, LogOut, Trophy,
+  KanbanSquare, Receipt, Code2, BellRing, LogOut, Trophy, Moon, Sun,
 } from "lucide-react";
 
 /* Logo dell'agenzia, incorporato: nessun file esterno da caricare */
@@ -2867,14 +2867,16 @@ position:sticky;top:0;z-index:20}
 .top p{margin:2px 0 0;color:var(--ink2);font-size:12.5px}
 .body{padding:20px 22px 56px;display:flex;flex-direction:column;gap:18px}
 
-.btn{background:var(--acc);color:#fff;padding:8px 13px;border-radius:8px;font-size:12.8px;font-weight:550;letter-spacing:-.008em;white-space:nowrap}
-.btn:hover{background:var(--acc-d)}
-.btn.ghost{background:var(--surf);color:var(--ink);border:1px solid var(--line)}
-.btn.ghost:hover{border-color:var(--acc-b);background:var(--surf2)}
-.btn.ghost[data-on="1"]{background:var(--acc);color:#fff;border-color:var(--acc)}
-.btn.danger{background:none;color:var(--acc);border:1px solid var(--acc-b)}
-.btn.mini{padding:5px 9px;font-size:12px}
-.btn:disabled{opacity:.55;cursor:default}
+/* .crm davanti: senza, la regola generica ".crm button" toglieva il fondo #8E2039 ai pulsanti principali */
+.crm .btn{background:var(--acc);color:#fff;padding:8px 13px;border-radius:8px;font-size:12.8px;font-weight:550;letter-spacing:-.008em;white-space:nowrap}
+.crm .btn:hover{background:var(--acc-d)}
+.crm .btn.ghost{background:var(--surf);color:var(--ink);border:1px solid var(--line)}
+.crm .btn.ghost:hover{border-color:var(--acc-b);background:var(--surf2)}
+.crm .btn.ghost[data-on="1"]{background:var(--acc);color:#fff;border-color:var(--acc)}
+.crm .btn.danger{background:none;color:var(--acc);border:1px solid var(--acc-b)}
+.crm .btn.danger:hover{background:var(--acc-s)}
+.crm .btn.mini{padding:5px 9px;font-size:12px}
+.crm .btn:disabled{opacity:.55;cursor:default}
 .meta-riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .meta-riga select{width:auto;min-width:0;max-width:340px;flex:1 1 220px;font-size:12.5px;padding:6px 8px}
 .meta-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--line);border-radius:7px;padding:3px 4px 3px 8px;font-size:12.5px;margin:2px 6px 2px 0}
@@ -3205,6 +3207,39 @@ background:var(--acc-s);display:grid;gap:9px}
 .proposta .tag{flex:none}
 .spunti{display:grid;gap:7px;padding:4px 0 10px;justify-items:start}
 .spunti .btn{text-align:left;white-space:normal;line-height:1.4}
+/* ---------- Modalità chiara (Impostazioni → Aspetto): stesso #8E2039, fondi bianchi ---------- */
+.crm[data-tema="chiaro"]{--nero:#FFFFFF;--ink:#17171C;--ink2:#55555F;--ink3:#85858F;--paper:#F5F4F5;--surf:#FFFFFF;--surf2:#F3F1F2;
+--line:#E3DFE0;--acc-t:#B02E4B;--acc-s:rgba(142,32,57,.08);--acc-b:rgba(142,32,57,.35);color-scheme:light}
+.crm[data-tema="chiaro"] input,.crm[data-tema="chiaro"] select,.crm[data-tema="chiaro"] textarea{background:#FFFFFF}
+.crm[data-tema="chiaro"] ::placeholder{color:#A0A0AA}
+.crm[data-tema="chiaro"] .pannello-filtri,.crm[data-tema="chiaro"] .tuttoilgiorno,.crm[data-tema="chiaro"] .cal-testa,.crm[data-tema="chiaro"] .px-out{background:#F8F7F8}
+.crm[data-tema="chiaro"] .drop{background:#FAF9FA}
+.crm[data-tema="chiaro"] .sceltariga,.crm[data-tema="chiaro"] .fascia{border-bottom-color:rgba(0,0,0,.06)}
+.crm[data-tema="chiaro"] .sceltariga:hover,.crm[data-tema="chiaro"] .tbl tbody tr:hover{background:rgba(0,0,0,.028)}
+.crm[data-tema="chiaro"] .fascia:hover{background:rgba(0,0,0,.02)}
+.crm[data-tema="chiaro"] ::-webkit-scrollbar-thumb{background:#D6D1D3}
+.crm[data-tema="chiaro"] .rail{color:#55555F}
+.crm[data-tema="chiaro"] .brand span,.crm[data-tema="chiaro"] .switch .eyebrow,.crm[data-tema="chiaro"] .railfoot{color:#85858F}
+.crm[data-tema="chiaro"] .switch select,.crm[data-tema="chiaro"] .accbtn{background:#FFFFFF;border-color:var(--line);color:var(--ink)}
+.crm[data-tema="chiaro"] .navb:not([data-on="1"]):hover,.crm[data-tema="chiaro"] .tgl:hover,.crm[data-tema="chiaro"] .cal-mini .gg:hover{background:rgba(0,0,0,.05);color:var(--ink)}
+.crm[data-tema="chiaro"] .tgl{color:#85858F}
+.crm[data-tema="chiaro"] .top{background:rgba(245,244,245,.88)}
+/* :where non aggiunge peso: le etichette colorate (urgente, alta, in ritardo…) restano più forti */
+:where(.crm[data-tema="chiaro"]) .tag,:where(.crm[data-tema="chiaro"]) .pill,:where(.crm[data-tema="chiaro"]) .track,:where(.crm[data-tema="chiaro"]) .barra,:where(.crm[data-tema="chiaro"]) .bar .tr{background:#EEEBEC}
+.crm[data-tema="chiaro"] .scheda{background:linear-gradient(160deg,#FFFFFF,#F6F4F5)}
+.crm[data-tema="chiaro"] .scrim{background:rgba(23,23,28,.35)}
+.crm[data-tema="chiaro"] .modal{box-shadow:0 24px 60px rgba(0,0,0,.16)}
+.crm[data-tema="chiaro"] .cal-cella:hover{background:#FAF9FA}
+.crm[data-tema="chiaro"] .cal-cella.fuori{background:#F4F3F4}
+.crm[data-tema="chiaro"] .cal-voce{background:rgba(0,0,0,.04)}
+.crm[data-tema="chiaro"] .cal-voce:hover{background:rgba(0,0,0,.075)}
+.crm[data-tema="chiaro"] .cal-mini .dow{color:#A0A0AA}
+.crm[data-tema="chiaro"] .px-out code{color:#3A3A44}
+/* Testi bianchi su fondo scuro: nel chiaro diventano inchiostro (quelli su #8E2039 restano bianchi) */
+.crm[data-tema="chiaro"] .sceltariga[data-on="1"] .nm,.crm[data-tema="chiaro"] .brand b,.crm[data-tema="chiaro"] .kpi .v,
+.crm[data-tema="chiaro"] .cal-cella .piu:hover,.crm[data-tema="chiaro"] .cal-testa .piu:hover,.crm[data-tema="chiaro"] .cal-altro:hover,
+.crm[data-tema="chiaro"] .fascia .blocco b,.crm[data-tema="chiaro"] .fascia .aggiungi:hover,.crm[data-tema="chiaro"] .cal-mini .gg.oggi{color:var(--ink)}
+.crm[data-tema="chiaro"] .card,.crm[data-tema="chiaro"] .kpi{box-shadow:0 1px 2px rgba(0,0,0,.04)}
 `;
 
 /* ================================================================== */
@@ -3332,7 +3367,7 @@ function Andamento({ righe, alto = 210 }) {
       </defs>
       {tacche.map((t, i) => (
         <g key={i}>
-          <line x1={L} y1={py(t)} x2={W - R} y2={py(t)} stroke="#26262E" strokeWidth="1" />
+          <line x1={L} y1={py(t)} x2={W - R} y2={py(t)} stroke="var(--line)" strokeWidth="1" />
           <text x={L - 8} y={py(t) + 4} textAnchor="end" fontSize="10" fill="#6C6C79" fontFamily="JetBrains Mono, ui-monospace, monospace">
             {t >= 1000 ? `${Math.round(t / 1000)}k` : Math.round(t)}
           </text>
@@ -3374,7 +3409,7 @@ function Anello({ voci, totale, etichetta = "Totale" }) {
     <div className="riga" style={{ gap: 20, padding: "6px 16px 16px", flexWrap: "wrap" }}>
       <svg viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="Distribuzione della spesa">
         {archi.map((a, i) => <path key={i} d={a.d} fill={a.c} />)}
-        <text x="70" y="66" textAnchor="middle" fontSize="15" fill="#fff" fontFamily="JetBrains Mono, ui-monospace, monospace">{eur0(totale)}</text>
+        <text x="70" y="66" textAnchor="middle" fontSize="15" fill="var(--ink)" fontFamily="JetBrains Mono, ui-monospace, monospace">{eur0(totale)}</text>
         <text x="70" y="82" textAnchor="middle" fontSize="9" fill="#6C6C79" fontFamily="JetBrains Mono, ui-monospace, monospace" letterSpacing="1">{etichetta.toUpperCase()}</text>
       </svg>
       <div style={{ display: "grid", gap: 7, flex: 1, minWidth: 170 }}>
@@ -3711,6 +3746,9 @@ const NUMERICI = {
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
 export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null, analisi = null, spazio = null } = {}) {
   const [data, setData] = useState(null);
+  /* Aspetto: scuro (predefinito) o chiaro, scelto in Impostazioni e ricordato da questo browser */
+  const [tema, setTema] = useState(() => { try { return localStorage.getItem("crm-tema") === "chiaro" ? "chiaro" : "scuro"; } catch { return "scuro"; } });
+  const cambiaTema = (t) => { setTema(t); try { localStorage.setItem("crm-tema", t); } catch { /* browser senza archivio: vale per questa sessione */ } };
   const [cliAtt, setCliAtt] = useState("");
   const [vista, setVista] = useState("cruscotto");
   const [q, setQ] = useState("");
@@ -4443,7 +4481,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
     };
   }, [data]);
 
-  if (!data || !m) return <div className="crm"><style>{CSS}</style><div className="empty" style={{ padding: 60 }}>Carico i tuoi dati…</div></div>;
+  if (!data || !m) return <div className="crm" data-tema={tema}><style>{CSS}</style><div className="empty" style={{ padding: 60 }}>Carico i tuoi dati…</div></div>;
 
   const cliente = (id) => data.clienti.find((z) => z.id === id);
 
@@ -5032,6 +5070,19 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     );
   };
 
+  const PannelloAspetto = () => (
+    <section className="card">
+      <header><h2>Aspetto</h2><span className="sp eyebrow">vale per questo browser</span></header>
+      <div className="riga" style={{ gap: 10, padding: "14px 18px", flexWrap: "wrap" }}>
+        {[["scuro", Moon, "Modalità scura"], ["chiaro", Sun, "Modalità chiara"]].map(([v, I, l]) => (
+          <button key={v} className={tema === v ? "btn" : "btn ghost"} aria-pressed={tema === v} onClick={() => cambiaTema(v)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <I size={16} strokeWidth={1.9} aria-hidden="true" />{l}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
   const PannelloPiattaforme = () => {
     if (!meta) return null;
     const stato = (p) => {
@@ -7102,7 +7153,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
       <button className="cal-voce" style={{ borderLeftColor: v.colore }}
         title={`${v.ora ? `${v.ora} · ` : ""}${v.titolo}${v.nota ? ` — ${v.nota}` : ""}`}
         onClick={() => { if (v.rec) apri(v.tipo === "task" ? "task" : "eventi", v.rec); }}>
-        {v.ora && <b className="mono" style={{ marginRight: 5, color: "#fff" }}>{v.ora}</b>}
+        {v.ora && <b className="mono" style={{ marginRight: 5, color: "var(--ink)" }}>{v.ora}</b>}
         <span>{v.titolo}</span>
         {v.nota && <em>{v.nota}</em>}
       </button>
@@ -11992,7 +12043,7 @@ Regole:
   );
 
   return (
-    <div className="crm">
+    <div className="crm" data-tema={tema}>
       <style>{CSS}</style>
       <div className="shell">
         <nav className="rail" data-compatto={compatto ? "1" : "0"}>
@@ -12600,6 +12651,7 @@ Regole:
 
             {!attivo && vista === "impostazioni" && (
               <>
+                {PannelloAspetto()}
                 {PannelloPiattaforme()}
                 {PannelloOrari()}
                 {PannelloMetaAgenzia()}
