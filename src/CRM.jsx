@@ -3272,11 +3272,11 @@ transition:transform .2s ease,box-shadow .2s ease;background:#0C0C0E;outline-off
 .nf-hero-cop{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:min(440px,42%);aspect-ratio:16/9;object-fit:cover;border-radius:10px;z-index:-1;box-shadow:0 20px 50px rgba(0,0,0,.6)}
 @media (max-width:900px){.nf-hero-cop{position:static;transform:none;width:100%;margin-bottom:16px;order:-1}.nf-hero{flex-direction:column;align-items:stretch}}
 .nf-card .logo-n{position:absolute;top:8px;right:8px;z-index:1;width:26px;height:26px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-.nf-hero-home{min-height:0;aspect-ratio:16/9;align-items:center;background:#060508;padding:clamp(24px,4vw,56px)}
-.nf-home-sfondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right center;z-index:-1}
-.nf-home-logo{position:absolute;left:clamp(18px,3vw,40px);top:clamp(14px,3vw,36px);width:clamp(180px,30%,400px);height:auto}
-.nf-home-titolo{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:500;font-size:clamp(34px,5.6vw,80px);line-height:1.08;letter-spacing:-.01em;margin:clamp(40px,6vw,90px) 0 clamp(18px,3vw,36px)}
-@media (max-width:700px){.nf-hero-home{aspect-ratio:auto;min-height:340px}.nf-home-sfondo{object-position:72% center;opacity:.55}}
+.nf-hero-home{min-height:0;height:clamp(360px,30vw,520px);align-items:center;background:#060508;padding:clamp(24px,4vw,56px)}
+.nf-home-sfondo{position:absolute;top:0;right:0;height:100%;width:auto;max-width:none;z-index:-1;-webkit-mask-image:linear-gradient(90deg,transparent,#000 18%);mask-image:linear-gradient(90deg,transparent,#000 18%)}
+.nf-home-logo{position:absolute;left:clamp(18px,3vw,40px);top:clamp(14px,3vw,36px);width:clamp(170px,24%,320px);height:auto}
+.nf-home-titolo{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:500;font-size:clamp(32px,4.4vw,60px);line-height:1.08;letter-spacing:-.01em;margin:clamp(40px,5vw,70px) 0 clamp(16px,2.4vw,28px)}
+@media (max-width:700px){.nf-hero-home{height:auto;min-height:340px}.nf-home-sfondo{opacity:.55}}
 .nf-sigillo{position:absolute;right:42px;top:50%;transform:translateY(-50%) rotate(-8deg);width:min(250px,30%);z-index:-1;opacity:.92;filter:drop-shadow(0 18px 40px rgba(0,0,0,.55))}
 @media (max-width:700px){.nf-sigillo{width:110px;right:14px;top:22px;transform:rotate(-8deg);opacity:.5}}
 .nf-card .avanz{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.25);z-index:1}
