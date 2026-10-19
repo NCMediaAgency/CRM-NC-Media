@@ -3253,7 +3253,9 @@ transition:transform .2s ease,box-shadow .2s ease;background:#0C0C0E;outline-off
 .nf-card .bollo{position:absolute;top:9px;left:9px;z-index:1;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:rgba(0,0,0,.55);color:#fff}
 .nf-card .bollo.gratis{background:#2E7D46}
 .nf-card .bollo.chiuso{background:var(--acc)}
-.nf-card .logo-n{position:absolute;top:9px;right:10px;z-index:1;font-weight:800;color:#E8A3B2;font-size:13px;letter-spacing:-.02em}
+.nf-card .logo-n{position:absolute;top:8px;right:8px;z-index:1;width:26px;height:26px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.nf-sigillo{position:absolute;right:42px;top:50%;transform:translateY(-50%) rotate(-8deg);width:min(250px,30%);z-index:-1;opacity:.92;filter:drop-shadow(0 18px 40px rgba(0,0,0,.55))}
+@media (max-width:700px){.nf-sigillo{width:110px;right:14px;top:22px;transform:rotate(-8deg);opacity:.5}}
 .nf-card .avanz{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.25);z-index:1}
 .nf-card .avanz i{display:block;height:100%;background:#E50914;background:var(--acc-t)}
 .nf-scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.72);overflow-y:auto;padding:36px 16px}
@@ -3812,6 +3814,7 @@ const NUMERICI = {
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
 /* Catalogo di esempio dell'Academy: si vede finché non ci sono i corsi veri (data.academy.corsi).
    sezione = dove il CRM suggerisce la lezione (advertising, vendite, funnel, winner). */
+const LOGO_ACADEMY = "/academy-logo.webp";
 const ACADEMY_ESEMPIO = [
   { id: "es-meta", titolo: "Fondamenti di Meta Ads", descrizione: "Struttura delle campagne, pixel e lettura dei dati: le basi per non bruciare budget.", livello: "Base", gratuito: true, colore: "#8E2039",
     lezioni: [
@@ -10059,7 +10062,7 @@ Regole:
     const libera = lezioneLibera(s2.c, s2.l);
     return (
       <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surf)" }}>
-        <GraduationCap size={18} strokeWidth={1.9} aria-hidden="true" style={{ color: "var(--acc-t)", flex: "none" }} />
+        <img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 26, height: 26, flex: "none" }} />
         <span><b>Dall'Academy</b> · {s2.l.titolo} <span className="sub">({s2.c.titolo} · {s2.l.durata}{libera ? " · gratuita" : ""})</span></span>
         <span className="sp" />
         <button className="btn ghost mini" onClick={() => { setVista("academy"); setAcCorso(s2.c.id); setAcLezione({ corso: s2.c.id, lezione: s2.l.id }); }}>{libera ? "Guarda" : "🔒 Scopri"}</button>
@@ -10094,7 +10097,7 @@ Regole:
         <div className="cop" style={sfondo(c, k)} />
         <span className="grande" aria-hidden="true">{(c.titolo || "A")[0]}</span>
         <Bollo c={c} />
-        <span className="logo-n" aria-hidden="true">A</span>
+        <img className="logo-n" src={LOGO_ACADEMY} alt="" aria-hidden="true" />
         <div className="tit">{c.titolo}<small>{c.livello ? `${c.livello} · ` : ""}{nLez(c)} lezioni</small></div>
         {nViste(c) > 0 && <div className="avanz"><i style={{ width: `${perc(c)}%` }} /></div>}
       </div>
@@ -10127,9 +10130,9 @@ Regole:
         {evid && (
           <section className="nf-hero">
             <div className="sfondo" style={sfondo(evid, 2)} />
-            <GraduationCap size={260} strokeWidth={0.6} aria-hidden="true" style={{ position: "absolute", right: 30, top: 10, color: "rgba(255,255,255,.07)", zIndex: -1 }} />
+            <img src={LOGO_ACADEMY} alt="" aria-hidden="true" className="nf-sigillo" />
             <div>
-              <div className="marchio"><GraduationCap size={15} strokeWidth={2} aria-hidden="true" />{ac.nome || "Accademia dell'Advertising"}</div>
+              <div className="marchio"><img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 22, height: 22 }} />{ac.nome || "Accademia dell'Advertising"}</div>
               <h1>{evid.titolo}</h1>
               <div className="meta">
                 {evid.gratuito ? <span className="tag" data-k="attivo">gratis</span> : <span className="tag" data-k="alta">{evid.prezzo || "premium"}</span>}
@@ -10204,6 +10207,7 @@ Regole:
                   <div className="sfondo" style={sfondo(corso, 0)} />
                   <button className="nf-chiudi" aria-label="Chiudi" onClick={() => setAcCorso("")}>×</button>
                   <div>
+                    <img src={LOGO_ACADEMY} alt="Accademia dell'Advertising" style={{ width: 54, height: 54, marginBottom: 10, filter: "drop-shadow(0 4px 12px rgba(0,0,0,.4))" }} />
                     <h2>{corso.titolo}</h2>
                     <div className="riga" style={{ gap: 10, flexWrap: "wrap" }}>
                       {primaLibera(corso) && <button className="nf-play" onClick={() => setAcLezione({ corso: corso.id, lezione: primaLibera(corso).id })}>▶ {corso.gratuito || corso.sbloccato ? "Guarda" : "Guarda l'anteprima"}</button>}
