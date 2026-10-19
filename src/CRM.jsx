@@ -10226,7 +10226,7 @@ Regole:
 
         {scheda === "home" && (
           <section className="nf-hero nf-hero-home">
-            <img src="/academy/home-sfondo.webp" alt="" aria-hidden="true" className="nf-home-sfondo" />
+            <img src="/academy/home-copertina.webp" alt="" aria-hidden="true" className="nf-home-sfondo" />
             <img src="/academy/home-logo.webp" alt={ac.nome || "Accademia dell'Advertising"} className="nf-home-logo" />
             <div>
               <h1 className="nf-home-titolo">Accademia<br />dell'Advertising</h1>
