@@ -3894,6 +3894,8 @@ const ACADEMY_ESEMPIO = [
     descrizione: "Le strutture ricorrenti delle creatività che funzionano, da riusare per nuove inserzioni.", lezioni: [] },
   { id: "g-giornale-creativita", macro: "guide", titolo: "Giornale delle Creatività", copertina: "/academy/giornale-delle-creativita.webp", colore: "#7B5BC8", livello: "Base", sezione: "winner",
     descrizione: "Come tenere traccia delle creatività provate, dei risultati e delle idee da testare.", lezioni: [] },
+  { id: "g-pos", macro: "guide", titolo: "Procedure Operative Standard P.O.S.", copertina: "/academy/procedure-operative-standard.webp", colore: "#B97A6A", livello: "Base", sezione: "advertising",
+    descrizione: "Le procedure passo per passo per lavorare sugli account sempre allo stesso modo: controlli, decisioni e cosa fare in ogni caso.", lezioni: [] },
   { id: "es-live-analisi", macro: "live", esempio: true, titolo: "Live mensile: analisi degli account", colore: "#8E2039", livello: "Tutti",
     descrizione: "Esempio di evento live: analisi in diretta degli account degli iscritti.",
     lezioni: [{ id: "es-live-1", titolo: "Registrazione di ottobre", durata: "62 min" }] },
