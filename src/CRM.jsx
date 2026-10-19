@@ -3272,8 +3272,8 @@ transition:transform .2s ease,box-shadow .2s ease;background:#0C0C0E;outline-off
 .nf-hero-cop{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:min(440px,42%);aspect-ratio:16/9;object-fit:cover;border-radius:10px;z-index:-1;box-shadow:0 20px 50px rgba(0,0,0,.6)}
 @media (max-width:900px){.nf-hero-cop{position:static;transform:none;width:100%;margin-bottom:16px;order:-1}.nf-hero{flex-direction:column;align-items:stretch}}
 .nf-card .logo-n{position:absolute;top:8px;right:8px;z-index:1;width:26px;height:26px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-.nf-hero-home{min-height:0;height:auto;aspect-ratio:16/9;align-items:center;background:#0B0C0F;padding:clamp(24px,3.5vw,48px)}
-.nf-home-sfondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.nf-hero-home{min-height:0;height:auto;aspect-ratio:21/9;align-items:center;background:#0B0C0F;padding:clamp(24px,3.5vw,48px)}
+.nf-home-sfondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 45%;z-index:-2}
 .nf-hero-home::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(8,8,10,.55),rgba(8,8,10,0) 45%)}
 .nf-home-logo{position:absolute;left:clamp(18px,3vw,40px);top:clamp(14px,3vw,36px);width:clamp(170px,24%,320px);height:auto}
 .nf-home-titolo{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:500;font-size:clamp(32px,4.4vw,60px);line-height:1.08;letter-spacing:-.01em;margin:clamp(40px,5vw,70px) 0 clamp(16px,2.4vw,28px)}
