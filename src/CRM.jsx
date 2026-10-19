@@ -3833,8 +3833,8 @@ const ACADEMY_MACRO = [
   { v: "guide", l: "Guide Strategiche", d: "Metodi e checklist da applicare subito ai clienti." },
   { v: "live", l: "Eventi Live", d: "Dirette, masterclass e sessioni di domande e risposte." },
 ];
-/* Catalogo finché la piattaforma non è collegata (data.academy.corsi vuoto): i 5 corsi della
-   sezione Corsi hanno titolo e copertina veri; descrizioni, lezioni e le altre sezioni sono esempi.
+/* Catalogo finché la piattaforma non è collegata (data.academy.corsi vuoto): i corsi delle sezioni
+   Corsi e Formazione Specifica hanno titolo e copertina veri; descrizioni, lezioni e le altre sezioni sono esempi.
    sezione = dove il CRM suggerisce il corso o la lezione (advertising, winner, funnel, vendite). */
 const ACADEMY_ESEMPIO = [
   { id: "c-fb-principianti", macro: "corsi", titolo: "Facebook Ads per Principianti", copertina: "/academy/facebook-ads-principianti.webp", colore: "#3B5A9A", livello: "Base", sezione: "advertising",
@@ -3853,12 +3853,16 @@ const ACADEMY_ESEMPIO = [
     descrizione: "Scrivere testi per inserzioni, pagine ed email che catturano l'attenzione e fanno agire.", lezioni: [] },
   { id: "c-email", macro: "corsi", titolo: "Email Marketing Bootcamp", copertina: "/academy/email-marketing-bootcamp.webp", colore: "#C2784A", livello: "Intermedio", sezione: "funnel",
     descrizione: "Sequenze email per trasformare i contatti in clienti e far tornare chi ha già comprato.", lezioni: [] },
-  { id: "es-pixel", macro: "formazione", esempio: true, titolo: "Pixel e tracciamento avanzato", colore: "#5C1B2C", livello: "Avanzato", gratuito: true, sezione: "advertising",
-    descrizione: "Esempio di formazione specifica: eventi, API di conversione e verifica dei dati.",
-    lezioni: [{ id: "es-pixel-1", titolo: "Eventi standard e personalizzati", durata: "12 min" }, { id: "es-pixel-2", titolo: "API di conversione", durata: "15 min" }] },
-  { id: "es-copy", macro: "formazione", esempio: true, titolo: "Copy per le inserzioni", colore: "#B4566B", livello: "Intermedio", prezzo: "97 €",
-    descrizione: "Esempio di formazione specifica: hook, angoli e testi che fermano lo scroll.",
-    lezioni: [{ id: "es-copy-1", titolo: "Anatomia di un hook", durata: "9 min", gratuita: true, sezione: "winner" }, { id: "es-copy-2", titolo: "Dieci angoli da testare", durata: "14 min" }] },
+  { id: "f-4-strategie", macro: "formazione", titolo: "Inserzioni Facebook: 4 Strategie Avanzate", copertina: "/academy/inserzioni-facebook-4-strategie.webp", colore: "#2F5FB3", livello: "Avanzato", sezione: "advertising",
+    descrizione: "Quattro strategie avanzate per strutturare le inserzioni su Facebook e Instagram e farle rendere di più.", lezioni: [] },
+  { id: "f-lancio", macro: "formazione", titolo: "Strategie di Lancio Campagna", copertina: "/academy/strategie-lancio-campagna.webp", colore: "#C2612A", livello: "Intermedio", sezione: "advertising",
+    descrizione: "Come impostare e lanciare una campagna nuova: struttura, budget iniziale e cosa guardare nei primi giorni.", lezioni: [] },
+  { id: "f-copy-inserzioni", macro: "formazione", titolo: "Strategie di Copywriting & Inserzioni", copertina: "/academy/strategie-copywriting-inserzioni.webp", colore: "#6A3FA0", livello: "Intermedio", sezione: "winner",
+    descrizione: "Hook, angoli e testi per inserzioni che fermano lo scroll e portano contatti.", lezioni: [] },
+  { id: "f-marketing", macro: "formazione", titolo: "Strategie di Marketing", copertina: "/academy/strategie-marketing.webp", colore: "#2E8B57", livello: "Intermedio", sezione: "funnel",
+    descrizione: "Posizionamento, offerta e percorso del cliente: le scelte di marketing che vengono prima delle campagne.", lezioni: [] },
+  { id: "f-ottimizzazione", macro: "formazione", titolo: "Flussi di Ottimizzazione & Strategie", copertina: "/academy/flussi-ottimizzazione-strategie.webp", colore: "#C23A4A", livello: "Avanzato", sezione: "winner",
+    descrizione: "Quando e come intervenire su campagne, gruppi e inserzioni: i flussi per tagliare ciò che non rende e scalare ciò che funziona.", lezioni: [] },
   { id: "es-lancio", macro: "guide", esempio: true, titolo: "Checklist di lancio campagna", colore: "#3E1720", livello: "Base", gratuito: true,
     descrizione: "Esempio di guida strategica: i controlli da fare prima di accendere una campagna.",
     lezioni: [{ id: "es-lancio-1", titolo: "Prima del lancio", durata: "7 min" }, { id: "es-lancio-2", titolo: "Le prime 72 ore", durata: "8 min", sezione: "advertising" }] },
@@ -10164,7 +10168,7 @@ Regole:
     const miei = corsi.filter((c) => c.sbloccato);
     return (
       <div className="nf">
-        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima.</b> I corsi della sezione Corsi hanno titoli e copertine veri; descrizioni e lezioni, e i contenuti segnati «esempio» nelle altre sezioni, arriveranno dalla piattaforma.</div>}
+        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima.</b> I corsi delle sezioni Corsi e Formazione Specifica hanno titoli e copertine veri; descrizioni e lezioni, e i contenuti segnati «esempio» nelle altre sezioni, arriveranno dalla piattaforma.</div>}
 
         <nav className="nf-schede" aria-label="Sezioni dell'Academy">
           {[{ v: "home", l: "Home" }, ...ACADEMY_MACRO].map((m2) => (
