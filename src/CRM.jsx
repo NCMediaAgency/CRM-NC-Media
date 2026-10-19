@@ -3253,6 +3253,17 @@ transition:transform .2s ease,box-shadow .2s ease;background:#0C0C0E;outline-off
 .nf-card .bollo{position:absolute;top:9px;left:9px;z-index:1;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:rgba(0,0,0,.55);color:#fff}
 .nf-card .bollo.gratis{background:#2E7D46}
 .nf-card .bollo.chiuso{background:var(--acc)}
+.nf-card .cop-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.crm .nf-tutti{font-size:12.5px;font-weight:550;color:var(--acc-t);margin-left:4px}
+.crm .nf-tutti:hover{text-decoration:underline}
+.nf-griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.nf-schede{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:2px}
+.crm .nf-schede button{padding:9px 14px;font-size:14px;font-weight:550;color:var(--ink2);border-bottom:2px solid transparent;margin-bottom:-3px;display:inline-flex;gap:7px;align-items:baseline}
+.crm .nf-schede button small{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.crm .nf-schede button:hover{color:var(--ink)}
+.crm .nf-schede button[data-on="1"]{color:var(--ink);border-bottom-color:var(--acc)}
+.nf-hero-cop{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:min(440px,42%);aspect-ratio:16/9;object-fit:cover;border-radius:10px;z-index:-1;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+@media (max-width:900px){.nf-hero-cop{position:static;transform:none;width:100%;margin-bottom:16px;order:-1}.nf-hero{flex-direction:column;align-items:stretch}}
 .nf-card .logo-n{position:absolute;top:8px;right:8px;z-index:1;width:26px;height:26px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
 .nf-sigillo{position:absolute;right:42px;top:50%;transform:translateY(-50%) rotate(-8deg);width:min(250px,30%);z-index:-1;opacity:.92;filter:drop-shadow(0 18px 40px rgba(0,0,0,.55))}
 @media (max-width:700px){.nf-sigillo{width:110px;right:14px;top:22px;transform:rotate(-8deg);opacity:.5}}
@@ -3815,35 +3826,45 @@ const NUMERICI = {
 /* Catalogo di esempio dell'Academy: si vede finché non ci sono i corsi veri (data.academy.corsi).
    sezione = dove il CRM suggerisce la lezione (advertising, vendite, funnel, winner). */
 const LOGO_ACADEMY = "/academy-logo.webp";
+/* Macro sezioni dell'Accademia, nell'ordine della piattaforma */
+const ACADEMY_MACRO = [
+  { v: "corsi", l: "Corsi", d: "I percorsi completi, dalle basi allo scaling." },
+  { v: "formazione", l: "Formazione Specifica", d: "Approfondimenti verticali su un argomento alla volta." },
+  { v: "guide", l: "Guide Strategiche", d: "Metodi e checklist da applicare subito ai clienti." },
+  { v: "live", l: "Eventi Live", d: "Dirette, masterclass e sessioni di domande e risposte." },
+];
+/* Catalogo finché la piattaforma non è collegata (data.academy.corsi vuoto): i 5 corsi della
+   sezione Corsi hanno titolo e copertina veri; descrizioni, lezioni e le altre sezioni sono esempi.
+   sezione = dove il CRM suggerisce il corso o la lezione (advertising, winner, funnel, vendite). */
 const ACADEMY_ESEMPIO = [
-  { id: "es-meta", titolo: "Fondamenti di Meta Ads", descrizione: "Struttura delle campagne, pixel e lettura dei dati: le basi per non bruciare budget.", livello: "Base", gratuito: true, colore: "#8E2039",
-    lezioni: [
-      { id: "es-meta-1", titolo: "Come strutturare una campagna lead", durata: "12 min", sezione: "advertising" },
-      { id: "es-meta-2", titolo: "Pixel e conversioni senza errori", durata: "9 min", sezione: "advertising" },
-      { id: "es-meta-3", titolo: "Pubblici freddi e retargeting", durata: "14 min", sezione: "winner" },
-      { id: "es-meta-4", titolo: "Leggere i numeri: CPL, CTR, frequenza", durata: "11 min", sezione: "advertising" },
-    ] },
-  { id: "es-funnel", titolo: "Funnel Lead Generation", descrizione: "Dal primo clic all'appuntamento: il funnel che porta clienti, non solo contatti.", livello: "Intermedio", prezzo: "197 €", colore: "#5C1B2C",
-    lezioni: [
-      { id: "es-funnel-1", titolo: "Perché la maggior parte dei funnel perde lead", durata: "8 min", gratuita: true, sezione: "funnel" },
-      { id: "es-funnel-2", titolo: "La pagina che converte", durata: "16 min" },
-      { id: "es-funnel-3", titolo: "Qualificare i lead prima della call", durata: "13 min", sezione: "vendite" },
-      { id: "es-funnel-4", titolo: "Show up: far presentare chi prenota", durata: "10 min", sezione: "vendite" },
-      { id: "es-funnel-5", titolo: "Misurare il funnel nel CRM", durata: "12 min" },
-    ] },
-  { id: "es-creativi", titolo: "Creatività che vendono", descrizione: "Hook, angoli e formati: come trovare le winner ads e come rifarle.", livello: "Intermedio", prezzo: "147 €", colore: "#B4566B",
-    lezioni: [
-      { id: "es-creativi-1", titolo: "Anatomia di una winner ad", durata: "11 min", gratuita: true, sezione: "winner" },
-      { id: "es-creativi-2", titolo: "Dieci hook che fermano lo scroll", durata: "15 min" },
-      { id: "es-creativi-3", titolo: "Testare gli angoli senza sprecare budget", durata: "13 min", sezione: "winner" },
-      { id: "es-creativi-4", titolo: "Rifare una creatività stanca", durata: "9 min" },
-    ] },
-  { id: "es-scala", titolo: "Scalare senza bruciare budget", descrizione: "Quando e come aumentare la spesa mantenendo il costo per cliente.", livello: "Avanzato", prezzo: "297 €", colore: "#3E1720",
-    lezioni: [
-      { id: "es-scala-1", titolo: "Il semaforo: spegni, aspetta, scala", durata: "10 min", sezione: "advertising" },
-      { id: "es-scala-2", titolo: "Scalare in verticale e in orizzontale", durata: "17 min" },
-      { id: "es-scala-3", titolo: "Budget e stagionalità", durata: "12 min" },
-    ] },
+  { id: "c-fb-principianti", macro: "corsi", titolo: "Facebook Ads per Principianti", copertina: "/academy/facebook-ads-principianti.webp", colore: "#3B5A9A", livello: "Base", sezione: "advertising",
+    descrizione: "Le basi per partire con le campagne su Facebook e Instagram: struttura, pubblici, budget e lettura dei risultati.", lezioni: [] },
+  { id: "c-bootcamp", macro: "corsi", titolo: "Facebook Ads Bootcamp", copertina: "/academy/facebook-ads-bootcamp.webp", colore: "#8E2039", livello: "Intermedio", sezione: "advertising",
+    descrizione: "Il percorso intensivo per impostare, testare e ottimizzare campagne che portano risultati.", lezioni: [] },
+  { id: "c-scalare", macro: "corsi", titolo: "Come Convertire e Scalare il Traffico a Pagamento", copertina: "/academy/convertire-scalare-traffico.webp", colore: "#3A3A3A", livello: "Avanzato", sezione: "winner",
+    descrizione: "Trasformare il traffico in clienti e aumentare la spesa mantenendo sotto controllo il costo per acquisizione.", lezioni: [] },
+  { id: "c-landing", macro: "corsi", titolo: "Come Creare ed Ottimizzare Landing Page e Web Page ad Alta Conversione", copertina: "/academy/landing-page-alta-conversione.webp", colore: "#1B4A5A", livello: "Intermedio", sezione: "funnel",
+    descrizione: "Costruire pagine che convertono il traffico delle campagne in contatti e vendite.", lezioni: [] },
+  { id: "c-ios14", macro: "corsi", titolo: "iOS 14 Senza Segreti", copertina: "/academy/ios14-senza-segreti.webp", colore: "#2A2A2A", livello: "Intermedio", sezione: "advertising",
+    descrizione: "Cosa è cambiato con iOS 14 nel tracciamento e come impostare eventi e misurazione oggi.", lezioni: [] },
+  { id: "es-pixel", macro: "formazione", esempio: true, titolo: "Pixel e tracciamento avanzato", colore: "#5C1B2C", livello: "Avanzato", gratuito: true, sezione: "advertising",
+    descrizione: "Esempio di formazione specifica: eventi, API di conversione e verifica dei dati.",
+    lezioni: [{ id: "es-pixel-1", titolo: "Eventi standard e personalizzati", durata: "12 min" }, { id: "es-pixel-2", titolo: "API di conversione", durata: "15 min" }] },
+  { id: "es-copy", macro: "formazione", esempio: true, titolo: "Copy per le inserzioni", colore: "#B4566B", livello: "Intermedio", prezzo: "97 €",
+    descrizione: "Esempio di formazione specifica: hook, angoli e testi che fermano lo scroll.",
+    lezioni: [{ id: "es-copy-1", titolo: "Anatomia di un hook", durata: "9 min", gratuita: true, sezione: "winner" }, { id: "es-copy-2", titolo: "Dieci angoli da testare", durata: "14 min" }] },
+  { id: "es-lancio", macro: "guide", esempio: true, titolo: "Checklist di lancio campagna", colore: "#3E1720", livello: "Base", gratuito: true,
+    descrizione: "Esempio di guida strategica: i controlli da fare prima di accendere una campagna.",
+    lezioni: [{ id: "es-lancio-1", titolo: "Prima del lancio", durata: "7 min" }, { id: "es-lancio-2", titolo: "Le prime 72 ore", durata: "8 min", sezione: "advertising" }] },
+  { id: "es-bench", macro: "guide", esempio: true, titolo: "Benchmark per settore", colore: "#6E1E31", livello: "Intermedio", prezzo: "47 €",
+    descrizione: "Esempio di guida strategica: costi per lead, appuntamento e cliente di riferimento per settore.",
+    lezioni: [{ id: "es-bench-1", titolo: "Come leggere i benchmark", durata: "10 min", gratuita: true, sezione: "winner" }] },
+  { id: "es-live-analisi", macro: "live", esempio: true, titolo: "Live mensile: analisi degli account", colore: "#8E2039", livello: "Tutti",
+    descrizione: "Esempio di evento live: analisi in diretta degli account degli iscritti.",
+    lezioni: [{ id: "es-live-1", titolo: "Registrazione di ottobre", durata: "62 min" }] },
+  { id: "es-live-qa", macro: "live", esempio: true, titolo: "Domande e risposte con il team", colore: "#4A1B26", livello: "Tutti", gratuito: true,
+    descrizione: "Esempio di evento live: sessione aperta di domande e risposte.",
+    lezioni: [{ id: "es-live-qa-1", titolo: "Q&A di settembre", durata: "48 min" }] },
 ];
 
 export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null, analisi = null, spazio = null } = {}) {
@@ -10054,18 +10075,23 @@ Regole:
   const academyCorsi = () => ((data.academy.corsi || []).length ? data.academy.corsi : ACADEMY_ESEMPIO);
   const lezioneLibera = (c, l) => !!(c.gratuito || c.sbloccato || l.gratuita);
   /* Lezioni da suggerire in una sezione del CRM (prima quelle libere) */
-  const academyPer = (sez) => academyCorsi().flatMap((c) => (c.lezioni || []).filter((l) => l.sezione === sez).map((l) => ({ c, l })))
-    .sort((a, b) => lezioneLibera(b.c, b.l) - lezioneLibera(a.c, a.l));
+  const academyPer = (sez) => [
+    ...academyCorsi().filter((c) => !c.esempio && c.sezione === sez).map((c) => ({ c, l: null })),
+    ...academyCorsi().flatMap((c) => (c.lezioni || []).filter((l) => l.sezione === sez).map((l) => ({ c, l })))
+      .sort((a, b) => lezioneLibera(b.c, b.l) - lezioneLibera(a.c, a.l)),
+  ];
   const SuggerimentoAcademy = ({ sez }) => {
     const s2 = academyPer(sez)[0];
     if (!s2) return null;
-    const libera = lezioneLibera(s2.c, s2.l);
+    const libera = s2.l ? lezioneLibera(s2.c, s2.l) : false;
     return (
       <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surf)" }}>
-        <img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 26, height: 26, flex: "none" }} />
-        <span><b>Dall'Academy</b> · {s2.l.titolo} <span className="sub">({s2.c.titolo} · {s2.l.durata}{libera ? " · gratuita" : ""})</span></span>
+        {s2.c.copertina ? <img src={s2.c.copertina} alt="" aria-hidden="true" style={{ width: 64, height: 36, borderRadius: 5, objectFit: "cover", flex: "none" }} />
+          : <img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 26, height: 26, flex: "none" }} />}
+        {s2.l ? <span><b>Dall'Academy</b> · {s2.l.titolo} <span className="sub">({s2.c.titolo} · {s2.l.durata}{libera ? " · gratuita" : ""})</span></span>
+          : <span><b>Dall'Academy</b> · {s2.c.titolo} <span className="sub">({s2.c.livello || "corso"})</span></span>}
         <span className="sp" />
-        <button className="btn ghost mini" onClick={() => { setVista("academy"); setAcCorso(s2.c.id); setAcLezione({ corso: s2.c.id, lezione: s2.l.id }); }}>{libera ? "Guarda" : "🔒 Scopri"}</button>
+        <button className="btn ghost mini" onClick={() => { setVista("academy"); setAcCorso(s2.c.id); setAcLezione(s2.l ? { corso: s2.c.id, lezione: s2.l.id } : null); }}>{s2.l ? (libera ? "Guarda" : "🔒 Scopri") : "Scopri il corso"}</button>
       </div>
     );
   };
@@ -10087,18 +10113,24 @@ Regole:
     const apriCorso = (c, l = null) => { setAcCorso(c.id); setAcLezione(l ? { corso: c.id, lezione: l.id } : null); };
     const primaLibera = (c) => (c.lezioni || []).find((l) => lezioneLibera(c, l));
     // In evidenza: il primo corso con contenuti gratuiti non ancora finito, altrimenti il primo
-    const evid = corsi.find((c) => primaLibera(c) && perc(c) < 100) || corsi[0];
+    const evid = corsi.find((c) => c.copertina && !c.esempio && perc(c) < 100) || corsi.find((c) => primaLibera(c) && perc(c) < 100) || corsi[0];
     const corso = corsi.find((c) => c.id === acCorso);
     const lezione = corso && acLezione && (corso.lezioni || []).find((l) => l.id === acLezione.lezione);
     const scorri = (e, dir) => { const r = e.currentTarget.closest(".nf-riga").querySelector(".nf-scorri"); r.scrollBy({ left: dir * r.clientWidth * 0.9, behavior: "smooth" }); };
-    const Bollo = ({ c }) => (c.gratuito ? <span className="bollo gratis">gratis</span> : c.sbloccato ? <span className="bollo">tuo</span> : <span className="bollo chiuso">🔒 {c.prezzo || "premium"}</span>);
+    const Bollo = ({ c }) => (c.esempio ? <span className="bollo">esempio</span>
+      : c.gratuito ? <span className="bollo gratis">gratis</span> : c.sbloccato ? <span className="bollo">tuo</span>
+      : c.prezzo ? <span className="bollo chiuso">🔒 {c.prezzo}</span> : null);
     const CartaCorso = ({ c, k }) => (
       <div className="nf-card" role="button" tabIndex={0} onClick={() => apriCorso(c)} onKeyDown={(e) => { if (e.key === "Enter") apriCorso(c); }} aria-label={c.titolo}>
-        <div className="cop" style={sfondo(c, k)} />
-        <span className="grande" aria-hidden="true">{(c.titolo || "A")[0]}</span>
+        {c.copertina ? <img className="cop-img" src={c.copertina} alt="" loading="lazy" /> : (
+          <>
+            <div className="cop" style={sfondo(c, k)} />
+            <span className="grande" aria-hidden="true">{(c.titolo || "A")[0]}</span>
+            <img className="logo-n" src={LOGO_ACADEMY} alt="" aria-hidden="true" />
+            <div className="tit">{c.titolo}<small>{c.livello ? `${c.livello} · ` : ""}{nLez(c) ? `${nLez(c)} lezioni` : "corso"}</small></div>
+          </>
+        )}
         <Bollo c={c} />
-        <img className="logo-n" src={LOGO_ACADEMY} alt="" aria-hidden="true" />
-        <div className="tit">{c.titolo}<small>{c.livello ? `${c.livello} · ` : ""}{nLez(c)} lezioni</small></div>
         {nViste(c) > 0 && <div className="avanz"><i style={{ width: `${perc(c)}%` }} /></div>}
       </div>
     );
@@ -10111,51 +10143,71 @@ Regole:
         {viste[l.id] && <div className="avanz"><i style={{ width: "100%" }} /></div>}
       </div>
     );
-    const Riga = ({ titolo, nota, children }) => (
+    const Riga = ({ titolo, nota, apri, children }) => (
       <div className="nf-riga">
-        <h3>{titolo}{nota && <small>{nota}</small>}</h3>
+        <h3>{titolo}{nota && <small>{nota}</small>}{apri && <button className="nf-tutti" onClick={apri}>Vedi tutti ›</button>}</h3>
         <button className="nf-freccia sx" aria-label="Indietro" onClick={(e) => scorri(e, -1)}>‹</button>
         <div className="nf-scorri">{children}</div>
         <button className="nf-freccia dx" aria-label="Avanti" onClick={(e) => scorri(e, 1)}>›</button>
       </div>
     );
     const inCorso = corsi.filter((c) => nViste(c) > 0 && perc(c) < 100);
+    const scheda = ACADEMY_MACRO.some((m2) => m2.v === acFiltro) ? acFiltro : "home";
+    const diMacro = (v) => corsi.filter((c) => (c.macro || "corsi") === v);
     const gratis = corsi.flatMap((c) => (c.lezioni || []).filter((l) => lezioneLibera(c, l) && !c.sbloccato).map((l) => ({ c, l })));
-    const livelli = [...new Set(corsi.map((c) => c.livello).filter(Boolean))];
     const miei = corsi.filter((c) => c.sbloccato);
     return (
       <div className="nf">
-        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima con corsi di esempio.</b> Titoli, prezzi e lezioni sono inventati: al loro posto arriveranno i corsi veri dell'Accademia.</div>}
+        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima.</b> I corsi della sezione Corsi hanno titoli e copertine veri; descrizioni e lezioni, e i contenuti segnati «esempio» nelle altre sezioni, arriveranno dalla piattaforma.</div>}
 
-        {evid && (
+        <nav className="nf-schede" aria-label="Sezioni dell'Academy">
+          {[{ v: "home", l: "Home" }, ...ACADEMY_MACRO].map((m2) => (
+            <button key={m2.v} aria-current={scheda === m2.v ? "page" : undefined} data-on={scheda === m2.v ? "1" : "0"} onClick={() => setAcFiltro(m2.v)}>
+              {m2.l}{m2.v !== "home" && <small>{diMacro(m2.v).length}</small>}
+            </button>
+          ))}
+        </nav>
+
+        {scheda === "home" && evid && (
           <section className="nf-hero">
             <div className="sfondo" style={sfondo(evid, 2)} />
-            <img src={LOGO_ACADEMY} alt="" aria-hidden="true" className="nf-sigillo" />
+            {evid.copertina ? <img src={evid.copertina} alt="" aria-hidden="true" className="nf-hero-cop" /> : <img src={LOGO_ACADEMY} alt="" aria-hidden="true" className="nf-sigillo" />}
             <div>
               <div className="marchio"><img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 22, height: 22 }} />{ac.nome || "Accademia dell'Advertising"}</div>
               <h1>{evid.titolo}</h1>
               <div className="meta">
-                {evid.gratuito ? <span className="tag" data-k="attivo">gratis</span> : <span className="tag" data-k="alta">{evid.prezzo || "premium"}</span>}
-                <span>{evid.livello}</span><span>·</span><span>{nLez(evid)} lezioni</span>
+                {evid.gratuito ? <span className="tag" data-k="attivo">gratis</span> : evid.prezzo ? <span className="tag" data-k="alta">{evid.prezzo}</span> : null}
+                <span>{(ACADEMY_MACRO.find((m2) => m2.v === (evid.macro || "corsi")) || {}).l}</span><span>·</span><span>{evid.livello}</span>
+                {nLez(evid) > 0 && <><span>·</span><span>{nLez(evid)} lezioni</span></>}
                 {nViste(evid) > 0 && <><span>·</span><span>seguite {nViste(evid)}</span></>}
               </div>
               <p>{evid.descrizione}</p>
               <div className="riga" style={{ gap: 10, flexWrap: "wrap" }}>
                 {primaLibera(evid) && <button className="nf-play" onClick={() => apriCorso(evid, primaLibera(evid))}>▶ {nViste(evid) ? "Riprendi" : evid.gratuito ? "Guarda" : "Guarda l'anteprima"}</button>}
                 <button className="nf-info" onClick={() => apriCorso(evid)}>ⓘ Altre informazioni</button>
-                {!evid.gratuito && !evid.sbloccato && <button className="nf-sblocca" onClick={sblocca}>Sblocca · {evid.prezzo || "premium"}</button>}
+                {!evid.gratuito && !evid.sbloccato && <button className="nf-sblocca" onClick={sblocca}>{evid.prezzo ? `Sblocca · ${evid.prezzo}` : "Accedi al corso"}</button>}
               </div>
             </div>
           </section>
         )}
 
-        {inCorso.length > 0 && <Riga titolo="Continua a guardare">{inCorso.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>}
-        {gratis.length > 0 && <Riga titolo="Gratis per te" nota={`${gratis.length} lezioni libere`}>{gratis.map(({ c, l }, k) => <CartaLezione key={l.id} c={c} l={l} k={k} />)}</Riga>}
-        <Riga titolo="Tutti i corsi" nota={`${corsi.length} corsi`}>{corsi.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>
-        {miei.length > 0 && <Riga titolo="I tuoi corsi">{miei.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>}
-        {livelli.length > 1 && livelli.map((lv) => (
-          <Riga key={lv} titolo={`Livello ${lv.toLowerCase()}`}>{corsi.filter((c) => c.livello === lv).map((c, k) => <CartaCorso key={c.id} c={c} k={k + 2} />)}</Riga>
-        ))}
+        {scheda === "home" ? (
+          <>
+            {inCorso.length > 0 && <Riga titolo="Continua a guardare">{inCorso.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>}
+            {miei.length > 0 && <Riga titolo="I tuoi corsi">{miei.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>}
+            {ACADEMY_MACRO.map((m2, mi) => diMacro(m2.v).length > 0 && (
+              <Riga key={m2.v} titolo={m2.l} nota={String(diMacro(m2.v).length)} apri={() => setAcFiltro(m2.v)}>{diMacro(m2.v).map((c, k) => <CartaCorso key={c.id} c={c} k={k + mi} />)}</Riga>
+            ))}
+            {gratis.length > 0 && <Riga titolo="Gratis per te" nota={`${gratis.length} lezioni libere`}>{gratis.map(({ c, l }, k) => <CartaLezione key={l.id} c={c} l={l} k={k} />)}</Riga>}
+          </>
+        ) : (
+          <div style={{ display: "grid", gap: 14 }}>
+            <div><h2 style={{ margin: "0 0 4px", fontSize: 26, letterSpacing: "-.02em" }}>{(ACADEMY_MACRO.find((m2) => m2.v === scheda) || {}).l}</h2>
+              <div className="sub">{(ACADEMY_MACRO.find((m2) => m2.v === scheda) || {}).d}</div></div>
+            <div className="nf-griglia">{diMacro(scheda).map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</div>
+            {!diMacro(scheda).length && <section className="card"><div className="empty"><b>Ancora niente qui</b>I contenuti di questa sezione arriveranno dalla piattaforma.</div></section>}
+          </div>
+        )}
 
         <section className="card">
           <header><h2>Impostazioni dell'Academy</h2><span className="sp eyebrow">collegamento con la piattaforma</span>
@@ -10203,6 +10255,16 @@ Regole:
                   )}
                 </div>
               ) : (
+                corso.copertina ? (
+                <div style={{ position: "relative" }}>
+                  <img src={corso.copertina} alt={corso.titolo} style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", display: "block" }} />
+                  <button className="nf-chiudi" aria-label="Chiudi" onClick={() => setAcCorso("")}>×</button>
+                  <div className="riga" style={{ gap: 10, flexWrap: "wrap", position: "absolute", left: 24, bottom: 20 }}>
+                    {primaLibera(corso) && <button className="nf-play" onClick={() => setAcLezione({ corso: corso.id, lezione: primaLibera(corso).id })}>▶ Guarda</button>}
+                    {!corso.gratuito && !corso.sbloccato && <button className="nf-sblocca" onClick={sblocca}>{corso.prezzo ? `Sblocca · ${corso.prezzo}` : "Accedi al corso"}</button>}
+                  </div>
+                </div>
+                ) : (
                 <div className="nf-mtesta">
                   <div className="sfondo" style={sfondo(corso, 0)} />
                   <button className="nf-chiudi" aria-label="Chiudi" onClick={() => setAcCorso("")}>×</button>
@@ -10211,15 +10273,18 @@ Regole:
                     <h2>{corso.titolo}</h2>
                     <div className="riga" style={{ gap: 10, flexWrap: "wrap" }}>
                       {primaLibera(corso) && <button className="nf-play" onClick={() => setAcLezione({ corso: corso.id, lezione: primaLibera(corso).id })}>▶ {corso.gratuito || corso.sbloccato ? "Guarda" : "Guarda l'anteprima"}</button>}
-                      {!corso.gratuito && !corso.sbloccato && <button className="nf-sblocca" onClick={sblocca}>Sblocca · {corso.prezzo || "premium"}</button>}
+                      {!corso.gratuito && !corso.sbloccato && <button className="nf-sblocca" onClick={sblocca}>{corso.prezzo ? `Sblocca · ${corso.prezzo}` : "Accedi al corso"}</button>}
                     </div>
                   </div>
                 </div>
+                )
               )}
               <div className="nf-corpo">
+                {corso.copertina && !lezione && <h2 style={{ margin: "14px 0 0", fontSize: 24, letterSpacing: "-.02em" }}>{corso.titolo}</h2>}
                 <div className="nf-dati">
-                  {corso.gratuito ? <span className="tag" data-k="attivo">gratis</span> : corso.sbloccato ? <span className="tag" data-k="attivo">sbloccato</span> : <span className="tag" data-k="alta">🔒 {corso.prezzo || "premium"}</span>}
-                  <span>{corso.livello}</span><span>·</span><span>{nLez(corso)} lezioni</span><span>·</span><span>seguite {nViste(corso)} di {nLez(corso)}</span>
+                  {corso.esempio ? <span className="tag">esempio</span> : corso.gratuito ? <span className="tag" data-k="attivo">gratis</span> : corso.sbloccato ? <span className="tag" data-k="attivo">sbloccato</span> : corso.prezzo ? <span className="tag" data-k="alta">🔒 {corso.prezzo}</span> : null}
+                  <span>{(ACADEMY_MACRO.find((m2) => m2.v === (corso.macro || "corsi")) || {}).l}</span><span>·</span><span>{corso.livello}</span>
+                  {nLez(corso) > 0 && <><span>·</span><span>{nLez(corso)} lezioni</span><span>·</span><span>seguite {nViste(corso)} di {nLez(corso)}</span></>}
                   {lezione && lezioneLibera(corso, lezione) && (
                     <label className="riga" style={{ gap: 6, marginLeft: "auto" }}><input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!viste[lezione.id]} onChange={(e) => segna(lezione.id, e.target.checked)} /> lezione seguita</label>
                   )}
@@ -10227,6 +10292,13 @@ Regole:
                 <div style={{ color: "var(--ink2)", lineHeight: 1.55 }}>{corso.descrizione}</div>
                 <div>
                   <h3 style={{ margin: "6px 0 8px", fontSize: 18 }}>Lezioni</h3>
+                  {!nLez(corso) && (
+                    <div className="meta-msg" style={{ borderRadius: 8, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <span>Le lezioni di questo corso compariranno qui quando colleghiamo la piattaforma dell'Accademia.</span>
+                      <span className="sp" />
+                      {urlOk(ac.url) && <a className="btn ghost mini" href={ac.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Apri sulla piattaforma ↗</a>}
+                    </div>
+                  )}
                   {(corso.lezioni || []).map((l, k) => {
                     const libera = lezioneLibera(corso, l);
                     return (
