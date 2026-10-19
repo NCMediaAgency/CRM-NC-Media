@@ -693,7 +693,7 @@ const normalizza = (d) => ({
   profili: d.profili || [],
   aiKey: d.aiKey || "",
   integrazioni: d.integrazioni || [],
-  academy: { nome: "Accademia dell'Advertising", url: "", incorpora: false, lezioni: [], ...(d.academy || {}) },
+  academy: { nome: "Accademia dell'Advertising", url: "", urlAcquisto: "", incorpora: false, lezioni: [], corsi: [], viste: {}, ...(d.academy || {}) },
   vendite: (d.vendite || []).map((r) => {
     if (r.valoreContratto !== undefined) return r;
     const { valore = 0, ...resto } = r;           /* prima esisteva un solo importo */
@@ -1718,11 +1718,11 @@ const GUIDA = [
   },
   {
     id: "academy", t: "Academy",
-    intro: "La sezione Academy, con il cappello di laurea nel menu, collega il CRM alla piattaforma di corsi Accademia dell'Advertising.",
+    intro: "La sezione Academy, con il cappello di laurea nel menu, porta nel CRM i corsi dell'Accademia dell'Advertising: lezioni gratuite da guardare subito, corsi a pagamento da sbloccare.",
     blocchi: [
-      { h: "Collegarla", p: "Incolla l'indirizzo della piattaforma (la pagina di accesso o l'area corsi, deve iniziare con https://): compare il pulsante Apri l'Accademia, che la apre in una nuova scheda con il tuo accesso di sempre." },
-      { h: "Vederla dentro il CRM", p: "Con «mostrala qui dentro» la piattaforma compare sotto, nella pagina del CRM. Funziona solo se la piattaforma lo permette: molte, per sicurezza, si rifiutano di essere mostrate dentro altri siti e il riquadro resta bianco. In quel caso usa il pulsante." },
-      { h: "Lezioni in evidenza", p: "Aggiungi i link diretti alle lezioni che ti servono più spesso, con un argomento per raggrupparle (Meta Ads, copy, funnel…). La casella segna quelle già seguite. Valgono per tutto lo spazio di lavoro." },
+      { h: "Il catalogo", p: "Ogni corso ha la sua scheda con livello, descrizione, numero di lezioni e avanzamento. «Gratis» vuol dire che è libero; il lucchetto con il prezzo che va sbloccato; alcuni corsi a pagamento hanno una lezione di anteprima gratuita. I filtri mostrano tutti i corsi, solo quelli gratuiti o solo i tuoi. Finché i corsi veri non sono collegati vedi un catalogo di esempio, segnalato in cima." },
+      { h: "Guardare e sbloccare", p: "Una lezione libera si apre con il suo video e la casella per segnarla come seguita. Una lezione bloccata mostra il pulsante per sbloccare il corso, che porta alla pagina di acquisto dell'Accademia indicata in fondo alla sezione." },
+      { h: "Suggerimenti nel CRM", p: "In Advertising e in Winner ads compare la lezione dell'Academy più utile per quella sezione, con il pulsante per guardarla o scoprirla." },
     ],
   },
   {
@@ -3754,6 +3754,39 @@ const NUMERICI = {
 
 /* onEsci e utente arrivano dalla schermata di accesso (App.jsx); senza onEsci il tasto non compare */
 /* meta: le funzioni per Meta Ads (src/lib/metaApi.js); senza, la sezione Meta spiega che serve la versione online */
+/* Catalogo di esempio dell'Academy: si vede finché non ci sono i corsi veri (data.academy.corsi).
+   sezione = dove il CRM suggerisce la lezione (advertising, vendite, funnel, winner). */
+const ACADEMY_ESEMPIO = [
+  { id: "es-meta", titolo: "Fondamenti di Meta Ads", descrizione: "Struttura delle campagne, pixel e lettura dei dati: le basi per non bruciare budget.", livello: "Base", gratuito: true, colore: "#8E2039",
+    lezioni: [
+      { id: "es-meta-1", titolo: "Come strutturare una campagna lead", durata: "12 min", sezione: "advertising" },
+      { id: "es-meta-2", titolo: "Pixel e conversioni senza errori", durata: "9 min", sezione: "advertising" },
+      { id: "es-meta-3", titolo: "Pubblici freddi e retargeting", durata: "14 min", sezione: "winner" },
+      { id: "es-meta-4", titolo: "Leggere i numeri: CPL, CTR, frequenza", durata: "11 min", sezione: "advertising" },
+    ] },
+  { id: "es-funnel", titolo: "Funnel Lead Generation", descrizione: "Dal primo clic all'appuntamento: il funnel che porta clienti, non solo contatti.", livello: "Intermedio", prezzo: "197 €", colore: "#5C1B2C",
+    lezioni: [
+      { id: "es-funnel-1", titolo: "Perché la maggior parte dei funnel perde lead", durata: "8 min", gratuita: true, sezione: "funnel" },
+      { id: "es-funnel-2", titolo: "La pagina che converte", durata: "16 min" },
+      { id: "es-funnel-3", titolo: "Qualificare i lead prima della call", durata: "13 min", sezione: "vendite" },
+      { id: "es-funnel-4", titolo: "Show up: far presentare chi prenota", durata: "10 min", sezione: "vendite" },
+      { id: "es-funnel-5", titolo: "Misurare il funnel nel CRM", durata: "12 min" },
+    ] },
+  { id: "es-creativi", titolo: "Creatività che vendono", descrizione: "Hook, angoli e formati: come trovare le winner ads e come rifarle.", livello: "Intermedio", prezzo: "147 €", colore: "#B4566B",
+    lezioni: [
+      { id: "es-creativi-1", titolo: "Anatomia di una winner ad", durata: "11 min", gratuita: true, sezione: "winner" },
+      { id: "es-creativi-2", titolo: "Dieci hook che fermano lo scroll", durata: "15 min" },
+      { id: "es-creativi-3", titolo: "Testare gli angoli senza sprecare budget", durata: "13 min", sezione: "winner" },
+      { id: "es-creativi-4", titolo: "Rifare una creatività stanca", durata: "9 min" },
+    ] },
+  { id: "es-scala", titolo: "Scalare senza bruciare budget", descrizione: "Quando e come aumentare la spesa mantenendo il costo per cliente.", livello: "Avanzato", prezzo: "297 €", colore: "#3E1720",
+    lezioni: [
+      { id: "es-scala-1", titolo: "Il semaforo: spegni, aspetta, scala", durata: "10 min", sezione: "advertising" },
+      { id: "es-scala-2", titolo: "Scalare in verticale e in orizzontale", durata: "17 min" },
+      { id: "es-scala-3", titolo: "Budget e stagionalità", durata: "12 min" },
+    ] },
+];
+
 export default function CRM({ onEsci, utente = "", meta = null, telegram = null, integrazioni = null, analisi = null, spazio = null } = {}) {
   const [data, setData] = useState(null);
   /* Aspetto: scuro (predefinito) o chiaro, scelto in Impostazioni e ricordato da questo browser */
@@ -4057,6 +4090,10 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   /* ---------- Winner ads: numeri degli annunci e analisi salvati dal connettore per Claude ---------- */
   const [winDati, setWinDati] = useState({ chiave: "", ads: [], testi: [], carico: false, errore: "" });
   const [winFoto, setWinFoto] = useState("");
+  /* Academy: filtro del catalogo, corso aperto, lezione aperta */
+  const [acFiltro, setAcFiltro] = useState("tutti");
+  const [acCorso, setAcCorso] = useState("");
+  const [acLezione, setAcLezione] = useState(null);
   const [winGiro, setWinGiro] = useState(0);
   const winIds = data && cliAtt ? (consolidato
     ? [cliAtt, ...(function sotto(id) { return data.clienti.filter((z) => z.padreId === id && z.archiviato !== "si").flatMap((z) => [z.id, ...sotto(z.id)]); })(cliAtt)]
@@ -9949,98 +9986,176 @@ Regole:
     return <div key={i} style={/^\s*([-*•]|\d+[.)])\s/.test(riga) ? { paddingLeft: 14 } : undefined}>{grassetto(riga)}</div>;
   });
   /* ---------- Academy: la piattaforma di corsi collegata al CRM ---------- */
+  const academyCorsi = () => ((data.academy.corsi || []).length ? data.academy.corsi : ACADEMY_ESEMPIO);
+  const lezioneLibera = (c, l) => !!(c.gratuito || c.sbloccato || l.gratuita);
+  /* Lezioni da suggerire in una sezione del CRM (prima quelle libere) */
+  const academyPer = (sez) => academyCorsi().flatMap((c) => (c.lezioni || []).filter((l) => l.sezione === sez).map((l) => ({ c, l })))
+    .sort((a, b) => lezioneLibera(b.c, b.l) - lezioneLibera(a.c, a.l));
+  const SuggerimentoAcademy = ({ sez }) => {
+    const s2 = academyPer(sez)[0];
+    if (!s2) return null;
+    const libera = lezioneLibera(s2.c, s2.l);
+    return (
+      <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surf)" }}>
+        <GraduationCap size={18} strokeWidth={1.9} aria-hidden="true" style={{ color: "var(--acc-t)", flex: "none" }} />
+        <span><b>Dall'Academy</b> · {s2.l.titolo} <span className="sub">({s2.c.titolo} · {s2.l.durata}{libera ? " · gratuita" : ""})</span></span>
+        <span className="sp" />
+        <button className="btn ghost mini" onClick={() => { setVista("academy"); setAcCorso(s2.c.id); setAcLezione({ corso: s2.c.id, lezione: s2.l.id }); }}>{libera ? "Guarda" : "🔒 Scopri"}</button>
+      </div>
+    );
+  };
   const SezioneAcademy = () => {
     const ac = data.academy;
     const cambia = (campi) => setData((d) => ({ ...d, academy: { ...d.academy, ...campi } }));
     const urlOk = (u) => /^https:\/\//i.test(String(u || "").trim());
-    const lezioni = ac.lezioni || [];
-    const argomenti = [...new Set(lezioni.map((l) => l.argomento).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
-    const aggiungi = (e) => {
-      e.preventDefault();
-      const f = new FormData(e.currentTarget);
-      const titolo = String(f.get("titolo") || "").trim(), url = String(f.get("url") || "").trim();
-      if (!titolo || !urlOk(url)) return;
-      cambia({ lezioni: [...lezioni, { id: uid(), titolo, url, argomento: String(f.get("argomento") || "").trim(), fatta: false }] });
-      e.currentTarget.reset();
-    };
+    const esempio = !(ac.corsi || []).length;
+    const corsi = academyCorsi();
+    const viste = ac.viste || {};
+    const segna = (id, v) => cambia({ viste: { ...viste, [id]: v } });
+    const nLez = (c) => (c.lezioni || []).length;
+    const nViste = (c) => (c.lezioni || []).filter((l) => viste[l.id]).length;
+    const sblocca = () => (urlOk(ac.urlAcquisto) ? window.open(ac.urlAcquisto, "_blank", "noopener") : window.alert("Qui si aprirà la pagina di acquisto dell'Accademia: incolla il suo indirizzo nelle impostazioni dell'Academy, in fondo alla pagina."));
+    const filtrati = corsi.filter((c) => acFiltro === "tutti" || (acFiltro === "gratis" ? c.gratuito || (c.lezioni || []).some((l) => l.gratuita) : c.gratuito || c.sbloccato));
+    const corso = corsi.find((c) => c.id === acCorso);
+    const lez = acLezione && corsi.find((c) => c.id === acLezione.corso);
+    const lezione = lez && (lez.lezioni || []).find((l) => l.id === acLezione.lezione);
+    const totLez = corsi.reduce((x, c) => x + nLez(c), 0), totViste = corsi.reduce((x, c) => x + nViste(c), 0);
+    const libere = corsi.reduce((x, c) => x + (c.lezioni || []).filter((l) => lezioneLibera(c, l)).length, 0);
+    const Copertina = ({ c, alta = 110 }) => (
+      <div style={{ height: alta, borderRadius: 10, background: `linear-gradient(135deg, ${c.colore || "#8E2039"}, #0C0C0E)`, position: "relative", display: "flex", alignItems: "flex-end", padding: 12, color: "#fff" }}>
+        <GraduationCap size={34} strokeWidth={1.4} aria-hidden="true" style={{ position: "absolute", right: 12, top: 12, opacity: 0.35 }} />
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", opacity: 0.85 }}>{c.livello || "Corso"}</span>
+      </div>
+    );
+    const Badge = ({ c }) => (c.gratuito ? <span className="tag" data-k="attivo">gratis</span>
+      : c.sbloccato ? <span className="tag" data-k="attivo">sbloccato</span>
+      : <span className="tag" data-k="alta">🔒 {c.prezzo || "a pagamento"}</span>);
     return (
       <>
+        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima con corsi di esempio.</b> Titoli, prezzi e lezioni sono inventati per farti vedere come funziona: al loro posto arriveranno i corsi veri dell'Accademia.</div>}
+
         <section className="card">
-          <header>
-            <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 8, background: "var(--acc)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "none" }}><GraduationCap size={19} strokeWidth={1.9} /></span>
-            <h2>{ac.nome || "Academy"}</h2>
-            <span className="sp" />
-            {urlOk(ac.url) && <a className="btn" href={ac.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Apri l'Accademia ↗</a>}
-          </header>
+          <div style={{ display: "flex", gap: 18, padding: 20, flexWrap: "wrap", alignItems: "center", background: "linear-gradient(120deg, var(--acc-s), transparent 60%)" }}>
+            <span aria-hidden="true" style={{ width: 54, height: 54, borderRadius: 12, background: "var(--acc)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "none" }}><GraduationCap size={28} strokeWidth={1.8} /></span>
+            <div style={{ flex: "1 1 260px" }}>
+              <div style={{ fontSize: 20, fontWeight: 650, letterSpacing: "-.02em" }}>{ac.nome || "Accademia dell'Advertising"}</div>
+              <div className="sub">{corsi.length} corsi · {totLez} lezioni · {libere} gratuite · seguite {totViste} di {totLez}</div>
+              <div className="barra" style={{ maxWidth: 360 }}><i style={{ width: `${totLez ? (totViste / totLez) * 100 : 0}%` }} /></div>
+            </div>
+            <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
+              {urlOk(ac.url) && <a className="btn ghost" href={ac.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Apri la piattaforma ↗</a>}
+              <button className="btn" onClick={sblocca}>Sblocca l'accesso completo</button>
+            </div>
+          </div>
+        </section>
+
+        {lezione && (
+          <section className="card">
+            <header>
+              <h2>{lezione.titolo}</h2>
+              <span className="sp eyebrow">{lez.titolo} · {lezione.durata}</span>
+              <button className="btn ghost mini" onClick={() => setAcLezione(null)}>Chiudi</button>
+            </header>
+            {lezioneLibera(lez, lezione) ? (
+              <>
+                {/^https:\/\//.test(lezione.video || "") ? (
+                  <iframe title={lezione.titolo} src={lezione.video} style={{ width: "100%", aspectRatio: "16 / 9", border: 0, display: "block" }} allow="fullscreen; autoplay; encrypted-media; picture-in-picture" />
+                ) : (
+                  <div style={{ aspectRatio: "16 / 9", maxHeight: 420, width: "100%", background: `linear-gradient(135deg, ${lez.colore || "#8E2039"}, #0C0C0E)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexDirection: "column", gap: 10 }}>
+                    <span style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,.18)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>▶</span>
+                    <span className="sub" style={{ color: "rgba(255,255,255,.8)" }}>Qui il video della lezione{esempio ? " (esempio)" : ""}</span>
+                  </div>
+                )}
+                <div className="riga" style={{ gap: 10, padding: "12px 18px" }}>
+                  <label className="riga" style={{ gap: 6 }}><input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!viste[lezione.id]} onChange={(e) => segna(lezione.id, e.target.checked)} /> lezione seguita</label>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: "34px 18px", display: "grid", gap: 10, justifyItems: "center", textAlign: "center" }}>
+                <div style={{ fontSize: 34 }}>🔒</div>
+                <b>Questa lezione fa parte di «{lez.titolo}»</b>
+                <div className="sub" style={{ maxWidth: 460 }}>{lez.descrizione}</div>
+                <button className="btn" onClick={sblocca}>Sblocca il corso · {lez.prezzo || "a pagamento"}</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {corso ? (
+          <section className="card">
+            <header>
+              <button className="btn ghost mini" onClick={() => { setAcCorso(""); setAcLezione(null); }}>‹ Tutti i corsi</button>
+              <h2>{corso.titolo}</h2>
+              <span className="sp" />
+              <Badge c={corso} />
+            </header>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 280px) 1fr", gap: 18, padding: 18 }}>
+              <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
+                <Copertina c={corso} alta={150} />
+                <div className="sub">{corso.descrizione}</div>
+                <div className="sub">{nLez(corso)} lezioni · seguite {nViste(corso)}</div>
+                <div className="barra"><i style={{ width: `${nLez(corso) ? (nViste(corso) / nLez(corso)) * 100 : 0}%` }} /></div>
+                {!corso.gratuito && !corso.sbloccato && <button className="btn" onClick={sblocca}>Sblocca il corso · {corso.prezzo || "a pagamento"}</button>}
+              </div>
+              <div>
+                {(corso.lezioni || []).map((l, k) => {
+                  const libera = lezioneLibera(corso, l);
+                  return (
+                    <button key={l.id} className="riga" onClick={() => setAcLezione({ corso: corso.id, lezione: l.id })}
+                      style={{ width: "100%", gap: 12, padding: "11px 6px", borderBottom: "1px solid var(--line)", textAlign: "left" }}>
+                      <span className="mono sub" style={{ width: 22 }}>{String(k + 1).padStart(2, "0")}</span>
+                      <span style={{ width: 22, textAlign: "center" }}>{viste[l.id] ? "✓" : libera ? "▶" : "🔒"}</span>
+                      <span style={{ flex: 1, opacity: libera ? 1 : 0.65 }}>{l.titolo}{l.gratuita && !corso.gratuito ? <span className="tag" data-k="attivo" style={{ marginLeft: 8 }}>anteprima gratis</span> : null}</span>
+                      <span className="sub mono">{l.durata}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <>
+            <div className="riga" style={{ gap: 8 }}>
+              {[["tutti", "Tutti i corsi"], ["gratis", "Gratuiti"], ["miei", "I miei corsi"]].map(([v, l]) => (
+                <button key={v} className={acFiltro === v ? "btn mini" : "btn ghost mini"} onClick={() => setAcFiltro(v)}>{l}</button>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 14 }}>
+              {filtrati.map((c) => (
+                <div key={c.id} className="card clic" role="button" tabIndex={0} onClick={() => setAcCorso(c.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setAcCorso(c.id); } }}
+                  style={{ textAlign: "left", padding: 12, display: "grid", gap: 10, alignContent: "start", cursor: "pointer" }}>
+                  <Copertina c={c} />
+                  <div className="riga" style={{ gap: 8, justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <b style={{ fontSize: 15 }}>{c.titolo}</b>
+                    <Badge c={c} />
+                  </div>
+                  <div className="sub">{c.descrizione}</div>
+                  <div className="sub mono">{nLez(c)} lezioni{(c.lezioni || []).some((l) => l.gratuita) && !c.gratuito ? " · anteprima gratis" : ""}</div>
+                  <div className="barra"><i style={{ width: `${nLez(c) ? (nViste(c) / nLez(c)) * 100 : 0}%` }} /></div>
+                </div>
+              ))}
+              {!filtrati.length && <section className="card"><div className="empty"><b>Nessun corso qui</b>{acFiltro === "miei" ? "Quando sblocchi un corso compare in questa lista." : "Prova un altro filtro."}</div></section>}
+            </div>
+          </>
+        )}
+
+        <section className="card">
+          <header><h2>Impostazioni dell'Academy</h2><span className="sp eyebrow">collegamento con la piattaforma</span></header>
           <div className="riga" style={{ gap: 14, flexWrap: "wrap", padding: "14px 18px", alignItems: "flex-end" }}>
             <label style={{ display: "grid", gap: 4, flex: "1 1 220px" }}>
               <span className="eyebrow">Nome</span>
               <input defaultValue={ac.nome} onBlur={(e) => cambia({ nome: e.target.value.trim() || "Accademia dell'Advertising" })} />
             </label>
-            <label style={{ display: "grid", gap: 4, flex: "2 1 320px" }}>
+            <label style={{ display: "grid", gap: 4, flex: "2 1 280px" }}>
               <span className="eyebrow">Indirizzo della piattaforma</span>
-              <input defaultValue={ac.url} placeholder="https://… (pagina di accesso o area corsi)" onBlur={(e) => cambia({ url: e.target.value.trim() })} />
+              <input defaultValue={ac.url} placeholder="https://… (area corsi)" onBlur={(e) => cambia({ url: e.target.value.trim() })} />
             </label>
-            {urlOk(ac.url) && (
-              <label className="riga" style={{ gap: 6, paddingBottom: 8 }}>
-                <input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!ac.incorpora} onChange={(e) => cambia({ incorpora: e.target.checked })} /> mostrala qui dentro
-              </label>
-            )}
+            <label style={{ display: "grid", gap: 4, flex: "2 1 280px" }}>
+              <span className="eyebrow">Pagina di acquisto</span>
+              <input defaultValue={ac.urlAcquisto || ""} placeholder="https://… (dove si paga l'accesso)" onBlur={(e) => cambia({ urlAcquisto: e.target.value.trim() })} />
+            </label>
           </div>
-          {ac.url && !urlOk(ac.url) && <div className="meta-msg" data-tipo="errore">L'indirizzo deve iniziare con https://</div>}
-          {!ac.url && <div className="meta-msg sub">Incolla l'indirizzo dell'Accademia dell'Advertising: da qui la apri con un clic, e puoi tenere a portata di mano le lezioni che ti servono di più.</div>}
-        </section>
-
-        {urlOk(ac.url) && ac.incorpora && (
-          <section className="card">
-            <div className="meta-msg sub">Se qui sotto resta bianco o chiede di accedere senza riuscirci, la piattaforma non permette di essere mostrata dentro altri siti: usa «Apri l'Accademia».</div>
-            <iframe title={ac.nome || "Academy"} src={ac.url} style={{ width: "100%", height: "75vh", border: 0, display: "block", background: "#fff", borderRadius: "0 0 10px 10px" }}
-              allow="fullscreen; autoplay; encrypted-media; picture-in-picture" referrerPolicy="strict-origin-when-cross-origin" />
-          </section>
-        )}
-
-        <section className="card">
-          <header>
-            <h2>Lezioni in evidenza</h2>
-            <span className="sp eyebrow">{lezioni.length ? `${lezioni.filter((l) => l.fatta).length} di ${lezioni.length} seguite` : "i link diretti alle lezioni che usi più spesso"}</span>
-          </header>
-          {(argomenti.length ? argomenti : [""]).map((arg) => {
-            const l = lezioni.filter((x) => (x.argomento || "") === arg || (!argomenti.length));
-            if (!l.length) return null;
-            return (
-              <div key={arg || "tutte"}>
-                {arg && <div className="eyebrow" style={{ padding: "12px 18px 0" }}>{arg}</div>}
-                {l.map((x) => (
-                  <div key={x.id} className="riga" style={{ gap: 10, padding: "9px 18px", borderBottom: "1px solid var(--line)" }}>
-                    <input type="checkbox" aria-label="Seguita" style={{ width: 16, height: 16, accentColor: "var(--acc)", flex: "none" }} checked={!!x.fatta}
-                      onChange={(e) => cambia({ lezioni: lezioni.map((y) => (y.id === x.id ? { ...y, fatta: e.target.checked } : y)) })} />
-                    <a href={x.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: "var(--ink)", textDecoration: x.fatta ? "line-through" : "none", opacity: x.fatta ? 0.6 : 1 }}>{x.titolo} ↗</a>
-                    <button className="btn danger mini" onClick={() => cambia({ lezioni: lezioni.filter((y) => y.id !== x.id) })}>Togli</button>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-          {lezioni.length > 0 && argomenti.length > 0 && lezioni.some((x) => !x.argomento) && (
-            <div>
-              <div className="eyebrow" style={{ padding: "12px 18px 0" }}>Altro</div>
-              {lezioni.filter((x) => !x.argomento).map((x) => (
-                <div key={x.id} className="riga" style={{ gap: 10, padding: "9px 18px", borderBottom: "1px solid var(--line)" }}>
-                  <input type="checkbox" aria-label="Seguita" style={{ width: 16, height: 16, accentColor: "var(--acc)", flex: "none" }} checked={!!x.fatta}
-                    onChange={(e) => cambia({ lezioni: lezioni.map((y) => (y.id === x.id ? { ...y, fatta: e.target.checked } : y)) })} />
-                  <a href={x.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: "var(--ink)", textDecoration: x.fatta ? "line-through" : "none", opacity: x.fatta ? 0.6 : 1 }}>{x.titolo} ↗</a>
-                  <button className="btn danger mini" onClick={() => cambia({ lezioni: lezioni.filter((y) => y.id !== x.id) })}>Togli</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <form className="riga" onSubmit={aggiungi} style={{ gap: 8, flexWrap: "wrap", padding: "12px 18px" }}>
-            <input name="titolo" placeholder="Titolo della lezione" aria-label="Titolo della lezione" style={{ flex: "2 1 200px" }} />
-            <input name="url" placeholder="https://… link alla lezione" aria-label="Link alla lezione" style={{ flex: "3 1 260px" }} />
-            <input name="argomento" placeholder="Argomento (facoltativo)" aria-label="Argomento" list="academy-argomenti" style={{ flex: "1 1 160px" }} />
-            <datalist id="academy-argomenti">{argomenti.map((a2) => <option key={a2} value={a2} />)}</datalist>
-            <button className="btn">Aggiungi</button>
-          </form>
+          {[ac.url, ac.urlAcquisto].some((u) => u && !urlOk(u)) && <div className="meta-msg" data-tipo="errore">Gli indirizzi devono iniziare con https://</div>}
         </section>
       </>
     );
@@ -10076,6 +10191,7 @@ Regole:
     const nomeCliAd = (id) => (winIds.length > 1 ? nomeCli(id) : "");
     return (
       <>
+        {SuggerimentoAcademy({ sez: "winner" })}
         <section className="card">
           <header>
             <h2>Benchmark</h2>
@@ -10396,6 +10512,7 @@ Regole:
             <div className="kpi"><IcoKpi /><div className="eyebrow">Conversioni</div><div className="v">{int(TT.cv)}</div><div className="s">CPA medio {TT.cv ? eur(TT.cpa) : "—"}</div></div>
             <div className="kpi"><IcoKpi /><div className="eyebrow">Incassato</div><div className="v">{eur0(ST.incassato)}</div><div className="s">contratti {eur0(ST.contratto)}{TT.sp && TT.rc ? ` · ROAS ${fmt(TT.roas)}` : ""}</div></div>
           </div>
+          {SuggerimentoAcademy({ sez: "advertising" })}
           <section className="card">
             <header><h2>Advertising per cliente</h2><span className="sp eyebrow">clienti principali con i loro sottoclienti · ▸ apre i sottoclienti</span></header>
             <div className="wrap"><table className="tbl">
