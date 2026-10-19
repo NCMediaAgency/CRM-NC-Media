@@ -3840,8 +3840,8 @@ const ACADEMY_MACRO = [
   { v: "guide", l: "Guide Strategiche", d: "Metodi e checklist da applicare subito ai clienti." },
   { v: "live", l: "Eventi Live", d: "Dirette, masterclass e sessioni di domande e risposte." },
 ];
-/* Catalogo finché la piattaforma non è collegata (data.academy.corsi vuoto): i corsi delle sezioni
-   Corsi e Formazione Specifica hanno titolo e copertina veri; descrizioni, lezioni e le altre sezioni sono esempi.
+/* Catalogo finché la piattaforma non è collegata (data.academy.corsi vuoto): i contenuti di Corsi,
+   Formazione Specifica e Guide Strategiche hanno titolo e copertina veri; descrizioni, lezioni e le altre sezioni sono esempi.
    sezione = dove il CRM suggerisce il corso o la lezione (advertising, winner, funnel, vendite). */
 const ACADEMY_ESEMPIO = [
   { id: "c-fb-principianti", macro: "corsi", titolo: "Facebook Ads per Principianti", copertina: "/academy/facebook-ads-principianti.webp", colore: "#3B5A9A", livello: "Base", sezione: "advertising",
@@ -3884,12 +3884,16 @@ const ACADEMY_ESEMPIO = [
     descrizione: "Come funziona il budget a livello di campagna (Advantage+) e quando conviene rispetto al budget per gruppo di inserzioni.", lezioni: [] },
   { id: "f-presentazione-creativita", macro: "formazione", titolo: "Schema di Presentazione Creatività", copertina: "/academy/schema-presentazione-creativita.webp", colore: "#D9A52A", livello: "Base", sezione: "winner",
     descrizione: "Lo schema per preparare e presentare le creatività al cliente: idea, angolo, testo e formato in un unico documento.", lezioni: [] },
-  { id: "es-lancio", macro: "guide", esempio: true, titolo: "Checklist di lancio campagna", colore: "#3E1720", livello: "Base", gratuito: true,
-    descrizione: "Esempio di guida strategica: i controlli da fare prima di accendere una campagna.",
-    lezioni: [{ id: "es-lancio-1", titolo: "Prima del lancio", durata: "7 min" }, { id: "es-lancio-2", titolo: "Le prime 72 ore", durata: "8 min", sezione: "advertising" }] },
-  { id: "es-bench", macro: "guide", esempio: true, titolo: "Benchmark per settore", colore: "#6E1E31", livello: "Intermedio", prezzo: "47 €",
-    descrizione: "Esempio di guida strategica: costi per lead, appuntamento e cliente di riferimento per settore.",
-    lezioni: [{ id: "es-bench-1", titolo: "Come leggere i benchmark", durata: "10 min", gratuita: true, sezione: "winner" }] },
+  { id: "g-libro-schemi", macro: "guide", titolo: "Libro degli Schemi: Facebook Edition", copertina: "/academy/libro-degli-schemi-facebook.webp", colore: "#2E5E54", livello: "Intermedio", sezione: "advertising",
+    descrizione: "Gli schemi di campagna pronti da usare su Facebook e Instagram, con quando e come applicarli.", lezioni: [] },
+  { id: "g-regole", macro: "guide", titolo: "Regole del Gioco", copertina: "/academy/regole-del-gioco.webp", colore: "#2FA35A", livello: "Base", sezione: "advertising",
+    descrizione: "Le regole da conoscere prima di investire: politiche pubblicitarie, struttura dell'account e buone pratiche.", lezioni: [] },
+  { id: "g-tattiche", macro: "guide", titolo: "Tattiche di Gioco", copertina: "/academy/tattiche-di-gioco.webp", colore: "#D99A2B", livello: "Intermedio", sezione: "winner",
+    descrizione: "Le mosse da fare in base ai numeri: cosa spegnere, cosa duplicare e cosa scalare.", lezioni: [] },
+  { id: "g-strutture-creativita", macro: "guide", titolo: "Strutture di Creatività", copertina: "/academy/strutture-di-creativita.webp", colore: "#3A1E24", livello: "Intermedio", sezione: "winner",
+    descrizione: "Le strutture ricorrenti delle creatività che funzionano, da riusare per nuove inserzioni.", lezioni: [] },
+  { id: "g-giornale-creativita", macro: "guide", titolo: "Giornale delle Creatività", copertina: "/academy/giornale-delle-creativita.webp", colore: "#7B5BC8", livello: "Base", sezione: "winner",
+    descrizione: "Come tenere traccia delle creatività provate, dei risultati e delle idee da testare.", lezioni: [] },
   { id: "es-live-analisi", macro: "live", esempio: true, titolo: "Live mensile: analisi degli account", colore: "#8E2039", livello: "Tutti",
     descrizione: "Esempio di evento live: analisi in diretta degli account degli iscritti.",
     lezioni: [{ id: "es-live-1", titolo: "Registrazione di ottobre", durata: "62 min" }] },
@@ -10203,7 +10207,7 @@ Regole:
     const miei = corsi.filter((c) => c.sbloccato);
     return (
       <div className="nf">
-        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima.</b> I corsi delle sezioni Corsi e Formazione Specifica hanno titoli e copertine veri; descrizioni e lezioni, e i contenuti segnati «esempio» nelle altre sezioni, arriveranno dalla piattaforma.</div>}
+        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima.</b> Corsi, Formazione Specifica e Guide Strategiche hanno titoli e copertine veri; descrizioni e lezioni, e i contenuti segnati «esempio» nelle altre sezioni, arriveranno dalla piattaforma.</div>}
 
         <nav className="nf-schede" aria-label="Sezioni dell'Academy">
           {[{ v: "home", l: "Home" }, ...ACADEMY_MACRO].map((m2) => (
