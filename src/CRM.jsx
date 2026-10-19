@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Building2, Megaphone, CalendarRange, PieChart, PhoneCall,
   Handshake, Calculator, Filter, NotebookPen, FolderOpen, Sparkles, ListChecks,
   Zap, Upload, DownloadCloud, HelpCircle, Settings, FileText, PenLine, Contact,
-  KanbanSquare, Receipt, Code2, BellRing, LogOut, Trophy, Moon, Sun,
+  KanbanSquare, Receipt, Code2, BellRing, LogOut, Trophy, Moon, Sun, GraduationCap,
 } from "lucide-react";
 
 /* Logo dell'agenzia, incorporato: nessun file esterno da caricare */
@@ -87,7 +87,7 @@ const DIZ = {
     "nav.file": "File", "nav.economia": "Economia", "nav.ai": "Consulente", "nav.task": "Task",
     "nav.automazioni": "Automazioni", "nav.importa": "Importa dati", "nav.backup": "Backup",
     "nav.guida": "Guida", "nav.impostazioni": "Impostazioni", "nav.esci": "Esci", "nav.contatti": "Contatti",
-    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaggio", "nav.report": "Report", "nav.winner": "Winner ads",
+    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaggio", "nav.report": "Report", "nav.winner": "Winner ads", "nav.academy": "Academy",
     "nav.scheda": "Scheda cliente", "nav.campagne": "Advertising",
     /* azioni ricorrenti */
     "a.salva": "Salva", "a.annulla": "Annulla", "a.elimina": "Elimina", "a.aggiungi": "Aggiungi",
@@ -129,7 +129,7 @@ const DIZ = {
     "nav.file": "Files", "nav.economia": "Finances", "nav.ai": "Advisor", "nav.task": "Tasks",
     "nav.automazioni": "Automations", "nav.importa": "Import data", "nav.backup": "Backup",
     "nav.guida": "Guide", "nav.impostazioni": "Settings", "nav.esci": "Log out", "nav.contatti": "Contacts",
-    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaging", "nav.report": "Report", "nav.winner": "Winner ads",
+    "nav.pipeline": "Pipeline", "nav.messaggio": "Messaging", "nav.report": "Report", "nav.winner": "Winner ads", "nav.academy": "Academy",
     "nav.scheda": "Client record", "nav.campagne": "Advertising",
     "a.salva": "Save", "a.annulla": "Cancel", "a.elimina": "Delete", "a.aggiungi": "Add",
     "a.chiudi": "Close", "a.apri": "Open", "a.copia": "Copy", "a.copiato": "Copied",
@@ -693,6 +693,7 @@ const normalizza = (d) => ({
   profili: d.profili || [],
   aiKey: d.aiKey || "",
   integrazioni: d.integrazioni || [],
+  academy: { nome: "Accademia dell'Advertising", url: "", incorpora: false, lezioni: [], ...(d.academy || {}) },
   vendite: (d.vendite || []).map((r) => {
     if (r.valoreContratto !== undefined) return r;
     const { valore = 0, ...resto } = r;           /* prima esisteva un solo importo */
@@ -1716,6 +1717,15 @@ const GUIDA = [
     ],
   },
   {
+    id: "academy", t: "Academy",
+    intro: "La sezione Academy, con il cappello di laurea nel menu, collega il CRM alla piattaforma di corsi Accademia dell'Advertising.",
+    blocchi: [
+      { h: "Collegarla", p: "Incolla l'indirizzo della piattaforma (la pagina di accesso o l'area corsi, deve iniziare con https://): compare il pulsante Apri l'Accademia, che la apre in una nuova scheda con il tuo accesso di sempre." },
+      { h: "Vederla dentro il CRM", p: "Con «mostrala qui dentro» la piattaforma compare sotto, nella pagina del CRM. Funziona solo se la piattaforma lo permette: molte, per sicurezza, si rifiutano di essere mostrate dentro altri siti e il riquadro resta bianco. In quel caso usa il pulsante." },
+      { h: "Lezioni in evidenza", p: "Aggiungi i link diretti alle lezioni che ti servono più spesso, con un argomento per raggrupparle (Meta Ads, copy, funnel…). La casella segna quelle già seguite. Valgono per tutto lo spazio di lavoro." },
+    ],
+  },
+  {
     id: "winner", t: "Winner ads e connettore per Claude",
     intro: "Il Claude di un cliente (per Boutique del Fitness quello collegato a Hyros, con tutto il second brain) salva nel CRM i numeri di ogni annuncio e le sue analisi. Il CRM ne fa la classifica sui tuoi benchmark, nella sezione Winner ads del cliente.",
     blocchi: [
@@ -2697,7 +2707,7 @@ const ICONE_NAV = {
   file: FolderOpen, economia: Euro, ai: Sparkles, task: ListChecks, automazioni: Zap,
   importa: Upload, backup: DownloadCloud, guida: HelpCircle, impostazioni: Settings, esci: LogOut,
   contatti: Contact, pipeline: KanbanSquare, messaggio: PenLine, report: FileText,
-  scheda: Receipt, winner: Trophy,
+  scheda: Receipt, winner: Trophy, academy: GraduationCap,
 };
 
 const IcoNav = ({ id }) => {
@@ -6162,6 +6172,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     { id: "automazioni", l: t("nav.automazioni"), i: "⚡", n: data.automazioni.filter((a) => a.attiva === "si").length },
     { id: "importa", l: t("nav.importa"), i: "⇪" },
     { id: "backup", l: t("nav.backup"), i: "⤓" },
+    { id: "academy", l: t("nav.academy"), i: "🎓" },
     { id: "guida", l: t("nav.guida"), i: "?" },
     { id: "impostazioni", l: t("nav.impostazioni"), i: "⚙" },
   ];
@@ -6239,6 +6250,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     automazioni: ["Automazioni", "Regole che lavorano da sole: innesco e azione"],
     backup: ["Backup", "Scarica una copia, o ripristinane una"],
     importa: ["Importa dati", "Dai file esportati dalle piattaforme, senza riscrivere nulla"],
+    academy: ["Academy", "I corsi dell'Accademia dell'Advertising, a portata di clic"],
     guida: ["Guida", "Come si usa, in che ordine, e cosa non può fare"],
     impostazioni: ["Impostazioni", "Identità dell'agenzia e aree di lavoro"],
   };
@@ -9936,6 +9948,104 @@ Regole:
     if (!riga.trim()) return <div key={i} style={{ height: 8 }} />;
     return <div key={i} style={/^\s*([-*•]|\d+[.)])\s/.test(riga) ? { paddingLeft: 14 } : undefined}>{grassetto(riga)}</div>;
   });
+  /* ---------- Academy: la piattaforma di corsi collegata al CRM ---------- */
+  const SezioneAcademy = () => {
+    const ac = data.academy;
+    const cambia = (campi) => setData((d) => ({ ...d, academy: { ...d.academy, ...campi } }));
+    const urlOk = (u) => /^https:\/\//i.test(String(u || "").trim());
+    const lezioni = ac.lezioni || [];
+    const argomenti = [...new Set(lezioni.map((l) => l.argomento).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+    const aggiungi = (e) => {
+      e.preventDefault();
+      const f = new FormData(e.currentTarget);
+      const titolo = String(f.get("titolo") || "").trim(), url = String(f.get("url") || "").trim();
+      if (!titolo || !urlOk(url)) return;
+      cambia({ lezioni: [...lezioni, { id: uid(), titolo, url, argomento: String(f.get("argomento") || "").trim(), fatta: false }] });
+      e.currentTarget.reset();
+    };
+    return (
+      <>
+        <section className="card">
+          <header>
+            <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 8, background: "var(--acc)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "none" }}><GraduationCap size={19} strokeWidth={1.9} /></span>
+            <h2>{ac.nome || "Academy"}</h2>
+            <span className="sp" />
+            {urlOk(ac.url) && <a className="btn" href={ac.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Apri l'Accademia ↗</a>}
+          </header>
+          <div className="riga" style={{ gap: 14, flexWrap: "wrap", padding: "14px 18px", alignItems: "flex-end" }}>
+            <label style={{ display: "grid", gap: 4, flex: "1 1 220px" }}>
+              <span className="eyebrow">Nome</span>
+              <input defaultValue={ac.nome} onBlur={(e) => cambia({ nome: e.target.value.trim() || "Accademia dell'Advertising" })} />
+            </label>
+            <label style={{ display: "grid", gap: 4, flex: "2 1 320px" }}>
+              <span className="eyebrow">Indirizzo della piattaforma</span>
+              <input defaultValue={ac.url} placeholder="https://… (pagina di accesso o area corsi)" onBlur={(e) => cambia({ url: e.target.value.trim() })} />
+            </label>
+            {urlOk(ac.url) && (
+              <label className="riga" style={{ gap: 6, paddingBottom: 8 }}>
+                <input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!ac.incorpora} onChange={(e) => cambia({ incorpora: e.target.checked })} /> mostrala qui dentro
+              </label>
+            )}
+          </div>
+          {ac.url && !urlOk(ac.url) && <div className="meta-msg" data-tipo="errore">L'indirizzo deve iniziare con https://</div>}
+          {!ac.url && <div className="meta-msg sub">Incolla l'indirizzo dell'Accademia dell'Advertising: da qui la apri con un clic, e puoi tenere a portata di mano le lezioni che ti servono di più.</div>}
+        </section>
+
+        {urlOk(ac.url) && ac.incorpora && (
+          <section className="card">
+            <div className="meta-msg sub">Se qui sotto resta bianco o chiede di accedere senza riuscirci, la piattaforma non permette di essere mostrata dentro altri siti: usa «Apri l'Accademia».</div>
+            <iframe title={ac.nome || "Academy"} src={ac.url} style={{ width: "100%", height: "75vh", border: 0, display: "block", background: "#fff", borderRadius: "0 0 10px 10px" }}
+              allow="fullscreen; autoplay; encrypted-media; picture-in-picture" referrerPolicy="strict-origin-when-cross-origin" />
+          </section>
+        )}
+
+        <section className="card">
+          <header>
+            <h2>Lezioni in evidenza</h2>
+            <span className="sp eyebrow">{lezioni.length ? `${lezioni.filter((l) => l.fatta).length} di ${lezioni.length} seguite` : "i link diretti alle lezioni che usi più spesso"}</span>
+          </header>
+          {(argomenti.length ? argomenti : [""]).map((arg) => {
+            const l = lezioni.filter((x) => (x.argomento || "") === arg || (!argomenti.length));
+            if (!l.length) return null;
+            return (
+              <div key={arg || "tutte"}>
+                {arg && <div className="eyebrow" style={{ padding: "12px 18px 0" }}>{arg}</div>}
+                {l.map((x) => (
+                  <div key={x.id} className="riga" style={{ gap: 10, padding: "9px 18px", borderBottom: "1px solid var(--line)" }}>
+                    <input type="checkbox" aria-label="Seguita" style={{ width: 16, height: 16, accentColor: "var(--acc)", flex: "none" }} checked={!!x.fatta}
+                      onChange={(e) => cambia({ lezioni: lezioni.map((y) => (y.id === x.id ? { ...y, fatta: e.target.checked } : y)) })} />
+                    <a href={x.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: "var(--ink)", textDecoration: x.fatta ? "line-through" : "none", opacity: x.fatta ? 0.6 : 1 }}>{x.titolo} ↗</a>
+                    <button className="btn danger mini" onClick={() => cambia({ lezioni: lezioni.filter((y) => y.id !== x.id) })}>Togli</button>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          {lezioni.length > 0 && argomenti.length > 0 && lezioni.some((x) => !x.argomento) && (
+            <div>
+              <div className="eyebrow" style={{ padding: "12px 18px 0" }}>Altro</div>
+              {lezioni.filter((x) => !x.argomento).map((x) => (
+                <div key={x.id} className="riga" style={{ gap: 10, padding: "9px 18px", borderBottom: "1px solid var(--line)" }}>
+                  <input type="checkbox" aria-label="Seguita" style={{ width: 16, height: 16, accentColor: "var(--acc)", flex: "none" }} checked={!!x.fatta}
+                    onChange={(e) => cambia({ lezioni: lezioni.map((y) => (y.id === x.id ? { ...y, fatta: e.target.checked } : y)) })} />
+                  <a href={x.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: "var(--ink)", textDecoration: x.fatta ? "line-through" : "none", opacity: x.fatta ? 0.6 : 1 }}>{x.titolo} ↗</a>
+                  <button className="btn danger mini" onClick={() => cambia({ lezioni: lezioni.filter((y) => y.id !== x.id) })}>Togli</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <form className="riga" onSubmit={aggiungi} style={{ gap: 8, flexWrap: "wrap", padding: "12px 18px" }}>
+            <input name="titolo" placeholder="Titolo della lezione" aria-label="Titolo della lezione" style={{ flex: "2 1 200px" }} />
+            <input name="url" placeholder="https://… link alla lezione" aria-label="Link alla lezione" style={{ flex: "3 1 260px" }} />
+            <input name="argomento" placeholder="Argomento (facoltativo)" aria-label="Argomento" list="academy-argomenti" style={{ flex: "1 1 160px" }} />
+            <datalist id="academy-argomenti">{argomenti.map((a2) => <option key={a2} value={a2} />)}</datalist>
+            <button className="btn">Aggiungi</button>
+          </form>
+        </section>
+      </>
+    );
+  };
+
   const SezioneWinner = () => {
     const bm = benchmarkDi(attivo);
     const cambiaBm = (campi) => setData((d) => ({ ...d, clienti: d.clienti.map((z) => (z.id === attivo.id ? { ...z, winner: { ...benchmarkDi(z), ...campi } } : z)) }));
@@ -12745,6 +12855,7 @@ Regole:
             {!attivo && vista === "backup" && SezioneBackup()}
             {!attivo && vista === "importa" && SezioneImporta()}
             {vista === "guida" && SezioneGuida()}
+            {!attivo && vista === "academy" && SezioneAcademy()}
             {vista === "file" && SezioneFile()}
             {vista === "ai" && SezioneAI()}
 
