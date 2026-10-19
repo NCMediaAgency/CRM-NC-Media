@@ -3272,6 +3272,11 @@ transition:transform .2s ease,box-shadow .2s ease;background:#0C0C0E;outline-off
 .nf-hero-cop{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:min(440px,42%);aspect-ratio:16/9;object-fit:cover;border-radius:10px;z-index:-1;box-shadow:0 20px 50px rgba(0,0,0,.6)}
 @media (max-width:900px){.nf-hero-cop{position:static;transform:none;width:100%;margin-bottom:16px;order:-1}.nf-hero{flex-direction:column;align-items:stretch}}
 .nf-card .logo-n{position:absolute;top:8px;right:8px;z-index:1;width:26px;height:26px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.nf-hero-home{min-height:400px;align-items:center;background:#060508}
+.nf-home-sfondo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right center;z-index:-1}
+.nf-home-logo{position:absolute;left:30px;top:24px;width:min(260px,45%);height:auto}
+.nf-home-titolo{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:500;font-size:clamp(34px,5vw,64px);line-height:1.08;letter-spacing:-.01em;margin:60px 0 26px}
+@media (max-width:700px){.nf-hero-home{min-height:320px}.nf-home-sfondo{object-position:72% center;opacity:.55}.nf-home-logo{left:18px;top:16px}}
 .nf-sigillo{position:absolute;right:42px;top:50%;transform:translateY(-50%) rotate(-8deg);width:min(250px,30%);z-index:-1;opacity:.92;filter:drop-shadow(0 18px 40px rgba(0,0,0,.55))}
 @media (max-width:700px){.nf-sigillo{width:110px;right:14px;top:22px;transform:rotate(-8deg);opacity:.5}}
 .nf-card .avanz{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.25);z-index:1}
@@ -10163,7 +10168,7 @@ Regole:
     const sfondo = (c, k = 0) => ({ background: `radial-gradient(120% 140% at ${85 - (k % 3) * 20}% ${10 + (k % 2) * 30}%, ${c.colore || "#8E2039"} 0%, #2A0E16 45%, #08080A 100%)` });
     const apriCorso = (c, l = null) => { setAcCorso(c.id); setAcLezione(l ? { corso: c.id, lezione: l.id } : null); };
     const primaLibera = (c) => (c.lezioni || []).find((l) => lezioneLibera(c, l));
-    // In evidenza: il primo corso con contenuti gratuiti non ancora finito, altrimenti il primo
+    // Corso da cui parte «Inizia» in Home: il primo vero non ancora finito
     const evid = corsi.find((c) => c.copertina && !c.esempio && perc(c) < 100) || corsi.find((c) => primaLibera(c) && perc(c) < 100) || corsi[0];
     const corso = corsi.find((c) => c.id === acCorso);
     const lezione = corso && acLezione && (corso.lezioni || []).find((l) => l.id === acLezione.lezione);
@@ -10219,24 +10224,15 @@ Regole:
           ))}
         </nav>
 
-        {scheda === "home" && evid && (
-          <section className="nf-hero">
-            <div className="sfondo" style={sfondo(evid, 2)} />
-            {evid.copertina ? <img src={evid.copertina} alt="" aria-hidden="true" className="nf-hero-cop" /> : <img src={LOGO_ACADEMY} alt="" aria-hidden="true" className="nf-sigillo" />}
+        {scheda === "home" && (
+          <section className="nf-hero nf-hero-home">
+            <img src="/academy/home-sfondo.webp" alt="" aria-hidden="true" className="nf-home-sfondo" />
+            <img src="/academy/home-logo.webp" alt={ac.nome || "Accademia dell'Advertising"} className="nf-home-logo" />
             <div>
-              <div className="marchio"><img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 22, height: 22 }} />{ac.nome || "Accademia dell'Advertising"}</div>
-              <h1>{evid.titolo}</h1>
-              <div className="meta">
-                {evid.gratuito ? <span className="tag" data-k="attivo">gratis</span> : evid.prezzo ? <span className="tag" data-k="alta">{evid.prezzo}</span> : null}
-                <span>{(ACADEMY_MACRO.find((m2) => m2.v === (evid.macro || "corsi")) || {}).l}</span><span>·</span><span>{evid.livello}</span>
-                {nLez(evid) > 0 && <><span>·</span><span>{nLez(evid)} lezioni</span></>}
-                {nViste(evid) > 0 && <><span>·</span><span>seguite {nViste(evid)}</span></>}
-              </div>
-              <p>{evid.descrizione}</p>
+              <h1 className="nf-home-titolo">Accademia<br />dell'Advertising</h1>
               <div className="riga" style={{ gap: 10, flexWrap: "wrap" }}>
-                {primaLibera(evid) && <button className="nf-play" onClick={() => apriCorso(evid, primaLibera(evid))}>▶ {nViste(evid) ? "Riprendi" : evid.gratuito ? "Guarda" : "Guarda l'anteprima"}</button>}
-                <button className="nf-info" onClick={() => apriCorso(evid)}>ⓘ Altre informazioni</button>
-                {!evid.gratuito && !evid.sbloccato && <button className="nf-sblocca" onClick={sblocca}>{evid.prezzo ? `Sblocca · ${evid.prezzo}` : "Accedi al corso"}</button>}
+                {(inCorso[0] || evid) && <button className="nf-play" onClick={() => (inCorso[0] ? apriCorso(inCorso[0], primaLibera(inCorso[0]) || undefined) : apriCorso(evid))}>▶ {inCorso[0] ? "Riprendi" : "Inizia"}</button>}
+                {ac.url && <a className="nf-info" href={ac.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>Vai alla piattaforma ↗</a>}
               </div>
             </div>
           </section>
