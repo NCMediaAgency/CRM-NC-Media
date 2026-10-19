@@ -65,4 +65,13 @@ jobs:
           psql "$DB_URL" -X -P pager=off -c "
             select status, to_char(start_time at time zone 'Europe/Rome', 'DD/MM HH24:MI') as avvio_roma, left(return_message, 80) as messaggio
             from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'meta-sync-mattina')
-            order by start_time desc limit 4;" || true
+            order by start_time desc limit 12;" || true
+
+      - name: Fuso orario e risposte della funzione
+        run: |
+          psql "$DB_URL" -X -P pager=off -c "
+            select workspace_id, fuso, ora_meta, ultimo_meta, to_char(aggiornato at time zone 'Europe/Rome', 'DD/MM HH24:MI') as aggiornato
+            from public.workspace_impostazioni;" || true
+          psql "$DB_URL" -X -P pager=off -c "
+            select id, status_code, to_char(created at time zone 'Europe/Rome', 'DD/MM HH24:MI') as quando_roma, left(content, 160) as risposta, left(error_msg, 80) as errore
+            from net._http_response order by id desc limit 12;" || true
