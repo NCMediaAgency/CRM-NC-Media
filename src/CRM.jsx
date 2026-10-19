@@ -693,7 +693,7 @@ const normalizza = (d) => ({
   profili: d.profili || [],
   aiKey: d.aiKey || "",
   integrazioni: d.integrazioni || [],
-  academy: { nome: "Accademia dell'Advertising", url: "", urlAcquisto: "", incorpora: false, lezioni: [], corsi: [], viste: {}, ...(d.academy || {}) },
+  academy: { nome: "Accademia dell'Advertising", url: "https://accademiadelladvertising.applicazione.app/", urlAcquisto: "", incorpora: false, lezioni: [], corsi: [], viste: {}, ...(d.academy || {}) },
   vendite: (d.vendite || []).map((r) => {
     if (r.valoreContratto !== undefined) return r;
     const { valore = 0, ...resto } = r;           /* prima esisteva un solo importo */
@@ -3217,6 +3217,62 @@ background:var(--acc-s);display:grid;gap:9px}
 .proposta .tag{flex:none}
 .spunti{display:grid;gap:7px;padding:4px 0 10px;justify-items:start}
 .spunti .btn{text-align:left;white-space:normal;line-height:1.4}
+/* ---------- Academy in stile Netflix ---------- */
+.nf{display:grid;gap:28px;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}
+.nf>*,.nf-riga,.nf-scorri{min-width:0}
+.nf-hero{position:relative;border-radius:14px;overflow:hidden;min-height:360px;display:flex;align-items:flex-end;padding:36px 34px;color:#fff;background:#0C0C0E;isolation:isolate}
+.nf-hero .sfondo{position:absolute;inset:0;z-index:-1}
+.nf-hero .sfondo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,8,10,.92) 0%,rgba(8,8,10,.55) 45%,rgba(8,8,10,0) 75%),linear-gradient(0deg,rgba(8,8,10,.85),rgba(8,8,10,0) 50%)}
+.nf-hero .marchio{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#E8A3B2;display:flex;align-items:center;gap:8px}
+.nf-hero h1{font-size:clamp(28px,4.2vw,46px);line-height:1.05;letter-spacing:-.03em;margin:10px 0 10px;max-width:640px;font-weight:700}
+.nf-hero p{max-width:520px;margin:0 0 18px;color:rgba(255,255,255,.82);font-size:14.5px;line-height:1.5}
+.nf-hero .meta{display:flex;gap:10px;align-items:center;margin-bottom:16px;font-size:12.5px;color:rgba(255,255,255,.75)}
+.crm .nf-play{background:#fff;color:#0C0C0E;border-radius:6px;padding:10px 20px;font-weight:650;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.crm .nf-play:hover{background:rgba(255,255,255,.82)}
+.crm .nf-info{background:rgba(110,110,120,.55);color:#fff;border-radius:6px;padding:10px 18px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.crm .nf-info:hover{background:rgba(110,110,120,.4)}
+.crm .nf-sblocca{background:var(--acc);color:#fff;border-radius:6px;padding:10px 18px;font-weight:650;font-size:14px}
+.crm .nf-sblocca:hover{background:var(--acc-d)}
+.nf-riga{position:relative}
+.nf-riga h3{margin:0 0 10px;font-size:17px;font-weight:650;letter-spacing:-.015em;display:flex;align-items:baseline;gap:10px}
+.nf-riga h3 small{font-size:12px;color:var(--ink3);font-weight:450}
+.nf-scorri{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,calc((100% - 30px)/4));gap:10px;overflow-x:auto;padding:8px 2px 16px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.nf-scorri::-webkit-scrollbar{display:none}
+.crm .nf-freccia{position:absolute;top:38px;bottom:16px;width:40px;z-index:3;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,0));color:#fff;font-size:26px;opacity:0;transition:opacity .15s}
+.crm .nf-freccia.dx{right:0;background:linear-gradient(270deg,rgba(0,0,0,.55),rgba(0,0,0,0))}
+.crm .nf-freccia.sx{left:0}
+.nf-riga:hover .nf-freccia{opacity:1}
+.nf-card{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;cursor:pointer;scroll-snap-align:start;color:#fff;
+transition:transform .2s ease,box-shadow .2s ease;background:#0C0C0E;outline-offset:2px}
+.nf-card:hover,.nf-card:focus-visible{transform:scale(1.045);z-index:2;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+.nf-card .cop{position:absolute;inset:0}
+.nf-card .cop::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,0) 60%)}
+.nf-card .grande{position:absolute;right:-6px;top:-18px;font-size:110px;font-weight:800;letter-spacing:-.06em;color:rgba(255,255,255,.08);line-height:1}
+.nf-card .tit{position:absolute;left:12px;right:12px;bottom:12px;z-index:1;font-weight:650;font-size:14.5px;line-height:1.2;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.nf-card .tit small{display:block;font-weight:450;font-size:11.5px;color:rgba(255,255,255,.75);margin-top:3px}
+.nf-card .bollo{position:absolute;top:9px;left:9px;z-index:1;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:rgba(0,0,0,.55);color:#fff}
+.nf-card .bollo.gratis{background:#2E7D46}
+.nf-card .bollo.chiuso{background:var(--acc)}
+.nf-card .logo-n{position:absolute;top:9px;right:10px;z-index:1;font-weight:800;color:#E8A3B2;font-size:13px;letter-spacing:-.02em}
+.nf-card .avanz{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.25);z-index:1}
+.nf-card .avanz i{display:block;height:100%;background:#E50914;background:var(--acc-t)}
+.nf-scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.72);overflow-y:auto;padding:36px 16px}
+.nf-modal{max-width:880px;margin:0 auto;background:var(--surf);border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6);color:var(--ink)}
+.nf-mtesta{position:relative;aspect-ratio:16/7;min-height:250px;display:flex;align-items:flex-end;padding:28px;color:#fff;isolation:isolate}
+.nf-mtesta .sfondo{position:absolute;inset:0;z-index:-1}
+.nf-mtesta .sfondo::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,var(--surf) 0%,rgba(0,0,0,.25) 45%,rgba(0,0,0,0) 100%)}
+.nf-mtesta h2{font-size:32px;letter-spacing:-.03em;margin:0 0 14px;line-height:1.05;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.crm .nf-chiudi{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(12,12,14,.8);color:#fff;font-size:18px;z-index:2}
+.nf-corpo{padding:6px 28px 28px;display:grid;gap:16px}
+.nf-dati{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink2)}
+.nf-ep{display:grid;grid-template-columns:34px 150px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 10px;border-radius:8px;cursor:pointer;width:100%;text-align:left;border-bottom:1px solid var(--line)}
+.nf-ep:hover{background:var(--surf2)}
+.nf-ep .n{font-size:22px;color:var(--ink3);text-align:center}
+.nf-ep .mini{position:relative;aspect-ratio:16/9;border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+.nf-ep b{display:block;font-size:14.5px}
+.nf-ep .sub{font-size:12.5px}
+.nf-player{aspect-ratio:16/9;width:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#fff;position:relative}
+@media (max-width:700px){.nf-scorri{grid-auto-columns:72%}.nf-ep{grid-template-columns:28px 96px minmax(0,1fr)}.nf-ep .dur{display:none}.nf-hero{padding:24px 18px;min-height:300px}}
 /* ---------- Modalità chiara (Impostazioni → Aspetto): stesso #8E2039, fondi bianchi ---------- */
 .crm[data-tema="chiaro"]{--nero:#FFFFFF;--ink:#17171C;--ink2:#55555F;--ink3:#85858F;--paper:#F5F4F5;--surf:#FFFFFF;--surf2:#F3F1F2;
 --line:#E3DFE0;--acc-t:#B02E4B;--acc-s:rgba(142,32,57,.08);--acc-b:rgba(142,32,57,.35);color-scheme:light}
@@ -4094,6 +4150,12 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   const [acFiltro, setAcFiltro] = useState("tutti");
   const [acCorso, setAcCorso] = useState("");
   const [acLezione, setAcLezione] = useState(null);
+  useEffect(() => {
+    if (!acCorso) return;
+    const esc = (e) => { if (e.key === "Escape") { setAcLezione(null); setAcCorso(""); } };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [acCorso]);
   const [winGiro, setWinGiro] = useState(0);
   const winIds = data && cliAtt ? (consolidato
     ? [cliAtt, ...(function sotto(id) { return data.clienti.filter((z) => z.padreId === id && z.archiviato !== "si").flatMap((z) => [z.id, ...sotto(z.id)]); })(cliAtt)]
@@ -10014,133 +10076,87 @@ Regole:
     const segna = (id, v) => cambia({ viste: { ...viste, [id]: v } });
     const nLez = (c) => (c.lezioni || []).length;
     const nViste = (c) => (c.lezioni || []).filter((l) => viste[l.id]).length;
-    const sblocca = () => (urlOk(ac.urlAcquisto) ? window.open(ac.urlAcquisto, "_blank", "noopener") : window.alert("Qui si aprirà la pagina di acquisto dell'Accademia: incolla il suo indirizzo nelle impostazioni dell'Academy, in fondo alla pagina."));
-    const filtrati = corsi.filter((c) => acFiltro === "tutti" || (acFiltro === "gratis" ? c.gratuito || (c.lezioni || []).some((l) => l.gratuita) : c.gratuito || c.sbloccato));
+    const perc = (c) => (nLez(c) ? (nViste(c) / nLez(c)) * 100 : 0);
+    const sblocca = () => (urlOk(ac.urlAcquisto) ? window.open(ac.urlAcquisto, "_blank", "noopener")
+      : urlOk(ac.url) ? window.open(ac.url, "_blank", "noopener")
+      : window.alert("Qui si aprirà la pagina di acquisto dell'Accademia: indicala nelle impostazioni dell'Academy, in fondo alla pagina."));
+    const sfondo = (c, k = 0) => ({ background: `radial-gradient(120% 140% at ${85 - (k % 3) * 20}% ${10 + (k % 2) * 30}%, ${c.colore || "#8E2039"} 0%, #2A0E16 45%, #08080A 100%)` });
+    const apriCorso = (c, l = null) => { setAcCorso(c.id); setAcLezione(l ? { corso: c.id, lezione: l.id } : null); };
+    const primaLibera = (c) => (c.lezioni || []).find((l) => lezioneLibera(c, l));
+    // In evidenza: il primo corso con contenuti gratuiti non ancora finito, altrimenti il primo
+    const evid = corsi.find((c) => primaLibera(c) && perc(c) < 100) || corsi[0];
     const corso = corsi.find((c) => c.id === acCorso);
-    const lez = acLezione && corsi.find((c) => c.id === acLezione.corso);
-    const lezione = lez && (lez.lezioni || []).find((l) => l.id === acLezione.lezione);
-    const totLez = corsi.reduce((x, c) => x + nLez(c), 0), totViste = corsi.reduce((x, c) => x + nViste(c), 0);
-    const libere = corsi.reduce((x, c) => x + (c.lezioni || []).filter((l) => lezioneLibera(c, l)).length, 0);
-    const Copertina = ({ c, alta = 110 }) => (
-      <div style={{ height: alta, borderRadius: 10, background: `linear-gradient(135deg, ${c.colore || "#8E2039"}, #0C0C0E)`, position: "relative", display: "flex", alignItems: "flex-end", padding: 12, color: "#fff" }}>
-        <GraduationCap size={34} strokeWidth={1.4} aria-hidden="true" style={{ position: "absolute", right: 12, top: 12, opacity: 0.35 }} />
-        <span style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", opacity: 0.85 }}>{c.livello || "Corso"}</span>
+    const lezione = corso && acLezione && (corso.lezioni || []).find((l) => l.id === acLezione.lezione);
+    const scorri = (e, dir) => { const r = e.currentTarget.closest(".nf-riga").querySelector(".nf-scorri"); r.scrollBy({ left: dir * r.clientWidth * 0.9, behavior: "smooth" }); };
+    const Bollo = ({ c }) => (c.gratuito ? <span className="bollo gratis">gratis</span> : c.sbloccato ? <span className="bollo">tuo</span> : <span className="bollo chiuso">🔒 {c.prezzo || "premium"}</span>);
+    const CartaCorso = ({ c, k }) => (
+      <div className="nf-card" role="button" tabIndex={0} onClick={() => apriCorso(c)} onKeyDown={(e) => { if (e.key === "Enter") apriCorso(c); }} aria-label={c.titolo}>
+        <div className="cop" style={sfondo(c, k)} />
+        <span className="grande" aria-hidden="true">{(c.titolo || "A")[0]}</span>
+        <Bollo c={c} />
+        <span className="logo-n" aria-hidden="true">A</span>
+        <div className="tit">{c.titolo}<small>{c.livello ? `${c.livello} · ` : ""}{nLez(c)} lezioni</small></div>
+        {nViste(c) > 0 && <div className="avanz"><i style={{ width: `${perc(c)}%` }} /></div>}
       </div>
     );
-    const Badge = ({ c }) => (c.gratuito ? <span className="tag" data-k="attivo">gratis</span>
-      : c.sbloccato ? <span className="tag" data-k="attivo">sbloccato</span>
-      : <span className="tag" data-k="alta">🔒 {c.prezzo || "a pagamento"}</span>);
+    const CartaLezione = ({ c, l, k }) => (
+      <div className="nf-card" role="button" tabIndex={0} onClick={() => apriCorso(c, l)} onKeyDown={(e) => { if (e.key === "Enter") apriCorso(c, l); }} aria-label={l.titolo}>
+        <div className="cop" style={sfondo(c, k + 1)} />
+        <span className="grande" aria-hidden="true">{(c.lezioni || []).indexOf(l) + 1}</span>
+        <span className="bollo gratis">gratis</span>
+        <div className="tit">{l.titolo}<small>{c.titolo} · {l.durata}</small></div>
+        {viste[l.id] && <div className="avanz"><i style={{ width: "100%" }} /></div>}
+      </div>
+    );
+    const Riga = ({ titolo, nota, children }) => (
+      <div className="nf-riga">
+        <h3>{titolo}{nota && <small>{nota}</small>}</h3>
+        <button className="nf-freccia sx" aria-label="Indietro" onClick={(e) => scorri(e, -1)}>‹</button>
+        <div className="nf-scorri">{children}</div>
+        <button className="nf-freccia dx" aria-label="Avanti" onClick={(e) => scorri(e, 1)}>›</button>
+      </div>
+    );
+    const inCorso = corsi.filter((c) => nViste(c) > 0 && perc(c) < 100);
+    const gratis = corsi.flatMap((c) => (c.lezioni || []).filter((l) => lezioneLibera(c, l) && !c.sbloccato).map((l) => ({ c, l })));
+    const livelli = [...new Set(corsi.map((c) => c.livello).filter(Boolean))];
+    const miei = corsi.filter((c) => c.sbloccato);
     return (
-      <>
-        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima con corsi di esempio.</b> Titoli, prezzi e lezioni sono inventati per farti vedere come funziona: al loro posto arriveranno i corsi veri dell'Accademia.</div>}
+      <div className="nf">
+        {esempio && <div className="meta-msg" style={{ borderRadius: 10, border: "1px dashed var(--acc-b)" }}><b>Anteprima con corsi di esempio.</b> Titoli, prezzi e lezioni sono inventati: al loro posto arriveranno i corsi veri dell'Accademia.</div>}
 
-        <section className="card">
-          <div style={{ display: "flex", gap: 18, padding: 20, flexWrap: "wrap", alignItems: "center", background: "linear-gradient(120deg, var(--acc-s), transparent 60%)" }}>
-            <span aria-hidden="true" style={{ width: 54, height: 54, borderRadius: 12, background: "var(--acc)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flex: "none" }}><GraduationCap size={28} strokeWidth={1.8} /></span>
-            <div style={{ flex: "1 1 260px" }}>
-              <div style={{ fontSize: 20, fontWeight: 650, letterSpacing: "-.02em" }}>{ac.nome || "Accademia dell'Advertising"}</div>
-              <div className="sub">{corsi.length} corsi · {totLez} lezioni · {libere} gratuite · seguite {totViste} di {totLez}</div>
-              <div className="barra" style={{ maxWidth: 360 }}><i style={{ width: `${totLez ? (totViste / totLez) * 100 : 0}%` }} /></div>
-            </div>
-            <div className="riga" style={{ gap: 8, flexWrap: "wrap" }}>
-              {urlOk(ac.url) && <a className="btn ghost" href={ac.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Apri la piattaforma ↗</a>}
-              <button className="btn" onClick={sblocca}>Sblocca l'accesso completo</button>
-            </div>
-          </div>
-        </section>
-
-        {lezione && (
-          <section className="card">
-            <header>
-              <h2>{lezione.titolo}</h2>
-              <span className="sp eyebrow">{lez.titolo} · {lezione.durata}</span>
-              <button className="btn ghost mini" onClick={() => setAcLezione(null)}>Chiudi</button>
-            </header>
-            {lezioneLibera(lez, lezione) ? (
-              <>
-                {/^https:\/\//.test(lezione.video || "") ? (
-                  <iframe title={lezione.titolo} src={lezione.video} style={{ width: "100%", aspectRatio: "16 / 9", border: 0, display: "block" }} allow="fullscreen; autoplay; encrypted-media; picture-in-picture" />
-                ) : (
-                  <div style={{ aspectRatio: "16 / 9", maxHeight: 420, width: "100%", background: `linear-gradient(135deg, ${lez.colore || "#8E2039"}, #0C0C0E)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexDirection: "column", gap: 10 }}>
-                    <span style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(255,255,255,.18)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>▶</span>
-                    <span className="sub" style={{ color: "rgba(255,255,255,.8)" }}>Qui il video della lezione{esempio ? " (esempio)" : ""}</span>
-                  </div>
-                )}
-                <div className="riga" style={{ gap: 10, padding: "12px 18px" }}>
-                  <label className="riga" style={{ gap: 6 }}><input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!viste[lezione.id]} onChange={(e) => segna(lezione.id, e.target.checked)} /> lezione seguita</label>
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: "34px 18px", display: "grid", gap: 10, justifyItems: "center", textAlign: "center" }}>
-                <div style={{ fontSize: 34 }}>🔒</div>
-                <b>Questa lezione fa parte di «{lez.titolo}»</b>
-                <div className="sub" style={{ maxWidth: 460 }}>{lez.descrizione}</div>
-                <button className="btn" onClick={sblocca}>Sblocca il corso · {lez.prezzo || "a pagamento"}</button>
+        {evid && (
+          <section className="nf-hero">
+            <div className="sfondo" style={sfondo(evid, 2)} />
+            <GraduationCap size={260} strokeWidth={0.6} aria-hidden="true" style={{ position: "absolute", right: 30, top: 10, color: "rgba(255,255,255,.07)", zIndex: -1 }} />
+            <div>
+              <div className="marchio"><GraduationCap size={15} strokeWidth={2} aria-hidden="true" />{ac.nome || "Accademia dell'Advertising"}</div>
+              <h1>{evid.titolo}</h1>
+              <div className="meta">
+                {evid.gratuito ? <span className="tag" data-k="attivo">gratis</span> : <span className="tag" data-k="alta">{evid.prezzo || "premium"}</span>}
+                <span>{evid.livello}</span><span>·</span><span>{nLez(evid)} lezioni</span>
+                {nViste(evid) > 0 && <><span>·</span><span>seguite {nViste(evid)}</span></>}
               </div>
-            )}
-          </section>
-        )}
-
-        {corso ? (
-          <section className="card">
-            <header>
-              <button className="btn ghost mini" onClick={() => { setAcCorso(""); setAcLezione(null); }}>‹ Tutti i corsi</button>
-              <h2>{corso.titolo}</h2>
-              <span className="sp" />
-              <Badge c={corso} />
-            </header>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 280px) 1fr", gap: 18, padding: 18 }}>
-              <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
-                <Copertina c={corso} alta={150} />
-                <div className="sub">{corso.descrizione}</div>
-                <div className="sub">{nLez(corso)} lezioni · seguite {nViste(corso)}</div>
-                <div className="barra"><i style={{ width: `${nLez(corso) ? (nViste(corso) / nLez(corso)) * 100 : 0}%` }} /></div>
-                {!corso.gratuito && !corso.sbloccato && <button className="btn" onClick={sblocca}>Sblocca il corso · {corso.prezzo || "a pagamento"}</button>}
-              </div>
-              <div>
-                {(corso.lezioni || []).map((l, k) => {
-                  const libera = lezioneLibera(corso, l);
-                  return (
-                    <button key={l.id} className="riga" onClick={() => setAcLezione({ corso: corso.id, lezione: l.id })}
-                      style={{ width: "100%", gap: 12, padding: "11px 6px", borderBottom: "1px solid var(--line)", textAlign: "left" }}>
-                      <span className="mono sub" style={{ width: 22 }}>{String(k + 1).padStart(2, "0")}</span>
-                      <span style={{ width: 22, textAlign: "center" }}>{viste[l.id] ? "✓" : libera ? "▶" : "🔒"}</span>
-                      <span style={{ flex: 1, opacity: libera ? 1 : 0.65 }}>{l.titolo}{l.gratuita && !corso.gratuito ? <span className="tag" data-k="attivo" style={{ marginLeft: 8 }}>anteprima gratis</span> : null}</span>
-                      <span className="sub mono">{l.durata}</span>
-                    </button>
-                  );
-                })}
+              <p>{evid.descrizione}</p>
+              <div className="riga" style={{ gap: 10, flexWrap: "wrap" }}>
+                {primaLibera(evid) && <button className="nf-play" onClick={() => apriCorso(evid, primaLibera(evid))}>▶ {nViste(evid) ? "Riprendi" : evid.gratuito ? "Guarda" : "Guarda l'anteprima"}</button>}
+                <button className="nf-info" onClick={() => apriCorso(evid)}>ⓘ Altre informazioni</button>
+                {!evid.gratuito && !evid.sbloccato && <button className="nf-sblocca" onClick={sblocca}>Sblocca · {evid.prezzo || "premium"}</button>}
               </div>
             </div>
           </section>
-        ) : (
-          <>
-            <div className="riga" style={{ gap: 8 }}>
-              {[["tutti", "Tutti i corsi"], ["gratis", "Gratuiti"], ["miei", "I miei corsi"]].map(([v, l]) => (
-                <button key={v} className={acFiltro === v ? "btn mini" : "btn ghost mini"} onClick={() => setAcFiltro(v)}>{l}</button>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 14 }}>
-              {filtrati.map((c) => (
-                <div key={c.id} className="card clic" role="button" tabIndex={0} onClick={() => setAcCorso(c.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setAcCorso(c.id); } }}
-                  style={{ textAlign: "left", padding: 12, display: "grid", gap: 10, alignContent: "start", cursor: "pointer" }}>
-                  <Copertina c={c} />
-                  <div className="riga" style={{ gap: 8, justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <b style={{ fontSize: 15 }}>{c.titolo}</b>
-                    <Badge c={c} />
-                  </div>
-                  <div className="sub">{c.descrizione}</div>
-                  <div className="sub mono">{nLez(c)} lezioni{(c.lezioni || []).some((l) => l.gratuita) && !c.gratuito ? " · anteprima gratis" : ""}</div>
-                  <div className="barra"><i style={{ width: `${nLez(c) ? (nViste(c) / nLez(c)) * 100 : 0}%` }} /></div>
-                </div>
-              ))}
-              {!filtrati.length && <section className="card"><div className="empty"><b>Nessun corso qui</b>{acFiltro === "miei" ? "Quando sblocchi un corso compare in questa lista." : "Prova un altro filtro."}</div></section>}
-            </div>
-          </>
         )}
 
+        {inCorso.length > 0 && <Riga titolo="Continua a guardare">{inCorso.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>}
+        {gratis.length > 0 && <Riga titolo="Gratis per te" nota={`${gratis.length} lezioni libere`}>{gratis.map(({ c, l }, k) => <CartaLezione key={l.id} c={c} l={l} k={k} />)}</Riga>}
+        <Riga titolo="Tutti i corsi" nota={`${corsi.length} corsi`}>{corsi.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>
+        {miei.length > 0 && <Riga titolo="I tuoi corsi">{miei.map((c, k) => <CartaCorso key={c.id} c={c} k={k} />)}</Riga>}
+        {livelli.length > 1 && livelli.map((lv) => (
+          <Riga key={lv} titolo={`Livello ${lv.toLowerCase()}`}>{corsi.filter((c) => c.livello === lv).map((c, k) => <CartaCorso key={c.id} c={c} k={k + 2} />)}</Riga>
+        ))}
+
         <section className="card">
-          <header><h2>Impostazioni dell'Academy</h2><span className="sp eyebrow">collegamento con la piattaforma</span></header>
+          <header><h2>Impostazioni dell'Academy</h2><span className="sp eyebrow">collegamento con la piattaforma</span>
+            {urlOk(ac.url) && <a className="btn ghost mini" href={ac.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Apri la piattaforma ↗</a>}</header>
           <div className="riga" style={{ gap: 14, flexWrap: "wrap", padding: "14px 18px", alignItems: "flex-end" }}>
             <label style={{ display: "grid", gap: 4, flex: "1 1 220px" }}>
               <span className="eyebrow">Nome</span>
@@ -10157,7 +10173,73 @@ Regole:
           </div>
           {[ac.url, ac.urlAcquisto].some((u) => u && !urlOk(u)) && <div className="meta-msg" data-tipo="errore">Gli indirizzi devono iniziare con https://</div>}
         </section>
-      </>
+
+        {corso && (
+          <div className="nf-scrim" onClick={(e) => { if (e.target === e.currentTarget) { setAcLezione(null); setAcCorso(""); } }}>
+            <div className="nf-modal" role="dialog" aria-modal="true" aria-label={corso.titolo}>
+              {lezione ? (
+                <div style={{ position: "relative", background: "#000" }}>
+                  <button className="nf-chiudi" aria-label="Chiudi la lezione" onClick={() => setAcLezione(null)}>×</button>
+                  {lezioneLibera(corso, lezione) ? (
+                    /^https:\/\//.test(lezione.video || "") ? (
+                      <iframe title={lezione.titolo} src={lezione.video} style={{ width: "100%", aspectRatio: "16 / 9", border: 0, display: "block" }} allow="fullscreen; autoplay; encrypted-media; picture-in-picture" />
+                    ) : (
+                      <div className="nf-player" style={sfondo(corso, 1)}>
+                        <span style={{ width: 74, height: 74, borderRadius: "50%", background: "rgba(255,255,255,.2)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>▶</span>
+                        <b style={{ fontSize: 18 }}>{lezione.titolo}</b>
+                        <span style={{ color: "rgba(255,255,255,.75)", fontSize: 13 }}>Qui il video della lezione{esempio ? " (esempio)" : ""} · {lezione.durata}</span>
+                      </div>
+                    )
+                  ) : (
+                    <div className="nf-player" style={sfondo(corso, 1)}>
+                      <span style={{ fontSize: 40 }}>🔒</span>
+                      <b style={{ fontSize: 18 }}>{lezione.titolo}</b>
+                      <span style={{ color: "rgba(255,255,255,.8)", fontSize: 13, maxWidth: 460, textAlign: "center" }}>Fa parte di «{corso.titolo}». Sbloccalo per guardare tutte le lezioni.</span>
+                      <button className="nf-sblocca" onClick={sblocca}>Sblocca · {corso.prezzo || "premium"}</button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="nf-mtesta">
+                  <div className="sfondo" style={sfondo(corso, 0)} />
+                  <button className="nf-chiudi" aria-label="Chiudi" onClick={() => setAcCorso("")}>×</button>
+                  <div>
+                    <h2>{corso.titolo}</h2>
+                    <div className="riga" style={{ gap: 10, flexWrap: "wrap" }}>
+                      {primaLibera(corso) && <button className="nf-play" onClick={() => setAcLezione({ corso: corso.id, lezione: primaLibera(corso).id })}>▶ {corso.gratuito || corso.sbloccato ? "Guarda" : "Guarda l'anteprima"}</button>}
+                      {!corso.gratuito && !corso.sbloccato && <button className="nf-sblocca" onClick={sblocca}>Sblocca · {corso.prezzo || "premium"}</button>}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="nf-corpo">
+                <div className="nf-dati">
+                  {corso.gratuito ? <span className="tag" data-k="attivo">gratis</span> : corso.sbloccato ? <span className="tag" data-k="attivo">sbloccato</span> : <span className="tag" data-k="alta">🔒 {corso.prezzo || "premium"}</span>}
+                  <span>{corso.livello}</span><span>·</span><span>{nLez(corso)} lezioni</span><span>·</span><span>seguite {nViste(corso)} di {nLez(corso)}</span>
+                  {lezione && lezioneLibera(corso, lezione) && (
+                    <label className="riga" style={{ gap: 6, marginLeft: "auto" }}><input type="checkbox" style={{ width: 16, height: 16, accentColor: "var(--acc)" }} checked={!!viste[lezione.id]} onChange={(e) => segna(lezione.id, e.target.checked)} /> lezione seguita</label>
+                  )}
+                </div>
+                <div style={{ color: "var(--ink2)", lineHeight: 1.55 }}>{corso.descrizione}</div>
+                <div>
+                  <h3 style={{ margin: "6px 0 8px", fontSize: 18 }}>Lezioni</h3>
+                  {(corso.lezioni || []).map((l, k) => {
+                    const libera = lezioneLibera(corso, l);
+                    return (
+                      <button key={l.id} className="nf-ep" onClick={() => setAcLezione({ corso: corso.id, lezione: l.id })} style={acLezione && acLezione.lezione === l.id ? { background: "var(--surf2)" } : undefined}>
+                        <span className="n">{k + 1}</span>
+                        <span className="mini" style={sfondo(corso, k)}>{viste[l.id] ? "✓" : libera ? "▶" : "🔒"}</span>
+                        <span><b>{l.titolo}</b><span className="sub">{l.gratuita && !corso.gratuito ? "Anteprima gratuita" : libera ? "Disponibile" : "Da sbloccare"}</span></span>
+                        <span className="sub mono dur">{l.durata}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 
