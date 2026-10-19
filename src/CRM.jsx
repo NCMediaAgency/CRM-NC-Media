@@ -1722,7 +1722,7 @@ const GUIDA = [
     blocchi: [
       { h: "Il catalogo", p: "Ogni corso ha la sua scheda con livello, descrizione, numero di lezioni e avanzamento. «Gratis» vuol dire che è libero; il lucchetto con il prezzo che va sbloccato; alcuni corsi a pagamento hanno una lezione di anteprima gratuita. I filtri mostrano tutti i corsi, solo quelli gratuiti o solo i tuoi. Finché i corsi veri non sono collegati vedi un catalogo di esempio, segnalato in cima." },
       { h: "Guardare e sbloccare", p: "Una lezione libera si apre con il suo video e la casella per segnarla come seguita. Una lezione bloccata mostra il pulsante per sbloccare il corso, che porta alla pagina di acquisto dell'Accademia indicata in fondo alla sezione." },
-      { h: "Suggerimenti nel CRM", p: "In Advertising e in Winner ads compare la lezione dell'Academy più utile per quella sezione, con il pulsante per guardarla o scoprirla." },
+      { h: "Suggerimenti nel CRM", p: "In Advertising, Funnel e Winner ads c'è la riga «Dall'Academy» con tutti i corsi e le lezioni utili per quella sezione: si scorre in orizzontale e un clic apre il corso." },
     ],
   },
   {
@@ -3218,6 +3218,13 @@ background:var(--acc-s);display:grid;gap:9px}
 .spunti{display:grid;gap:7px;padding:4px 0 10px;justify-items:start}
 .spunti .btn{text-align:left;white-space:normal;line-height:1.4}
 /* ---------- Academy in stile Netflix ---------- */
+.crm .ac-sugg .ac-sugg-riga{display:flex;gap:12px;overflow-x:auto;padding:12px 16px 14px;scroll-padding-inline:16px;scroll-snap-type:x proximity}
+.ac-sugg{min-width:0}
+.ac-sugg-el{flex:0 0 200px;display:flex;flex-direction:column;gap:4px;cursor:pointer;scroll-snap-align:start;border-radius:8px;outline-offset:3px}
+.ac-sugg-el>img,.ac-sugg-cop{width:200px;height:112px;border-radius:8px;object-fit:cover;transition:transform .15s}
+.ac-sugg-cop{display:grid;place-items:center}.ac-sugg-cop img{width:40px;height:40px}
+.ac-sugg-el:hover>img,.ac-sugg-el:hover .ac-sugg-cop{transform:scale(1.03)}
+.ac-sugg-el b{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ac-sugg-el .sub{font-size:11.5px}
 .nf{display:grid;gap:28px;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}
 .nf>*,.nf-riga,.nf-scorri{min-width:0}
 .nf-hero{position:relative;border-radius:14px;overflow:hidden;min-height:360px;display:flex;align-items:flex-end;padding:36px 34px;color:#fff;background:#0C0C0E;isolation:isolate}
@@ -10100,19 +10107,33 @@ Regole:
     ...academyCorsi().flatMap((c) => (c.lezioni || []).filter((l) => l.sezione === sez).map((l) => ({ c, l })))
       .sort((a, b) => lezioneLibera(b.c, b.l) - lezioneLibera(a.c, a.l)),
   ];
+  /* Riga di suggerimenti dell'Academy in una sezione del CRM: tutti i corsi e le lezioni adatti, si scorre in orizzontale */
   const SuggerimentoAcademy = ({ sez }) => {
-    const s2 = academyPer(sez)[0];
-    if (!s2) return null;
-    const libera = s2.l ? lezioneLibera(s2.c, s2.l) : false;
+    const lista = academyPer(sez);
+    if (!lista.length) return null;
+    const apriSugg = (s2) => { setVista("academy"); setAcCorso(s2.c.id); setAcLezione(s2.l ? { corso: s2.c.id, lezione: s2.l.id } : null); };
     return (
-      <div className="meta-msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surf)" }}>
-        {s2.c.copertina ? <img src={s2.c.copertina} alt="" aria-hidden="true" style={{ width: 64, height: 36, borderRadius: 5, objectFit: "cover", flex: "none" }} />
-          : <img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 26, height: 26, flex: "none" }} />}
-        {s2.l ? <span><b>Dall'Academy</b> · {s2.l.titolo} <span className="sub">({s2.c.titolo} · {s2.l.durata}{libera ? " · gratuita" : ""})</span></span>
-          : <span><b>Dall'Academy</b> · {s2.c.titolo} <span className="sub">({s2.c.livello || "corso"})</span></span>}
-        <span className="sp" />
-        <button className="btn ghost mini" onClick={() => { setVista("academy"); setAcCorso(s2.c.id); setAcLezione(s2.l ? { corso: s2.c.id, lezione: s2.l.id } : null); }}>{s2.l ? (libera ? "Guarda" : "🔒 Scopri") : "Scopri il corso"}</button>
-      </div>
+      <section className="card ac-sugg">
+        <header>
+          <img src={LOGO_ACADEMY} alt="" aria-hidden="true" style={{ width: 22, height: 22 }} />
+          <h2>Dall'Academy</h2>
+          <span className="sp eyebrow">{lista.length === 1 ? "1 contenuto" : `${lista.length} contenuti`} utili qui</span>
+          <button className="btn ghost mini" onClick={() => { setVista("academy"); setAcCorso(null); setAcLezione(null); }}>Vedi tutta l'Academy</button>
+        </header>
+        <div className="ac-sugg-riga">
+          {lista.map((s2) => {
+            const libera = s2.l ? lezioneLibera(s2.c, s2.l) : false;
+            return (
+              <div key={s2.c.id + (s2.l ? ":" + s2.l.id : "")} className="ac-sugg-el" role="button" tabIndex={0} onClick={() => apriSugg(s2)} onKeyDown={(e) => { if (e.key === "Enter") apriSugg(s2); }}>
+                {s2.c.copertina ? <img src={s2.c.copertina} alt="" aria-hidden="true" />
+                  : <div className="ac-sugg-cop" style={{ background: s2.c.colore || "var(--acc)" }}><img src={LOGO_ACADEMY} alt="" aria-hidden="true" /></div>}
+                <b>{s2.l ? s2.l.titolo : s2.c.titolo}</b>
+                <span className="sub">{s2.l ? `${s2.c.titolo} · ${s2.l.durata}${libera ? " · gratuita" : ""}` : s2.c.livello || "corso"}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     );
   };
   const SezioneAcademy = () => {
@@ -13144,7 +13165,7 @@ Regole:
             {!attivo && vista === "calendario" && SezioneCalendario()}
             {!attivo && vista === "advertising" && SezioneAdv()}
             {!attivo && vista === "pianificatore" && SezionePianificatore()}
-            {!attivo && vista === "funnel" && SezioneFunnel()}
+            {!attivo && vista === "funnel" && <>{SuggerimentoAcademy({ sez: "funnel" })}{SezioneFunnel()}</>}
             {!attivo && vista === "diario" && SezioneDiario()}
             {!attivo && vista === "economia" && SezioneEconomia()}
             {!attivo && vista === "backup" && SezioneBackup()}
@@ -13437,7 +13458,7 @@ Regole:
             {attivo && vista === "vendite" && SezioneVendite()}
             {attivo && vista === "chiusure" && SezioneChiusure()}
             {attivo && vista === "pianificatore" && SezionePianificatore()}
-            {attivo && vista === "funnel" && SezioneFunnel()}
+            {attivo && vista === "funnel" && <>{SuggerimentoAcademy({ sez: "funnel" })}{SezioneFunnel()}</>}
             {attivo && vista === "diario" && SezioneDiario()}
             {attivo && vista === "report" && SezioneReport()}
 
