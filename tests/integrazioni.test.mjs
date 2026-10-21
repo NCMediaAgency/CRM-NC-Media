@@ -30,6 +30,7 @@ assert.equal(d.task.length, 2);
 assert.equal(d.task[0].clienteId, "s1");          // abbinato
 assert.equal(d.task[1].clienteId, "k");           // senza abbinamento: cliente principale
 assert.equal(d.task[0].origine, "Boschetto");
+assert.equal(d.task[0].tipo, "operativa");
 assert.deepEqual(d.task[0].esterno.ultimo, statoEsterno(d.task[0]));
 assert.deepEqual(d.integrazioni[0].nomiVisti, { "ristorante da mario": "Ristorante Da Mario", "bar sport": "Bar Sport" });
 // stesso id → aggiorna, non duplica; il cliente spostato a mano resta

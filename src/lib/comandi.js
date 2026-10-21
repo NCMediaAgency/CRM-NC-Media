@@ -28,6 +28,8 @@ export function applicaComandi(data, comandi, { uid, oggi, giorniRicorrenza = ()
         titolo: String(d.titolo || "Task da Telegram"), note: d.note || "", stato: "dafare",
         priorita: PRIORITA.includes(d.priorita) ? d.priorita : "media",
         inizio: oggi, scadenza: d.scadenza || "", ora: d.ora || "", stima: 0, ricorrenza: "no", checklist: [], creato: oggi, origine: d.origine || "telegram",
+        // da Claude (analisi delle inserzioni) è lavoro di marketing, dal bot è lavoro operativo
+        tipo: d.tipo === "marketing" || d.tipo === "operativa" ? d.tipo : d.origine === "claude" ? "marketing" : "operativa",
       });
       esiti.push({ id: c.id, esito: "task creato" });
     } else if (c.tipo === "crea_nota") {
@@ -80,7 +82,7 @@ export function applicaComandi(data, comandi, { uid, oggi, giorniRicorrenza = ()
         task[i] = { ...task[i], ...campi, clienteId: tuo ? vecchio : cliente, esterno };
         esiti.push({ id: c.id, esito: "task aggiornata" });
       } else {
-        task.push({ id: uid(), clienteId: cliente, areaId: "", ...campi, inizio: oggi, stima: 0, ricorrenza: "no", checklist: [], creato: oggi, origine: esterno.fonte, esterno });
+        task.push({ id: uid(), clienteId: cliente, areaId: "", ...campi, inizio: oggi, stima: 0, ricorrenza: "no", checklist: [], creato: oggi, origine: esterno.fonte, tipo: "operativa", esterno });
         esiti.push({ id: c.id, esito: "task importata" });
       }
     } else esiti.push({ id: c.id, esito: "sconosciuto" });

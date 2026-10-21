@@ -168,6 +168,9 @@ const applicato = applicaComandi({ clienti, task: [], aree: [] }, T.crm_comandi,
 assert.equal(applicato.clienteId, "z1");
 assert.equal(applicato.origine, "claude");
 assert.equal(applicato.priorita, "alta");
+assert.equal(applicato.tipo, "marketing");        // da Claude: va in Task Marketing
+const daBot = applicaComandi({ clienti, task: [], aree: [] }, [{ id: "b1", tipo: "crea_task", dati: { titolo: "Chiamare Oliva" } }], { uid: () => "u2", oggi: "2026-10-17" }).data.task[0];
+assert.equal(daBot.tipo, "operativa");            // dal bot Telegram: Task Operative
 // in pausa: rifiutato
 T.integrazioni[0].attiva = false;
 assert.equal((await rpc("tools/list")).stato, 401);

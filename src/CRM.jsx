@@ -84,7 +84,7 @@ const DIZ = {
     "nav.pixel": "Pixel facile", "nav.calendario": "Calendario", "nav.avvisi": "Avvisi",
     "nav.grafici": "Grafici", "nav.vendite": "Ciclo di vendita", "nav.chiusure": "Chiusure",
     "nav.pianificatore": "Pianificatore", "nav.funnel": "Funnel", "nav.diario": "Diario",
-    "nav.file": "File", "nav.economia": "Economia", "nav.ai": "Consulente", "nav.task": "Task",
+    "nav.file": "File", "nav.economia": "Economia", "nav.ai": "Consulente", "nav.task": "Task Operative", "nav.taskmkt": "Task Marketing",
     "nav.automazioni": "Automazioni", "nav.importa": "Importa dati", "nav.backup": "Backup",
     "nav.guida": "Guida", "nav.impostazioni": "Impostazioni", "nav.esci": "Esci", "nav.contatti": "Contatti",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Messaggio", "nav.report": "Report", "nav.winner": "Winner ads", "nav.academy": "Academy",
@@ -126,7 +126,7 @@ const DIZ = {
     "nav.pixel": "Easy Pixel", "nav.calendario": "Calendar", "nav.avvisi": "Alerts",
     "nav.grafici": "Charts", "nav.vendite": "Sales cycle", "nav.chiusure": "Closed deals",
     "nav.pianificatore": "Planner", "nav.funnel": "Funnel", "nav.diario": "Journal",
-    "nav.file": "Files", "nav.economia": "Finances", "nav.ai": "Advisor", "nav.task": "Tasks",
+    "nav.file": "Files", "nav.economia": "Finances", "nav.ai": "Advisor", "nav.task": "Operational tasks", "nav.taskmkt": "Marketing tasks",
     "nav.automazioni": "Automations", "nav.importa": "Import data", "nav.backup": "Backup",
     "nav.guida": "Guide", "nav.impostazioni": "Settings", "nav.esci": "Log out", "nav.contatti": "Contacts",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Messaging", "nav.report": "Report", "nav.winner": "Winner ads", "nav.academy": "Academy",
@@ -164,7 +164,7 @@ const DIZ = {
     "nav.pixel": "Píxel fácil", "nav.calendario": "Calendario", "nav.avvisi": "Avisos",
     "nav.grafici": "Gráficos", "nav.vendite": "Ciclo de venta", "nav.chiusure": "Cierres",
     "nav.pianificatore": "Planificador", "nav.funnel": "Embudo", "nav.diario": "Diario",
-    "nav.file": "Archivos", "nav.economia": "Economía", "nav.ai": "Asesor", "nav.task": "Tareas",
+    "nav.file": "Archivos", "nav.economia": "Economía", "nav.ai": "Asesor", "nav.task": "Tareas operativas", "nav.taskmkt": "Tareas de marketing",
     "nav.automazioni": "Automatizaciones", "nav.importa": "Importar datos", "nav.backup": "Copia de seguridad",
     "nav.guida": "Guía", "nav.impostazioni": "Ajustes", "nav.esci": "Cerrar sesión", "nav.contatti": "Contactos",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Mensaje", "nav.report": "Informe",
@@ -202,7 +202,7 @@ const DIZ = {
     "nav.pixel": "Pixel facile", "nav.calendario": "Calendrier", "nav.avvisi": "Alertes",
     "nav.grafici": "Graphiques", "nav.vendite": "Cycle de vente", "nav.chiusure": "Ventes conclues",
     "nav.pianificatore": "Planificateur", "nav.funnel": "Tunnel", "nav.diario": "Journal",
-    "nav.file": "Fichiers", "nav.economia": "Finances", "nav.ai": "Conseiller", "nav.task": "Tâches",
+    "nav.file": "Fichiers", "nav.economia": "Finances", "nav.ai": "Conseiller", "nav.task": "Tâches opérationnelles", "nav.taskmkt": "Tâches marketing",
     "nav.automazioni": "Automatisations", "nav.importa": "Importer", "nav.backup": "Sauvegarde",
     "nav.guida": "Guide", "nav.impostazioni": "Réglages", "nav.esci": "Déconnexion", "nav.contatti": "Contacts",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Message", "nav.report": "Rapport",
@@ -240,7 +240,7 @@ const DIZ = {
     "nav.pixel": "Pixel leicht", "nav.calendario": "Kalender", "nav.avvisi": "Hinweise",
     "nav.grafici": "Diagramme", "nav.vendite": "Verkaufszyklus", "nav.chiusure": "Abschlüsse",
     "nav.pianificatore": "Planer", "nav.funnel": "Funnel", "nav.diario": "Journal",
-    "nav.file": "Dateien", "nav.economia": "Finanzen", "nav.ai": "Berater", "nav.task": "Aufgaben",
+    "nav.file": "Dateien", "nav.economia": "Finanzen", "nav.ai": "Berater", "nav.task": "Operative Aufgaben", "nav.taskmkt": "Marketing-Aufgaben",
     "nav.automazioni": "Automatisierungen", "nav.importa": "Daten importieren", "nav.backup": "Sicherung",
     "nav.guida": "Handbuch", "nav.impostazioni": "Einstellungen", "nav.esci": "Abmelden", "nav.contatti": "Kontakte",
     "nav.pipeline": "Pipeline", "nav.messaggio": "Botschaft", "nav.report": "Bericht",
@@ -294,6 +294,10 @@ const faseDi = (v) => FASI.find((f) => f.v === v) || FASI[0];
 const STATI_TASK = [
   { v: "dafare", l: "Da fare" }, { v: "incorso", l: "In corso" }, { v: "attesa", l: "In attesa" }, { v: "fatto", l: "Fatto" },
 ];
+/* Due sezioni di task: le operative le inserisci tu, quelle di marketing nascono da automazioni e avvisi */
+const TIPI_TASK = [{ v: "operativa", l: "Task Operative" }, { v: "marketing", l: "Task Marketing" }];
+const tipoTask = (t) => t.tipo || (t.auto || t.autoRif ? "marketing" : "operativa");
+
 const PRIORITA = [
   { v: "urgente", l: "Urgente", r: 0 }, { v: "alta", l: "Alta", r: 1 }, { v: "media", l: "Media", r: 2 }, { v: "bassa", l: "Bassa", r: 3 },
 ];
@@ -677,7 +681,7 @@ const normalizza = (d) => ({
   contatti: d.contatti || [], trattative: d.trattative || [],
   /* Il budget giornaliero non si deduce da un totale diviso la durata: o è quello
      impostato in piattaforma, o non c'è. Un numero inventato qui produce confronti falsi. */
-  campagne: (d.campagne || []).map((k) => ({ archiviata: "no", erroreDal: "", modificaVista: "no", esitoManuale: "", storicoBudget: [], budgetGiorno: 0, ...k, bmk: { ...BMK_VUOTO, ...(k.bmk || {}) } })), task: d.task || [], chiusure: d.chiusure || [], creativi: (d.creativi || []).map((c) => ({ adsetId: "", ...c })),
+  campagne: (d.campagne || []).map((k) => ({ archiviata: "no", erroreDal: "", modificaVista: "no", esitoManuale: "", storicoBudget: [], budgetGiorno: 0, ...k, bmk: { ...BMK_VUOTO, ...(k.bmk || {}) } })), task: (d.task || []).map((t) => (t.tipo ? t : { ...t, tipo: tipoTask(t) })), chiusure: d.chiusure || [], creativi: (d.creativi || []).map((c) => ({ adsetId: "", ...c })),
   rilevazioni: d.rilevazioni || [],
   giornate: d.giornate || [],
   deposito: d.deposito || [],
@@ -1266,7 +1270,8 @@ const VISTE_CAL = [
 /* Cosa può comparire sul calendario, e con che colore quando non ha categoria */
 const FONTI_CAL = [
   { v: "eventi", l: "Eventi e obiettivi", c: "#8B5CF6" },
-  { v: "task", l: "Task", c: "#C99A3A" },
+  { v: "task", l: "Task Operative", c: "#C99A3A" },
+  { v: "taskmkt", l: "Task Marketing", c: "#2BA3A0" },
   { v: "campagne", l: "Avvii e chiusure campagne", c: "#D8455F" },
   { v: "finestre", l: "Finestre di analisi", c: "#6C6C79" },
   { v: "chiusure", l: "Clienti chiusi", c: "#3FA45C" },
@@ -1683,6 +1688,7 @@ const GUIDA = [
     intro: "La parte che tiene in ordine l'esecuzione.",
     blocchi: [
       { h: "Task", p: "Bacheca per stato o elenco per scadenza, con aree di lavoro, priorità, stime e passaggi. I ricorrenti si rigenerano da soli quando li chiudi: comodo per report e controlli mensili." },
+      { h: "Task Operative e Task Marketing", p: "Le task sono divise in due sezioni del menu. In Task Operative trovi quelle che inserisci tu, quelle del bot Telegram e quelle che arrivano da Boschetto. In Task Marketing arrivano quelle create dalle regole di automazione, comprese quelle sugli avvisi delle campagne, e quelle che crea Claude dalle analisi delle inserzioni. Una task si sposta da una sezione all'altra con il campo «Sezione» del modulo. Il pulsante «Calendario» di ciascuna sezione apre il calendario con solo quelle task; nel Calendario le due fonti si accendono e spengono separatamente e le Task Marketing hanno un colore loro, verde acqua." },
       { h: "Automazioni", p: "Una regola collega un innesco a un'azione. Gli inneschi guardano avvisi, soglie, budget, ritardi, chiusure e mesi senza dati; le azioni creano un task o chiamano un webhook. Ogni evento scatta una volta sola e finisce nel registro." },
       { h: "Limite da conoscere", p: "Le regole girano mentre l'app è aperta. Non esiste modo di farle partire a browser chiuso, e non si possono ricevere dati dall'esterno: servirebbe un server acceso con un indirizzo pubblico." },
     ],
@@ -2704,7 +2710,7 @@ const ICONE_NAV = {
   semaforo: IcoSemaforo, pixel: Code2, calendario: CalendarRange, cruscotto: LayoutDashboard, clienti: Building2, sottoclienti: Users, advertising: Megaphone, campagne: Megaphone,
   mesi: CalendarRange, avvisi: AlertTriangle, grafici: PieChart, vendite: PhoneCall,
   chiusure: Handshake, pianificatore: Calculator, funnel: Filter, diario: NotebookPen,
-  file: FolderOpen, economia: Euro, ai: Sparkles, task: ListChecks, automazioni: Zap,
+  file: FolderOpen, economia: Euro, ai: Sparkles, task: ListChecks, taskmkt: BellRing, automazioni: Zap,
   importa: Upload, backup: DownloadCloud, guida: HelpCircle, impostazioni: Settings, esci: LogOut,
   contatti: Contact, pipeline: KanbanSquare, messaggio: PenLine, report: FileText,
   scheda: Receipt, winner: Trophy, academy: GraduationCap,
@@ -3961,7 +3967,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   const [calVista, setCalVista] = useState("mese");
   const [calData, setCalData] = useState("");
   const [calGiorno, setCalGiorno] = useState("");
-  const [calFonti, setCalFonti] = useState({ eventi: true, task: true, campagne: true, finestre: false, chiusure: true });
+  const [calFonti, setCalFonti] = useState({ eventi: true, task: true, taskmkt: true, campagne: true, finestre: false, chiusure: true });
   const [filtriAperti, setFiltriAperti] = useState(false);
   const [mostraArchCli, setMostraArchCli] = useState(false);
   const [trascina, setTrascina] = useState(false);
@@ -4089,7 +4095,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
             areaId: a.taskArea || (d.aree[0] || {}).id || "", titolo: a.taskTitolo || e.testo,
             note: `${e.testo}\n${e.dettaglio}\n\n(creato dall'automazione "${a.nome}")`,
             stato: "dafare", priorita: a.taskPriorita || "media", inizio: oggi(),
-            scadenza: piu(a.taskGiorni || 2), stima: 0, ricorrenza: "no", checklist: [], creato: oggi(), auto: true,
+            scadenza: piu(a.taskGiorni || 2), stima: 0, ricorrenza: "no", checklist: [], creato: oggi(), auto: true, tipo: "marketing",
           }, ...task];
         }
         registro = [{
@@ -6047,6 +6053,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     ],
     task: [
       { k: "titolo", label: "Task", wide: true },
+      { k: "tipo", label: "Sezione", type: "select", opts: TIPI_TASK },
       { k: "clienteId", label: "Cliente", type: "select", opts: optCliTutti, w2: true },
       { k: "areaId", label: "Area di lavoro", type: "select", opts: optAree },
       { k: "stato", label: "Stato", type: "select", opts: STATI_TASK },
@@ -6081,7 +6088,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     periodi: { clienteId: cliAtt, campagnaId: campFasi, tipo: "attiva", inizio: piu(-7), fine: oggi(), spesa: 0, impression: 0, click: 0, clickLink: 0, lead: 0, conversioni: 0, ricavi: 0, valoreContratto: 0, incassato: 0, frequenza: 0, note: "" },
     creativi: { clienteId: cliAtt, campagnaId: "", adsetId: "", tipo: "adset", nome: "", stato: "attiva", stadio: "", spesa: 0, impression: 0, click: 0, clickLink: 0, lead: 0, conversioni: 0, ricavi: 0, valoreContratto: 0, incassato: 0, frequenza: 0, note: "" },
     automazioni: { nome: "", attiva: "si", clienteId: "", trigger: "avviso", filtroAvviso: "", soloCritici: "no", metrica: "cpa", operatore: "gt", valore: 0, giorno: 8, azTask: "si", taskTitolo: "", taskArea: (data.aree[0] || {}).id || "", taskPriorita: "alta", taskGiorni: 2, azWebhook: "no", url: "" },
-    task: { clienteId: cliAtt, areaId: (data.aree[0] || {}).id || "", titolo: "", note: "", stato: "dafare", priorita: "media", inizio: oggi(), scadenza: piu(3), stima: 0, ricorrenza: "no", checklist: [], creato: oggi() },
+    task: { tipo: vista === "taskmkt" ? "marketing" : "operativa", clienteId: cliAtt, areaId: (data.aree[0] || {}).id || "", titolo: "", note: "", stato: "dafare", priorita: "media", inizio: oggi(), scadenza: piu(3), stima: 0, ricorrenza: "no", checklist: [], creato: oggi() },
   };
 
   /* forzaNuovo: rec è un modello precompilato (es. evento in un giorno, sottocliente di X),
@@ -6335,7 +6342,8 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     { id: "file", l: t("nav.file"), i: "▦", n: data.file.length },
     { id: "economia", l: t("nav.economia"), i: "◑" },
     { id: "ai", l: t("nav.ai"), i: "✳" },
-    { id: "task", l: t("nav.task"), i: "✓", n: data.task.filter((t) => t.stato !== "fatto").length },
+    { id: "task", l: t("nav.task"), i: "✓", n: data.task.filter((t) => t.stato !== "fatto" && tipoTask(t) === "operativa").length },
+    { id: "taskmkt", l: t("nav.taskmkt"), i: "✓", n: data.task.filter((t) => t.stato !== "fatto" && tipoTask(t) === "marketing").length },
     { id: "automazioni", l: t("nav.automazioni"), i: "⚡", n: data.automazioni.filter((a) => a.attiva === "si").length },
     { id: "importa", l: t("nav.importa"), i: "⇪" },
     { id: "backup", l: t("nav.backup"), i: "⤓" },
@@ -6364,7 +6372,8 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     { id: "file", l: t("nav.file"), i: "▦", n: S.file.length },
     { id: "report", l: t("nav.report"), i: "▥" },
     { id: "ai", l: t("nav.ai"), i: "✳" },
-    { id: "task", l: t("nav.task"), i: "✓", n: S.task.filter((t) => t.stato !== "fatto").length },
+    { id: "task", l: t("nav.task"), i: "✓", n: S.task.filter((t) => t.stato !== "fatto" && tipoTask(t) === "operativa").length },
+    { id: "taskmkt", l: t("nav.taskmkt"), i: "✓", n: S.task.filter((t) => t.stato !== "fatto" && tipoTask(t) === "marketing").length },
     { id: "scheda", l: t("nav.scheda"), i: "▤" },
     { id: "guida", l: t("nav.guida"), i: "?" },
   ];
@@ -6391,7 +6400,8 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     file: ["File", "Strategie, procedure e collegamenti ai documenti"],
     report: ["Report", "Il mese da consegnare al cliente"],
     ai: ["Consulente", "Chiedi, con i tuoi numeri già sotto gli occhi"],
-    task: ["Task", "Il lavoro da fare su questo cliente"],
+    task: ["Task Operative", "Il lavoro che inserisci tu su questo cliente"],
+    taskmkt: ["Task Marketing", "Le task nate da automazioni e avvisi sulle campagne"],
     scheda: ["Scheda cliente", "Dati, logo, compenso e vincoli"],
     guida: ["Guida", "Come si usa, in che ordine, e cosa non può fare"],
   } : {
@@ -6413,7 +6423,8 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     file: ["File", "Procedure dell'agenzia e documenti dei clienti"],
     economia: ["Economia", "Quanto rende ogni cliente, e quanto ti costa"],
     ai: ["Consulente", "Chiedi, con i numeri del portafoglio già sotto gli occhi"],
-    task: ["Task", "Tutto il lavoro, per area e per scadenza"],
+    task: ["Task Operative", "Il lavoro che inserisci tu, per area e per scadenza"],
+    taskmkt: ["Task Marketing", "Le task nate da automazioni e avvisi sulle campagne"],
     automazioni: ["Automazioni", "Regole che lavorano da sole: innesco e azione"],
     backup: ["Backup", "Scarica una copia, o ripristinane una"],
     importa: ["Importa dati", "Dai file esportati dalle piattaforme, senza riscrivere nulla"],
@@ -6424,10 +6435,11 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
 
   const cerca = (s) => (s || "").toLowerCase().includes(q.toLowerCase());
   const bottoneAggiungi = attivo
-    ? { contatti: "contatti", pipeline: "trattative", campagne: "campagne", task: "task", vendite: "vendite", chiusure: "chiusure", funnel: "funnel", file: "file" }[vista]
-    : { clienti: "clienti", advertising: "campagne", task: "task", vendite: "vendite", chiusure: "chiusure", automazioni: "automazioni", funnel: "funnel", file: "file" }[vista];
+    ? { contatti: "contatti", pipeline: "trattative", campagne: "campagne", task: "task", taskmkt: "task", vendite: "vendite", chiusure: "chiusure", funnel: "funnel", file: "file" }[vista]
+    : { clienti: "clienti", advertising: "campagne", task: "task", taskmkt: "task", vendite: "vendite", chiusure: "chiusure", automazioni: "automazioni", funnel: "funnel", file: "file" }[vista];
 
   const taskBase = (attivo ? S.task : data.task).filter((t) =>
+    (vista !== "task" && vista !== "taskmkt" || tipoTask(t) === (vista === "taskmkt" ? "marketing" : "operativa")) &&
     (!filtri.area || t.areaId === filtri.area) &&
     (!filtri.prio || t.priorita === filtri.prio) &&
     (attivo || !filtri.cli || t.clienteId === filtri.cli) &&
@@ -7293,11 +7305,12 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
           d = sommaGiorni(d, 1); g++;
         }
       });
-      if (calFonti.task) data.task.filter(dentro).filter((t) => t.scadenza).forEach((t) => {
+      data.task.filter(dentro).filter((t) => t.scadenza && calFonti[tipoTask(t) === "marketing" ? "taskmkt" : "task"]).forEach((t) => {
         const p = PRIORITA.find((x) => x.v === t.priorita) || {};
+        const mkt = tipoTask(t) === "marketing";
         out.push({ data: t.scadenza, titolo: t.titolo, tipo: "task", rec: t, clienteId: t.clienteId,
-          colore: t.stato === "fatto" ? "#3FA45C" : t.priorita === "urgente" ? "#D8455F" : t.priorita === "alta" ? "#E07A3F" : "#C99A3A",
-          nota: `${p.l || ""}${t.stato === "fatto" ? " · fatto" : t.scadenza < oggi() ? " · in ritardo" : ""}` });
+          colore: t.stato === "fatto" ? "#3FA45C" : mkt ? "#2BA3A0" : t.priorita === "urgente" ? "#D8455F" : t.priorita === "alta" ? "#E07A3F" : "#C99A3A",
+          nota: `${mkt ? "Marketing · " : ""}${p.l || ""}${t.stato === "fatto" ? " · fatto" : t.scadenza < oggi() ? " · in ritardo" : ""}` });
       });
       if (calFonti.campagne) m.campagne.filter(dentro).forEach((k) => {
         if (k.inizio) out.push({ data: k.inizio, titolo: `Avvio · ${k.nome}`, tipo: "campagne", colore: "#D8455F", clienteId: k.clienteId });
@@ -12413,7 +12426,7 @@ Regole:
     ));
   };
 
-  const SezioneTask = () => (
+  const SezioneTask = (tipo = "operativa") => (
     <>
       <section className="card">
         <header>
@@ -12439,11 +12452,21 @@ Regole:
                 checked={filtri.fatte} onChange={(e) => setFiltri({ ...filtri, fatte: e.target.checked })} />
               mostra fatte
             </label>
+            <button className="btn ghost mini" title="Apre il calendario con solo queste task"
+              onClick={() => { setCalFonti({ eventi: false, task: tipo === "operativa", taskmkt: tipo === "marketing", campagne: false, finestre: false, chiusure: false }); setVista("calendario"); }}>
+              Calendario
+            </button>
           </div>
           <span className="sp eyebrow">
             {taskBase.filter((t) => t.stato !== "fatto").length} aperti · {taskBase.filter((t) => t.stato !== "fatto" && t.scadenza && t.scadenza < oggi()).length} in ritardo
           </span>
         </header>
+        {tipo === "marketing" && (
+          <div className="nota" style={{ padding: "10px 16px 12px" }}>
+            Qui arrivano le task create dalle regole di automazione, comprese quelle sugli avvisi delle campagne, e quelle che crea Claude dalle analisi.
+            Per spostare una task nell'altra sezione cambia il campo «Sezione».
+          </div>
+        )}
       </section>
 
       {vistaTask === "bacheca" ? (
@@ -13162,7 +13185,8 @@ Regole:
               </>
             )}
 
-            {!attivo && vista === "task" && SezioneTask()}
+            {!attivo && vista === "task" && SezioneTask("operativa")}
+            {!attivo && vista === "taskmkt" && SezioneTask("marketing")}
             {!attivo && vista === "grafici" && SezioneGrafici()}
             {!attivo && vista === "vendite" && SezioneVendite()}
             {!attivo && vista === "chiusure" && SezioneChiusure()}
@@ -13461,7 +13485,8 @@ Regole:
               </div>
             )}
 
-            {attivo && vista === "task" && SezioneTask()}
+            {attivo && vista === "task" && SezioneTask("operativa")}
+            {attivo && vista === "taskmkt" && SezioneTask("marketing")}
             {attivo && vista === "grafici" && SezioneGrafici()}
             {attivo && vista === "vendite" && SezioneVendite()}
             {attivo && vista === "chiusure" && SezioneChiusure()}
