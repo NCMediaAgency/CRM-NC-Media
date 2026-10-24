@@ -12,6 +12,7 @@ import {
   Handshake, Calculator, Filter, NotebookPen, FolderOpen, Sparkles, ListChecks,
   Zap, Upload, DownloadCloud, HelpCircle, Settings, FileText, PenLine, Contact,
   KanbanSquare, Receipt, Code2, BellRing, LogOut, Trophy, Moon, Sun, GraduationCap,
+  Dna, Type, ImageIcon, ChevronDown,
 } from "lucide-react";
 
 /* Logo dell'agenzia, incorporato: nessun file esterno da caricare */
@@ -409,6 +410,26 @@ const METODI_PAGAMENTO = [
 
 /* Le cinque fasi del processo d'acquisto: servono a capire se il messaggio
    copre tutto il percorso o salta direttamente dal problema all'acquisto. */
+/* Darwin box: i test di pubblici, creative e copy, ognuno con la sua pipeline */
+const DARWIN_TIPI = [
+  { v: "audience", l: "Audience", voce: "Pubblico" },
+  { v: "creative", l: "Creative", voce: "Creative" },
+  { v: "copy", l: "Copy", voce: "Copy" },
+];
+const DARWIN_TEST = [
+  { v: "idee", l: "Idee di test" }, { v: "test", l: "In test" },
+  { v: "superato", l: "Test superato" }, { v: "fallito", l: "Test fallito" },
+];
+const DARWIN_FASI = {
+  audience: DARWIN_TEST,
+  creative: [...DARWIN_TEST, { v: "link", l: "Link Creative" }],
+  copy: [...DARWIN_TEST, { v: "link", l: "Link Copy" }],
+};
+const FORMATI_CREATIVE = [
+  { v: "", l: "— non indicato —" }, { v: "immagine", l: "Immagine" }, { v: "video", l: "Video" },
+  { v: "carosello", l: "Carosello" }, { v: "ugc", l: "UGC" }, { v: "reel", l: "Reel o storia" }, { v: "altro", l: "Altro" },
+];
+
 const STADI = [
   { v: "1", l: "1 · Riconoscimento del problema", b: "Problema" },
   { v: "2", l: "2 · Raccolta di informazioni", b: "Informazioni" },
@@ -681,7 +702,7 @@ const normalizza = (d) => ({
   contatti: d.contatti || [], trattative: d.trattative || [],
   /* Il budget giornaliero non si deduce da un totale diviso la durata: o è quello
      impostato in piattaforma, o non c'è. Un numero inventato qui produce confronti falsi. */
-  campagne: (d.campagne || []).map((k) => ({ archiviata: "no", erroreDal: "", modificaVista: "no", esitoManuale: "", storicoBudget: [], budgetGiorno: 0, ...k, bmk: { ...BMK_VUOTO, ...(k.bmk || {}) } })), task: (d.task || []).map((t) => (t.tipo ? t : { ...t, tipo: tipoTask(t) })), chiusure: d.chiusure || [], creativi: (d.creativi || []).map((c) => ({ adsetId: "", ...c })),
+  campagne: (d.campagne || []).map((k) => ({ archiviata: "no", erroreDal: "", modificaVista: "no", esitoManuale: "", storicoBudget: [], budgetGiorno: 0, ...k, bmk: { ...BMK_VUOTO, ...(k.bmk || {}) } })), task: (d.task || []).map((t) => (t.tipo ? t : { ...t, tipo: tipoTask(t) })), darwin: d.darwin || [], chiusure: d.chiusure || [], creativi: (d.creativi || []).map((c) => ({ adsetId: "", ...c })),
   rilevazioni: d.rilevazioni || [],
   giornate: d.giornate || [],
   deposito: d.deposito || [],
@@ -1681,6 +1702,16 @@ const GUIDA = [
       { h: "Le soglie non sono scritte qui", p: "Ogni regola si appoggia agli avvisi, che usano i benchmark della singola campagna. Impostando un CTR minimo diverso su un cliente, la stessa regola scatta a un valore diverso. È il motivo per cui il pacchetto funziona su clienti con economie opposte senza doverlo duplicare — ma anche il motivo per cui su una campagna senza benchmark impostati resta muto." },
       { h: "Le priorità", p: "Non sono tutte uguali, e seguono il danno che fa il problema: urgente per spesa senza conversioni, perdita sotto il pareggio e avvisi critici; alta per gancio, ritorno, costo e tendenza; media per asta e frequenza, che raramente richiedono di agire lo stesso giorno." },
       { h: "Il limite", p: "Come tutte le automazioni, queste regole girano solo mentre l'app è aperta. Non vigilano al posto tuo di notte: ti risparmiano la fatica di cercare i problemi, non quella di aprire il software." },
+    ],
+  },
+  {
+    id: "darwin", t: "Darwin box",
+    intro: "Il posto dove tieni traccia di tutti i test: pubblici, creative e copy, per ogni cliente e sottocliente. Solo quello che supera il test sopravvive.",
+    blocchi: [
+      { h: "Dove si trova", p: "Darwin box è nel menu laterale, dentro ogni cliente e anche nella vista agenzia (con il filtro per cliente). Cliccandola si apre il sottomenu con Audience, Creative e Copy: ognuno ha la sua pipeline." },
+      { h: "Le colonne", p: "Audience: Idee di test, In test, Test superato, Test fallito. Creative e Copy hanno in più l'ultima colonna, Link Creative o Link Copy, dove tieni le versioni pronte da usare con il link a Drive. Trascini una scheda da una colonna all'altra, oppure usi le frecce; quando entra in «In test» prende la data di inizio, quando la chiudi quella di fine." },
+      { h: "Cosa scrivere", p: "Per un pubblico: nome e com'è costruito (interessi, lookalike, età, zone). Per una creative: il nome, il formato e il link al file su Drive. Per un copy: il titolo, la fase del messaggio (da 1, riconoscimento del problema, a 5, dopo l'acquisto) e il link a Drive con i testi. Per tutti: l'ipotesi del test e, alla fine, il risultato con la decisione presa, così fra tre mesi sai perché quella cosa non si usa più." },
+      { h: "Sottoclienti", p: "Dentro un cliente principale vedi anche i test dei suoi sottoclienti, con il nome sotto il titolo; dentro un sottocliente vedi solo i suoi." },
     ],
   },
   {
@@ -2714,6 +2745,7 @@ const ICONE_NAV = {
   importa: Upload, backup: DownloadCloud, guida: HelpCircle, impostazioni: Settings, esci: LogOut,
   contatti: Contact, pipeline: KanbanSquare, messaggio: PenLine, report: FileText,
   scheda: Receipt, winner: Trophy, academy: GraduationCap,
+  darwin: Dna, "darwin-audience": Target, "darwin-creative": ImageIcon, "darwin-copy": Type,
 };
 
 const IcoNav = ({ id }) => {
@@ -2985,6 +3017,24 @@ padding:3px 7px;border-radius:5px;background:#1E1E26;color:var(--ink2);white-spa
 .scheda .eyebrow{color:var(--ink3)}
 
 .board{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px}
+.board.darwin{overflow-x:auto}
+.board.darwin .col[data-sopra="1"]{outline:2px dashed var(--acc-b);outline-offset:-2px}
+.board.darwin .col[data-fase="superato"] h3{color:#3FA45C}
+.board.darwin .col[data-fase="fallito"] h3{color:var(--acc-t)}
+.deal.dw{cursor:grab;display:flex;flex-direction:column;gap:6px}
+.deal.dw:active{cursor:grabbing}
+.dw-tag{display:flex;flex-wrap:wrap;gap:4px}
+.dw-testo{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.dw-link{font-size:12px;font-weight:600;color:var(--acc-t);text-decoration:none}
+.dw-link:hover{text-decoration:underline}
+.crm .dw-nuovo{margin-top:4px;padding:8px;border:1px dashed var(--line);border-radius:8px;font-size:12.5px;color:var(--ink2);width:100%;text-align:left}
+.crm .dw-nuovo:hover{border-color:var(--acc-b);color:var(--ink)}
+.navgruppo{display:flex;flex-direction:column;gap:2px;width:100%}
+.navfreccia{margin-left:auto;opacity:.5;transition:transform .15s;flex:none}
+.navgruppo[data-aperto="0"] .navfreccia{transform:rotate(-90deg)}
+.navb.navsub{padding-left:22px;font-size:13px}
+.rail[data-compatto="1"] .navb.navsub{padding-left:10px}
+.rail[data-compatto="1"] .navfreccia{display:none}
 .col{background:var(--surf);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:110px}
 .col>h3{margin:0;padding:11px 13px;font-size:12px;font-weight:600;display:flex;gap:7px;border-bottom:1px solid var(--line)}
 .col>h3 span{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink2);font-weight:400}
@@ -3928,6 +3978,8 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   const [ed, setEd] = useState(null);
   const [salvato, setSalvato] = useState(false);
   const [vistaTask, setVistaTask] = useState("bacheca");
+  const [navAperti, setNavAperti] = useState({});
+  const [darwinCli, setDarwinCli] = useState("");
   const [filtri, setFiltri] = useState({ area: "", prio: "", cli: "", fatte: false });
   const [compatto, setCompatto] = useState(() => typeof window !== "undefined" && window.innerWidth < 900);
   const [graf, setGraf] = useState({ ambito: "campagne", gruppo: "campagna", metrica: "spesa", tipo: "barre" });
@@ -5487,6 +5539,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     trattative: data.trattative.filter((t) => ambito.includes(t.clienteId)),
     campagne: m.campagne.filter((k) => ambito.includes(k.clienteId)),
     task: data.task.filter((t) => ambito.includes(t.clienteId)),
+    darwin: (data.darwin || []).filter((x) => ambito.includes(x.clienteId)),
     vendite: data.vendite.filter((v) => ambito.includes(v.clienteId)),
     chiusure: data.chiusure.filter((c) => ambito.includes(c.clienteId)),
     creativi: data.creativi.filter((c) => ambito.includes(c.clienteId)),
@@ -5733,7 +5786,29 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
       hint: `somma delle ${fasiDellaScheda.n} finestre` }
     : { k, label, type: "num", ...extra });
 
+  const darwinTipo = (ed && ed.tipo === "darwin" && ed.draft && ed.draft.tipo) || "audience";
   const CAMPI = {
+    darwin: [
+      { k: "titolo", label: { audience: "Pubblico", creative: "Nome della creative", copy: "Titolo del copy" }[darwinTipo], wide: true },
+      { k: "clienteId", label: "Cliente", type: "select", opts: optCliTutti, w2: true },
+      { k: "fase", label: "Fase", type: "select", opts: DARWIN_FASI[darwinTipo] },
+      ...(darwinTipo === "audience" ? [
+        { k: "dettagli", label: "Com'è costruito", type: "textarea", wide: true, ph: "interessi, lookalike, età, zone, esclusioni…" },
+      ] : []),
+      ...(darwinTipo === "creative" ? [
+        { k: "formato", label: "Formato", type: "select", opts: FORMATI_CREATIVE },
+        { k: "link", label: "Link Drive della creative", wide: true, ph: "https://drive.google.com/…" },
+      ] : []),
+      ...(darwinTipo === "copy" ? [
+        { k: "stadio", label: "Fase del messaggio", type: "select", opts: [{ v: "", l: "— non indicata —" }, ...STADI], w2: true },
+        { k: "link", label: "Link Drive con i testi", wide: true, ph: "https://docs.google.com/…" },
+      ] : []),
+      { k: "ipotesi", label: "Ipotesi del test", wide: true, ph: "cosa ti aspetti e perché" },
+      { k: "inizio", label: "Inizio del test", type: "date" },
+      { k: "fine", label: "Fine del test", type: "date" },
+      { k: "risultato", label: "Risultato", wide: true, ph: "CPL, CTR, costo per appuntamento… e la decisione presa" },
+      { k: "note", label: "Note", type: "textarea", wide: true },
+    ],
     agenzia: [
       { k: "nome", label: "Nome agenzia", w2: true },
       { k: "sottotitolo", label: "Sottotitolo" },
@@ -6088,6 +6163,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     periodi: { clienteId: cliAtt, campagnaId: campFasi, tipo: "attiva", inizio: piu(-7), fine: oggi(), spesa: 0, impression: 0, click: 0, clickLink: 0, lead: 0, conversioni: 0, ricavi: 0, valoreContratto: 0, incassato: 0, frequenza: 0, note: "" },
     creativi: { clienteId: cliAtt, campagnaId: "", adsetId: "", tipo: "adset", nome: "", stato: "attiva", stadio: "", spesa: 0, impression: 0, click: 0, clickLink: 0, lead: 0, conversioni: 0, ricavi: 0, valoreContratto: 0, incassato: 0, frequenza: 0, note: "" },
     automazioni: { nome: "", attiva: "si", clienteId: "", trigger: "avviso", filtroAvviso: "", soloCritici: "no", metrica: "cpa", operatore: "gt", valore: 0, giorno: 8, azTask: "si", taskTitolo: "", taskArea: (data.aree[0] || {}).id || "", taskPriorita: "alta", taskGiorni: 2, azWebhook: "no", url: "" },
+    darwin: { tipo: (vista.startsWith("darwin-") && vista.slice(7)) || "audience", fase: "idee", clienteId: cliAtt, titolo: "", dettagli: "", formato: "", stadio: "", link: "", ipotesi: "", inizio: "", fine: "", risultato: "", note: "", creato: oggi() },
     task: { tipo: vista === "taskmkt" ? "marketing" : "operativa", clienteId: cliAtt, areaId: (data.aree[0] || {}).id || "", titolo: "", note: "", stato: "dafare", priorita: "media", inizio: oggi(), scadenza: piu(3), stima: 0, ricorrenza: "no", checklist: [], creato: oggi() },
   };
 
@@ -6216,6 +6292,10 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
       ]);
     }
     if (tipo === "task") d.checklist = (d.checklist || []).filter((r) => r.t.trim());
+    if (tipo === "darwin") {
+      const l = (d.link || "").trim();
+      d.link = l && !/^https?:\/\//i.test(l) ? "https://" + l : l;
+    }
     if (tipo === "creativi" && d.campagnaId) {
       const k = data.campagne.find((x) => x.id === d.campagnaId);
       if (k) d.clienteId = k.clienteId;
@@ -6328,6 +6408,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     { id: "clienti", l: t("nav.clienti"), i: "▣", n: attivi.filter((z) => !z.padreId).length },
     { id: "sottoclienti", l: t("nav.sottoclienti"), i: "▤", n: attivi.filter((z) => z.padreId).length },
     { id: "advertising", l: t("nav.advertising"), i: "◈", n: m.campagne.length },
+    { id: "darwin", l: "Darwin box", i: "◇", sub: DARWIN_TIPI.map((x) => ({ id: "darwin-" + x.v, l: x.l, n: (data.darwin || []).filter((d) => d.tipo === x.v && ["idee", "test"].includes(d.fase)).length })) },
     { id: "mesi", l: t("nav.mesi"), i: "▤" },
     { id: "semaforo", l: t("nav.semaforo"), i: "◉" },
     { id: "pixel", l: t("nav.pixel"), i: "◈" },
@@ -6358,6 +6439,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     { id: "messaggio", l: t("nav.messaggio"), i: "✍", n: (attivo && attivo.msg && attivo.msg.mercato) ? undefined : "!", al: !(attivo && attivo.msg && attivo.msg.mercato) },
     { id: "campagne", l: t("nav.campagne"), i: "◈", n: S.campagne.length },
     { id: "winner", l: t("nav.winner"), i: "★" },
+    { id: "darwin", l: "Darwin box", i: "◇", sub: DARWIN_TIPI.map((x) => ({ id: "darwin-" + x.v, l: x.l, n: S.darwin.filter((d) => d.tipo === x.v && ["idee", "test"].includes(d.fase)).length })) },
     { id: "mesi", l: t("nav.mesi"), i: "▤" },
     { id: "semaforo", l: t("nav.semaforo"), i: "◉" },
     { id: "pixel", l: t("nav.pixel"), i: "◈" },
@@ -6402,6 +6484,9 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     ai: ["Consulente", "Chiedi, con i tuoi numeri già sotto gli occhi"],
     task: ["Task Operative", "Il lavoro che inserisci tu su questo cliente"],
     taskmkt: ["Task Marketing", "Le task nate da automazioni e avvisi sulle campagne"],
+    "darwin-audience": ["Darwin box · Audience", "I test dei pubblici, dall'idea all'esito"],
+    "darwin-creative": ["Darwin box · Creative", "I test delle creative, con il file su Drive"],
+    "darwin-copy": ["Darwin box · Copy", "I test dei testi, per fase del messaggio"],
     scheda: ["Scheda cliente", "Dati, logo, compenso e vincoli"],
     guida: ["Guida", "Come si usa, in che ordine, e cosa non può fare"],
   } : {
@@ -6425,6 +6510,9 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     ai: ["Consulente", "Chiedi, con i numeri del portafoglio già sotto gli occhi"],
     task: ["Task Operative", "Il lavoro che inserisci tu, per area e per scadenza"],
     taskmkt: ["Task Marketing", "Le task nate da automazioni e avvisi sulle campagne"],
+    "darwin-audience": ["Darwin box · Audience", "I test dei pubblici, dall'idea all'esito"],
+    "darwin-creative": ["Darwin box · Creative", "I test delle creative, con il file su Drive"],
+    "darwin-copy": ["Darwin box · Copy", "I test dei testi, per fase del messaggio"],
     automazioni: ["Automazioni", "Regole che lavorano da sole: innesco e azione"],
     backup: ["Backup", "Scarica una copia, o ripristinane una"],
     importa: ["Importa dati", "Dai file esportati dalle piattaforme, senza riscrivere nulla"],
@@ -6435,8 +6523,8 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
 
   const cerca = (s) => (s || "").toLowerCase().includes(q.toLowerCase());
   const bottoneAggiungi = attivo
-    ? { contatti: "contatti", pipeline: "trattative", campagne: "campagne", task: "task", taskmkt: "task", vendite: "vendite", chiusure: "chiusure", funnel: "funnel", file: "file" }[vista]
-    : { clienti: "clienti", advertising: "campagne", task: "task", taskmkt: "task", vendite: "vendite", chiusure: "chiusure", automazioni: "automazioni", funnel: "funnel", file: "file" }[vista];
+    ? { contatti: "contatti", pipeline: "trattative", campagne: "campagne", task: "task", taskmkt: "task", "darwin-audience": "darwin", "darwin-creative": "darwin", "darwin-copy": "darwin", vendite: "vendite", chiusure: "chiusure", funnel: "funnel", file: "file" }[vista]
+    : { clienti: "clienti", advertising: "campagne", task: "task", taskmkt: "task", "darwin-audience": "darwin", "darwin-creative": "darwin", "darwin-copy": "darwin", vendite: "vendite", chiusure: "chiusure", automazioni: "automazioni", funnel: "funnel", file: "file" }[vista];
 
   const taskBase = (attivo ? S.task : data.task).filter((t) =>
     (vista !== "task" && vista !== "taskmkt" || tipoTask(t) === (vista === "taskmkt" ? "marketing" : "operativa")) &&
@@ -12426,6 +12514,93 @@ Regole:
     ));
   };
 
+  /* ---------- Darwin box: test di pubblici, creative e copy ---------- */
+  const SezioneDarwin = (tipo) => {
+    const fasi = DARWIN_FASI[tipo];
+    const tp = DARWIN_TIPI.find((x) => x.v === tipo);
+    const tutti = (attivo ? S.darwin : (data.darwin || [])).filter((x) => x.tipo === tipo);
+    const elenco = tutti.filter((x) => attivo || !darwinCli || x.clienteId === darwinCli);
+    const sposta = (x, fase) => upd("darwin", (l) => l.map((y) => (y.id === x.id ? {
+      ...y, fase,
+      inizio: fase === "test" && !y.inizio ? oggi() : y.inizio,
+      fine: ["superato", "fallito"].includes(fase) && !y.fine ? oggi() : y.fine,
+    } : y)));
+    const nuovo = (fase) => apri("darwin", { tipo, fase, clienteId: attivo ? attivo.id : darwinCli }, true);
+    const mostraCli = !attivo || ambito.length > 1;
+    return (
+      <>
+        <section className="card">
+          <header>
+            <div className="filtri">
+              {DARWIN_TIPI.map((x) => (
+                <button key={x.v} className="btn ghost mini" data-on={x.v === tipo ? "1" : "0"} onClick={() => setVista("darwin-" + x.v)}>{x.l}</button>
+              ))}
+              {!attivo && (
+                <select value={darwinCli} onChange={(e) => setDarwinCli(e.target.value)} aria-label="Filtra per cliente">
+                  <option value="">Tutti i clienti</option>
+                  {attivi.map((z) => <option key={z.id} value={z.id}>{z.nome}</option>)}
+                </select>
+              )}
+            </div>
+            <span className="sp eyebrow">
+              {elenco.filter((x) => x.fase === "test").length} in test · {elenco.filter((x) => x.fase === "superato").length} superati · {elenco.filter((x) => x.fase === "fallito").length} falliti
+            </span>
+          </header>
+          <div className="nota" style={{ padding: "10px 16px 12px" }}>
+            Trascina una scheda da una colonna all'altra, oppure usa le frecce. Quando la sposti in «In test» prende la data di inizio, quando la chiudi quella di fine.
+            {tipo !== "audience" && ` In «${fasi[4].l}» tieni le ${tipo === "copy" ? "versioni dei testi" : "creative"} pronte da usare, con il link a Drive.`}
+          </div>
+        </section>
+        <div className="board darwin" style={{ gridTemplateColumns: `repeat(${fasi.length},minmax(170px,1fr))` }}>
+          {fasi.map((f, fi) => {
+            const items = elenco.filter((x) => (x.fase || "idee") === f.v)
+              .sort((a, b) => ((b.fine || b.inizio || b.creato || "") > (a.fine || a.inizio || a.creato || "") ? 1 : -1));
+            return (
+              <div className="col" key={f.v} data-fase={f.v}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.dataset.sopra = "1"; }}
+                onDragLeave={(e) => { e.currentTarget.dataset.sopra = "0"; }}
+                onDrop={(e) => {
+                  e.preventDefault(); e.currentTarget.dataset.sopra = "0";
+                  const x = elenco.find((y) => y.id === e.dataTransfer.getData("text/darwin"));
+                  if (x && x.fase !== f.v) sposta(x, f.v);
+                }}>
+                <h3>{f.l}<span>{items.length}</span></h3>
+                <div className="list">
+                  {items.map((x) => (
+                    <article className="deal dw" key={x.id} draggable
+                      onDragStart={(e) => { e.dataTransfer.setData("text/darwin", x.id); e.dataTransfer.effectAllowed = "move"; }}
+                      onClick={() => apri("darwin", x)}>
+                      <b>{x.titolo || `${tp.voce} senza nome`}</b>
+                      {mostraCli && x.clienteId && <div className="sub">{nomeCli(x.clienteId)}</div>}
+                      <div className="dw-tag">
+                        {x.formato && <span className="tag">{et(FORMATI_CREATIVE, x.formato)}</span>}
+                        {x.stadio && <span className="tag">Fase {x.stadio} · {(STADI.find((y) => y.v === x.stadio) || {}).b}</span>}
+                        {(x.inizio || x.fine) && <span className="tag">{x.inizio ? dataIt(x.inizio) : "…"}{x.fine ? ` → ${dataIt(x.fine)}` : ""}</span>}
+                      </div>
+                      {x.dettagli && <div className="sub dw-testo">{x.dettagli}</div>}
+                      {x.ipotesi && <div className="sub dw-testo"><i>Ipotesi:</i> {x.ipotesi}</div>}
+                      {x.risultato && <div className="sub dw-testo"><i>Esito:</i> {x.risultato}</div>}
+                      <div className="row">
+                        {x.link
+                          ? <a className="dw-link" href={x.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Apri su Drive ↗</a>
+                          : tipo !== "audience" ? <span className="sub">nessun link</span> : <span />}
+                        <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                          <button className="move" onClick={(e) => { e.stopPropagation(); sposta(x, fasi[fi - 1].v); }} disabled={fi === 0} aria-label="Fase precedente">‹</button>
+                          <button className="move" onClick={(e) => { e.stopPropagation(); sposta(x, fasi[fi + 1].v); }} disabled={fi === fasi.length - 1} aria-label="Fase successiva">›</button>
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                  <button className="dw-nuovo" onClick={() => nuovo(f.v)}>+ {f.v === "idee" ? "Nuova idea" : "Aggiungi qui"}</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
+
   const SezioneTask = (tipo = "operativa") => (
     <>
       <section className="card">
@@ -12536,7 +12711,30 @@ Regole:
               )
             )}
           </div>
-          {NAV.map((n) => (
+          {NAV.map((n) => n.sub ? (
+            /* Voce con sottomenu (Darwin box): si apre e chiude, ed è aperta quando ci sei dentro */
+            <div key={n.id} className="navgruppo" data-aperto={navAperti[n.id] || n.sub.some((x) => x.id === vista) ? "1" : "0"}>
+              <button className="navb" title={T(n.l)} data-on={n.sub.some((x) => x.id === vista) && compatto ? "1" : "0"}
+                aria-expanded={!!(navAperti[n.id] || n.sub.some((x) => x.id === vista))}
+                onClick={() => {
+                  const dentro = n.sub.some((x) => x.id === vista);
+                  if (!dentro) { setVista(n.sub[0].id); setQ(""); setNavAperti((a) => ({ ...a, [n.id]: true })); }
+                  else setNavAperti((a) => ({ ...a, [n.id]: !(a[n.id] ?? true) }));
+                }}>
+                <i><IcoNav id={n.id} /></i>
+                <span className="etichetta">{T(n.l)}</span>
+                <ChevronDown className="navfreccia" size={14} />
+              </button>
+              {(navAperti[n.id] ?? n.sub.some((x) => x.id === vista)) && n.sub.map((x) => (
+                <button key={x.id} className="navb navsub" title={T(x.l)} data-on={vista === x.id ? "1" : "0"}
+                  onClick={() => { setVista(x.id); setQ(""); }}>
+                  <i><IcoNav id={x.id} /></i>
+                  <span className="etichetta">{T(x.l)}</span>
+                  {x.n ? <u>{x.n}</u> : null}
+                </button>
+              ))}
+            </div>
+          ) : (
             <button key={n.id} className="navb" title={T(n.l)} data-on={vista === n.id ? "1" : "0"}
               data-badge={n.al ? "1" : "0"} onClick={() => { setVista(n.id); setQ(""); }}>
               <i><IcoNav id={n.id} /></i>
@@ -13187,6 +13385,7 @@ Regole:
 
             {!attivo && vista === "task" && SezioneTask("operativa")}
             {!attivo && vista === "taskmkt" && SezioneTask("marketing")}
+            {!attivo && vista.startsWith("darwin-") && SezioneDarwin(vista.slice(7))}
             {!attivo && vista === "grafici" && SezioneGrafici()}
             {!attivo && vista === "vendite" && SezioneVendite()}
             {!attivo && vista === "chiusure" && SezioneChiusure()}
@@ -13487,6 +13686,7 @@ Regole:
 
             {attivo && vista === "task" && SezioneTask("operativa")}
             {attivo && vista === "taskmkt" && SezioneTask("marketing")}
+            {attivo && vista.startsWith("darwin-") && SezioneDarwin(vista.slice(7))}
             {attivo && vista === "grafici" && SezioneGrafici()}
             {attivo && vista === "vendite" && SezioneVendite()}
             {attivo && vista === "chiusure" && SezioneChiusure()}
@@ -13710,7 +13910,7 @@ Regole:
       {ed && (
         <Editor
           titolo={ed.tipo === "agenzia" ? "Identità dell'agenzia"
-            : (ed.nuovo ? "Nuovo · " : "Modifica · ") + ({ clienti: "cliente", contatti: "contatto", trattative: "trattativa", campagne: "campagna", task: "task", aree: "area", vendite: "periodo commerciale", chiusure: "chiusura", automazioni: "automazione", creativi: "ad set o annuncio", annotazioni: "annotazione", esperimenti: "esperimento", funnel: "funnel", messaggio: "piano di messaggio", periodi: "fase della campagna", modelli: "modello di percorso", eventi: "evento", categorie: "categoria", file: "documento", giornate: "giornata", rilevazioni: "rilevazione" }[ed.tipo] || ed.tipo)}
+            : (ed.nuovo ? "Nuovo · " : "Modifica · ") + ({ clienti: "cliente", contatti: "contatto", trattative: "trattativa", campagne: "campagna", task: "task", aree: "area", vendite: "periodo commerciale", chiusure: "chiusura", automazioni: "automazione", creativi: "ad set o annuncio", annotazioni: "annotazione", esperimenti: "esperimento", funnel: "funnel", darwin: `test ${(DARWIN_TIPI.find((x) => x.v === (ed.draft || {}).tipo) || {}).l || ""}`, messaggio: "piano di messaggio", periodi: "fase della campagna", modelli: "modello di percorso", eventi: "evento", categorie: "categoria", file: "documento", giornate: "giornata", rilevazioni: "rilevazione" }[ed.tipo] || ed.tipo)}
           sotto={["contatti", "trattative", "campagne"].includes(ed.tipo) && attivo ? attivo.nome : ""}
           fields={CAMPI[ed.tipo]}
           draft={ed.draft}
