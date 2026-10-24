@@ -425,6 +425,8 @@ const DARWIN_FASI = {
   creative: [...DARWIN_TEST, { v: "link", l: "Link Creative" }],
   copy: [...DARWIN_TEST, { v: "link", l: "Link Copy" }],
 };
+/* Creative e copy si dividono per fase del messaggio: 1-4, la 5 (dopo l'acquisto) non ha annunci */
+const DARWIN_STADI = ["1", "2", "3", "4"];
 const FORMATI_CREATIVE = [
   { v: "", l: "— non indicato —" }, { v: "immagine", l: "Immagine" }, { v: "video", l: "Video" },
   { v: "carosello", l: "Carosello" }, { v: "ugc", l: "UGC" }, { v: "reel", l: "Reel o storia" }, { v: "altro", l: "Altro" },
@@ -1711,6 +1713,7 @@ const GUIDA = [
       { h: "Dove si trova", p: "Darwin box è nel menu laterale, dentro ogni cliente e anche nella vista agenzia (con il filtro per cliente). Cliccandola si apre il sottomenu con Audience, Creative e Copy: ognuno ha la sua pipeline." },
       { h: "Le colonne", p: "Audience: Idee di test, In test, Test superato, Test fallito. Creative e Copy hanno in più l'ultima colonna, Link Creative o Link Copy, dove tieni le versioni pronte da usare con il link a Drive. Trascini una scheda da una colonna all'altra, oppure usi le frecce; quando entra in «In test» prende la data di inizio, quando la chiudi quella di fine." },
       { h: "Cosa scrivere", p: "Per un pubblico: nome e com'è costruito (interessi, lookalike, età, zone). Per una creative: il nome, il formato e il link al file su Drive. Per un copy: il titolo, la fase del messaggio (da 1, riconoscimento del problema, a 5, dopo l'acquisto) e il link a Drive con i testi. Per tutti: l'ipotesi del test e, alla fine, il risultato con la decisione presa, così fra tre mesi sai perché quella cosa non si usa più." },
+      { h: "Una pipeline per fase", p: "Creative e Copy sono divisi per fase del messaggio: in alto scegli Fase 1 · Problema, Fase 2 · Informazioni, Fase 3 · Valutazione o Fase 4 · Acquisto, e sotto vedi solo la pipeline di quella fase, con il numero di schede accanto. Una scheda nuova nasce nella fase che stai guardando; per spostarla cambi la fase del messaggio nel modulo. Le Audience non sono divise, perché i pubblici da testare sono tutti di fase 1." },
       { h: "Sottoclienti", p: "Dentro un cliente principale vedi anche i test dei suoi sottoclienti, con il nome sotto il titolo; dentro un sottocliente vedi solo i suoi." },
     ],
   },
@@ -3023,6 +3026,7 @@ background:#C2445F;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www
 .crm input[type="date"]::-webkit-calendar-picker-indicator:hover{background:#D8455F}
 .crm[data-tema="chiaro"] input[type="date"]::-webkit-calendar-picker-indicator,.crm[data-tema="chiaro"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,.crm[data-tema="chiaro"] input[type="month"]::-webkit-calendar-picker-indicator{background:#8E2039}
 .board.darwin{overflow-x:auto}
+.dw-fasi{padding:6px 12px 0;margin-top:2px}
 .board.darwin .col[data-sopra="1"]{outline:2px dashed var(--acc-b);outline-offset:-2px}
 .board.darwin .col[data-fase="superato"] h3{color:#3FA45C}
 .board.darwin .col[data-fase="fallito"] h3{color:var(--acc-t)}
@@ -3985,6 +3989,7 @@ export default function CRM({ onEsci, utente = "", meta = null, telegram = null,
   const [vistaTask, setVistaTask] = useState("bacheca");
   const [navAperti, setNavAperti] = useState({});
   const [darwinCli, setDarwinCli] = useState("");
+  const [darwinFase, setDarwinFase] = useState({ creative: "1", copy: "1" });
   const [filtri, setFiltri] = useState({ area: "", prio: "", cli: "", fatte: false });
   const [compatto, setCompatto] = useState(() => typeof window !== "undefined" && window.innerWidth < 900);
   const [graf, setGraf] = useState({ ambito: "campagne", gruppo: "campagna", metrica: "spesa", tipo: "barre" });
@@ -5801,11 +5806,12 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
         { k: "dettagli", label: "Com'è costruito", type: "textarea", wide: true, ph: "interessi, lookalike, età, zone, esclusioni…" },
       ] : []),
       ...(darwinTipo === "creative" ? [
+        { k: "stadio", label: "Fase del messaggio", type: "select", opts: STADI.filter((x) => DARWIN_STADI.includes(x.v)), w2: true },
         { k: "formato", label: "Formato", type: "select", opts: FORMATI_CREATIVE },
         { k: "link", label: "Link Drive della creative", wide: true, ph: "https://drive.google.com/…" },
       ] : []),
       ...(darwinTipo === "copy" ? [
-        { k: "stadio", label: "Fase del messaggio", type: "select", opts: [{ v: "", l: "— non indicata —" }, ...STADI], w2: true },
+        { k: "stadio", label: "Fase del messaggio", type: "select", opts: STADI.filter((x) => DARWIN_STADI.includes(x.v)), w2: true },
         { k: "link", label: "Link Drive con i testi", wide: true, ph: "https://docs.google.com/…" },
       ] : []),
       { k: "ipotesi", label: "Ipotesi del test", wide: true, ph: "cosa ti aspetti e perché" },
@@ -6168,7 +6174,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
     periodi: { clienteId: cliAtt, campagnaId: campFasi, tipo: "attiva", inizio: piu(-7), fine: oggi(), spesa: 0, impression: 0, click: 0, clickLink: 0, lead: 0, conversioni: 0, ricavi: 0, valoreContratto: 0, incassato: 0, frequenza: 0, note: "" },
     creativi: { clienteId: cliAtt, campagnaId: "", adsetId: "", tipo: "adset", nome: "", stato: "attiva", stadio: "", spesa: 0, impression: 0, click: 0, clickLink: 0, lead: 0, conversioni: 0, ricavi: 0, valoreContratto: 0, incassato: 0, frequenza: 0, note: "" },
     automazioni: { nome: "", attiva: "si", clienteId: "", trigger: "avviso", filtroAvviso: "", soloCritici: "no", metrica: "cpa", operatore: "gt", valore: 0, giorno: 8, azTask: "si", taskTitolo: "", taskArea: (data.aree[0] || {}).id || "", taskPriorita: "alta", taskGiorni: 2, azWebhook: "no", url: "" },
-    darwin: { tipo: (vista.startsWith("darwin-") && vista.slice(7)) || "audience", fase: "idee", clienteId: cliAtt, titolo: "", dettagli: "", formato: "", stadio: "", link: "", ipotesi: "", inizio: "", fine: "", risultato: "", note: "", creato: oggi() },
+    darwin: { tipo: (vista.startsWith("darwin-") && vista.slice(7)) || "audience", fase: "idee", clienteId: cliAtt, titolo: "", dettagli: "", formato: "", stadio: vista === "darwin-creative" || vista === "darwin-copy" ? (darwinFase[vista.slice(7)] || "1") : "", link: "", ipotesi: "", inizio: "", fine: "", risultato: "", note: "", creato: oggi() },
     task: { tipo: vista === "taskmkt" ? "marketing" : "operativa", clienteId: cliAtt, areaId: (data.aree[0] || {}).id || "", titolo: "", note: "", stato: "dafare", priorita: "media", inizio: oggi(), scadenza: piu(3), stima: 0, ricorrenza: "no", checklist: [], creato: oggi() },
   };
 
@@ -12524,13 +12530,19 @@ Regole:
     const fasi = DARWIN_FASI[tipo];
     const tp = DARWIN_TIPI.find((x) => x.v === tipo);
     const tutti = (attivo ? S.darwin : (data.darwin || [])).filter((x) => x.tipo === tipo);
-    const elenco = tutti.filter((x) => attivo || !darwinCli || x.clienteId === darwinCli);
+    const delCliente = tutti.filter((x) => attivo || !darwinCli || x.clienteId === darwinCli);
+    /* Creative e copy: una pipeline per fase del messaggio; quelli senza fase finiscono in «Senza fase» */
+    const perFasi = tipo !== "audience";
+    const faseDi = (x) => (DARWIN_STADI.includes(x.stadio) ? x.stadio : "senza");
+    const schedeFase = perFasi ? [...DARWIN_STADI, ...(delCliente.some((x) => faseDi(x) === "senza") ? ["senza"] : [])] : [];
+    const faseSel = perFasi ? (schedeFase.includes(darwinFase[tipo]) ? darwinFase[tipo] : "1") : "";
+    const elenco = perFasi ? delCliente.filter((x) => faseDi(x) === faseSel) : delCliente;
     const sposta = (x, fase) => upd("darwin", (l) => l.map((y) => (y.id === x.id ? {
       ...y, fase,
       inizio: fase === "test" && !y.inizio ? oggi() : y.inizio,
       fine: ["superato", "fallito"].includes(fase) && !y.fine ? oggi() : y.fine,
     } : y)));
-    const nuovo = (fase) => apri("darwin", { tipo, fase, clienteId: attivo ? attivo.id : darwinCli }, true);
+    const nuovo = (fase) => apri("darwin", { tipo, fase, clienteId: attivo ? attivo.id : darwinCli, stadio: perFasi && faseSel !== "senza" ? faseSel : "" }, true);
     const mostraCli = !attivo || ambito.length > 1;
     return (
       <>
@@ -12551,7 +12563,22 @@ Regole:
               {elenco.filter((x) => x.fase === "test").length} in test · {elenco.filter((x) => x.fase === "superato").length} superati · {elenco.filter((x) => x.fase === "fallito").length} falliti
             </span>
           </header>
+          {perFasi && (
+            <nav className="nf-schede dw-fasi" aria-label="Fase del messaggio">
+              {schedeFase.map((v) => {
+                const st = STADI.find((y) => y.v === v);
+                return (
+                  <button key={v} data-on={faseSel === v ? "1" : "0"} aria-current={faseSel === v ? "page" : undefined}
+                    onClick={() => setDarwinFase((f) => ({ ...f, [tipo]: v }))}>
+                    {st ? `Fase ${v} · ${st.b}` : "Senza fase"}<small>{delCliente.filter((x) => faseDi(x) === v).length}</small>
+                  </button>
+                );
+              })}
+            </nav>
+          )}
           <div className="nota" style={{ padding: "10px 16px 12px" }}>
+            {perFasi && faseSel !== "senza" && <><b>{(STADI.find((y) => y.v === faseSel) || {}).l}.</b>{" "}</>}
+            {perFasi && faseSel === "senza" && <><b>Senza fase.</b> Apri ogni scheda e scegli la fase del messaggio: finirà nella sua pipeline.{" "}</>}
             Trascina una scheda da una colonna all'altra, oppure usa le frecce. Quando la sposti in «In test» prende la data di inizio, quando la chiudi quella di fine.
             {tipo !== "audience" && ` In «${fasi[4].l}» tieni le ${tipo === "copy" ? "versioni dei testi" : "creative"} pronte da usare, con il link a Drive.`}
           </div>
@@ -12579,7 +12606,6 @@ Regole:
                       {mostraCli && x.clienteId && <div className="sub">{nomeCli(x.clienteId)}</div>}
                       <div className="dw-tag">
                         {x.formato && <span className="tag">{et(FORMATI_CREATIVE, x.formato)}</span>}
-                        {x.stadio && <span className="tag">Fase {x.stadio} · {(STADI.find((y) => y.v === x.stadio) || {}).b}</span>}
                         {(x.inizio || x.fine) && <span className="tag">{x.inizio ? dataIt(x.inizio) : "…"}{x.fine ? ` → ${dataIt(x.fine)}` : ""}</span>}
                       </div>
                       {x.dettagli && <div className="sub dw-testo">{x.dettagli}</div>}
