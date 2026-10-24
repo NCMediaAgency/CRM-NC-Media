@@ -3017,6 +3017,11 @@ padding:3px 7px;border-radius:5px;background:#1E1E26;color:var(--ink2);white-spa
 .scheda .eyebrow{color:var(--ink3)}
 
 .board{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px}
+/* Icona del calendario e dell'orologio nei campi data: bordeaux, ben visibile in entrambi i temi */
+.crm input[type="date"]::-webkit-calendar-picker-indicator,.crm input[type="datetime-local"]::-webkit-calendar-picker-indicator,.crm input[type="month"]::-webkit-calendar-picker-indicator{
+background:#C2445F;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center/16px 16px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center/16px 16px no-repeat;width:18px;height:18px;opacity:1;cursor:pointer}
+.crm input[type="date"]::-webkit-calendar-picker-indicator:hover{background:#D8455F}
+.crm[data-tema="chiaro"] input[type="date"]::-webkit-calendar-picker-indicator,.crm[data-tema="chiaro"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,.crm[data-tema="chiaro"] input[type="month"]::-webkit-calendar-picker-indicator{background:#8E2039}
 .board.darwin{overflow-x:auto}
 .board.darwin .col[data-sopra="1"]{outline:2px dashed var(--acc-b);outline-offset:-2px}
 .board.darwin .col[data-fase="superato"] h3{color:#3FA45C}
