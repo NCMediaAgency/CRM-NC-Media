@@ -1481,7 +1481,7 @@ const GUIDA = [
       { h: "In gestione dal", p: "Nella scheda del cliente, sotto la sede, c'è la data da cui lo segui. All'inizio è quella in cui hai creato la scheda, ma puoi cambiarla: se un avvocato è entrato nel portafoglio a marzo e l'hai inserito a settembre, metti marzo. La colonna Data partenza negli elenchi mostra invece il primo giorno di attività pubblicitaria, e ripiega su questa data quando non ci sono ancora campagne. È anche importabile da foglio, con una colonna \"In gestione dal\", \"Onboarding\" o \"Cliente dal\"." },
       { h: "Data contratto", p: "Accanto c’è la data di firma, che è un’altra cosa: il contratto può essere firmato prima dell’avvio o dopo un periodo di prova. Quando le due date differiscono, la scheda ti dice di quanti giorni e in che verso. Anche questa si importa, con una colonna \"Data contratto\", \"Firma\" o \"Firmato il\"." },
       { h: "Due elenchi distinti", p: "La sezione Clienti conta e mostra solo i clienti principali: se ne segui tre, il menu dice tre, anche quando sotto di loro ci sono ottanta account. La freccia accanto al nome apre i suoi sottoclienti nella stessa tabella; cercando un nome compaiono già aperti. I sottoclienti hanno anche la loro sezione, con un riquadro chiuso per ogni cliente principale: cliccandolo vedi spesa, lead, CPL, resa e avvisi di ciascuno e i pulsanti per archiviarli o eliminarli. In cima trovi i totali del gruppo, che restano esclusi dai totali dell'agenzia." },
-      { h: "La freccia dei sottoclienti", p: "Ovunque una tabella elenca più clienti si vedono a colpo d'occhio i clienti principali, e la freccia ▸ accanto al nome apre i loro sottoclienti: in Clienti, Advertising, Ciclo di vendita, Chiusure, Economia, nella tabella Performance della Panoramica e nel collegamento con Meta in Impostazioni. Dove la tabella mostra totali (Advertising, Ciclo di vendita, Chiusure, Economia) la riga chiusa somma tutto il gruppo e, aperta, mostra il cliente principale da solo e ogni sottocliente. In Performance la riga del principale resta con i suoi numeri, come nei totali dell'agenzia, e aperta mostra i numeri di ogni sottocliente. In Impostazioni, sotto il nome, leggi quanti sottoclienti hanno già un account collegato. Ogni sezione ricorda le sue frecce aperte finché non ricarichi la pagina." },
+      { h: "La freccia dei sottoclienti", p: "Ovunque una tabella elenca più clienti si vedono a colpo d'occhio i clienti principali, e la freccia › accanto al nome apre i loro sottoclienti: in Clienti, Advertising, Ciclo di vendita, Chiusure, Economia, nella tabella Performance della Panoramica e nel collegamento con Meta in Impostazioni. Dove la tabella mostra totali (Advertising, Ciclo di vendita, Chiusure, Economia) la riga chiusa somma tutto il gruppo e, aperta, mostra il cliente principale da solo e ogni sottocliente. In Performance la riga del principale resta con i suoi numeri, come nei totali dell'agenzia, e aperta mostra i numeri di ogni sottocliente. In Impostazioni, sotto il nome, leggi quanti sottoclienti hanno già un account collegato. Ogni sezione ricorda le sue frecce aperte finché non ricarichi la pagina." },
       { h: "Le campagne nel cruscotto", p: "La scheda Campagne del cruscotto cliente parte dalla più recente e ha i suoi filtri: ordinamento, stato, fase e segnale del semaforo. Sono indipendenti da quelli della sezione Advertising, così puoi tenere il cruscotto su \"solo i rossi\" senza cambiare come guardi l'altra schermata. Anche qui ogni riga ha il pallino del semaforo all'inizio." },
       { h: "Sottoclienti", p: "Un cliente può contenerne altri. Li crei da tre punti: la scheda Sottoclienti nel cruscotto del cliente, il pulsante in fondo alla riga nell’elenco Clienti, oppure il campo \"Sottocliente di\" nel modulo, che serve anche a spostare sotto un altro un cliente già esistente. Serve quando gestisci l'azienda madre e insieme i suoi clienti finali — per esempio una società di consulenza e i singoli professionisti che entrano nel suo portafoglio. Ogni sottocliente ha la struttura completa: campagne, funnel, messaggio, ciclo di vendita, chiusure, task e file suoi." },
       { h: "Ordinati per cognome", p: "I sottoclienti compaiono sempre in ordine di cognome, non di nome: l'app ignora i titoli come Avv. o Studio Legale, tiene attaccate le particelle — De Luca sotto la D, Di Marco sotto la D — e scarta le forme societarie, così \"Studio Legale Rossi & Partners\" si ordina su Rossi. Se un nome è scritto al contrario — cognome prima, come in “Laudando Antonio” — la deduzione sbaglia: in quel caso compila il campo “Cognome per l\u2019ordinamento” nella scheda del cliente, che vince sempre sulla deduzione. Si importa anche da foglio, con una colonna Cognome." },
@@ -2751,6 +2751,9 @@ const ICONE_NAV = {
   darwin: Dna, "darwin-audience": Target, "darwin-creative": ImageIcon, "darwin-copy": Type,
 };
 
+/* Freccia di apertura e chiusura, uguale in tutto il CRM: › da chiusa, ⌄ da aperta */
+const Freccia = ({ aperto, size = 14 }) => <ChevronDown className="freccia-ap" data-aperto={aperto ? "1" : "0"} size={size} aria-hidden="true" />;
+
 const IcoNav = ({ id }) => {
   const I = ICONE_NAV[id] || BarChart3;
   return <I size={16} strokeWidth={1.9} aria-hidden="true" />;
@@ -3039,8 +3042,18 @@ background:#C2445F;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www
 .crm .dw-nuovo{margin-top:4px;padding:8px;border:1px dashed var(--line);border-radius:8px;font-size:12.5px;color:var(--ink2);width:100%;text-align:left}
 .crm .dw-nuovo:hover{border-color:var(--acc-b);color:var(--ink)}
 .navgruppo{display:flex;flex-direction:column;gap:2px;width:100%}
-.navfreccia{margin-left:auto;opacity:.5;transition:transform .15s;flex:none}
-.navgruppo[data-aperto="0"] .navfreccia{transform:rotate(-90deg)}
+.navfreccia{margin-left:auto;opacity:.5;flex:none;display:inline-flex}
+.freccia-ap{transition:transform .15s ease;flex:none;vertical-align:-2px}
+.freccia-ap[data-aperto="0"]{transform:rotate(-90deg)}
+.crm .adv-freccia .freccia-ap{vertical-align:0}
+/* Le sezioni a scomparsa (details) usano la stessa freccia */
+.crm details>summary{list-style:none;cursor:pointer}
+.crm details>summary::-webkit-details-marker{display:none}
+.crm details>summary::before{content:"";display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-2px;background:currentColor;opacity:.6;
+-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/14px no-repeat;
+mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/14px no-repeat;
+transform:rotate(-90deg);transition:transform .15s ease}
+.crm details[open]>summary::before{transform:none}
 .navb[data-dentro="1"]:not([data-on="1"]){box-shadow:inset 0 0 0 1px #8E2039;color:var(--ink)}
 .navb[data-dentro="1"]:not([data-on="1"]) i{color:#8E2039}
 .navb.navsub{padding-left:22px;font-size:13px}
@@ -5398,7 +5411,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
       <section className="card">
         <header>
           <h2>Collegamento con Meta Ads</h2>
-          <span className="sp eyebrow">{collegati} di {righe.length} clienti collegati · {metaAccount.length} account visibili · ▸ apre i sottoclienti</span>
+          <span className="sp eyebrow">{collegati} di {righe.length} clienti collegati · {metaAccount.length} account visibili · › apre i sottoclienti</span>
           {metaPulsanti()}
         </header>
         {!metaFb && metaInfo && <div className="meta-msg">Il profilo Meta non è collegato: premi «Collega a Meta» nel riquadro Piattaforme pubblicitarie qui sopra.</div>}
@@ -5504,7 +5517,7 @@ Puoi leggere anche i dati del CRM con dati_cliente (campagne, ciclo di vendita, 
   const frecciaCli = (sez, id, n) => (n > 0 ? (
     <button type="button" className="adv-freccia" aria-expanded={apertoCli(sez, id)} aria-label={apertoCli(sez, id) ? "Chiudi i sottoclienti" : "Apri i sottoclienti"}
       title={apertoCli(sez, id) ? "Chiudi i sottoclienti" : "Apri i sottoclienti"}
-      onClick={(e) => { e.stopPropagation(); setApertiCli((x) => ({ ...x, [sez + ":" + id]: !x[sez + ":" + id] })); }}>{apertoCli(sez, id) ? "▾" : "▸"}</button>
+      onClick={(e) => { e.stopPropagation(); setApertiCli((x) => ({ ...x, [sez + ":" + id]: !x[sez + ":" + id] })); }}><Freccia aperto={apertoCli(sez, id)} /></button>
   ) : null);
   /* Da un elenco gerarchico ({ z, liv } in ordine) alle righe visibili, ognuna con quanti sottoclienti ha */
   const alberoCli = (sez, righe) => {
@@ -10183,7 +10196,7 @@ Regole:
         )}
 
         <section className="card">
-          <header><h2>Conto economico per cliente</h2><span className="sp eyebrow">ore dai task conclusi negli ultimi 30 giorni · ▸ apre i sottoclienti</span></header>
+          <header><h2>Conto economico per cliente</h2><span className="sp eyebrow">ore dai task conclusi negli ultimi 30 giorni · › apre i sottoclienti</span></header>
           <div className="wrap">
             <table className="tbl">
               <thead><tr><th>Cliente</th><th className="r">Compenso</th><th className="r">Ore</th><th className="r">Costo tempo</th><th className="r">Margine</th><th className="r">Margine %</th><th className="r">Quota</th></tr></thead>
@@ -10835,7 +10848,7 @@ Regole:
           </div>
           {SuggerimentoAcademy({ sez: "advertising" })}
           <section className="card">
-            <header><h2>Advertising per cliente</h2><span className="sp eyebrow">clienti principali con i loro sottoclienti · ▸ apre i sottoclienti</span></header>
+            <header><h2>Advertising per cliente</h2><span className="sp eyebrow">clienti principali con i loro sottoclienti · › apre i sottoclienti</span></header>
             <div className="wrap"><table className="tbl">
               <thead><tr><th>Cliente</th><th className="r">Campagne</th><th className="r">Spesa</th><th className="r">Lead</th><th className="r">CPL</th><th className="r">Conversioni</th><th className="r" title="ROAS dichiarato dalla piattaforma; se manca, contratti su spesa dei mesi del Ciclo di vendita">ROAS</th><th className="r">Contratti</th><th className="r">Incassato</th></tr></thead>
               <tbody>
@@ -10844,7 +10857,7 @@ Regole:
                     <td style={{ paddingLeft: 14 + r.liv * 18 }}>
                       {r.nSotto > 0 && (
                         <button className="adv-freccia" aria-expanded={!!apertiAdv[r.z.id]} aria-label={apertiAdv[r.z.id] ? "Chiudi i sottoclienti" : "Apri i sottoclienti"}
-                          onClick={(e) => { e.stopPropagation(); setApertiAdv((x) => ({ ...x, [r.z.id]: !x[r.z.id] })); }}>{apertiAdv[r.z.id] ? "▾" : "▸"}</button>
+                          onClick={(e) => { e.stopPropagation(); setApertiAdv((x) => ({ ...x, [r.z.id]: !x[r.z.id] })); }}><Freccia aperto={!!apertiAdv[r.z.id]} /></button>
                       )}
                       {r.liv ? <span className="sub">↳ </span> : null}<b>{r.z.nome}</b>
                       {r.solo && <div className="sub">solo l'account principale</div>}
@@ -10914,7 +10927,7 @@ Regole:
       return (
         <tr key={"g" + z.id} className="clic adv-gruppo" onClick={() => setApertiAdv((x) => ({ ...x, [z.id]: !x[z.id] }))}
           title={aperto ? "Chiudi le campagne del sottocliente" : "Apri le campagne del sottocliente"}>
-          <td style={{ paddingRight: 0, width: 22 }}><span className="adv-freccia" aria-expanded={aperto}>{aperto ? "▾" : "▸"}</span></td>
+          <td style={{ paddingRight: 0, width: 22 }}><span className="adv-freccia" aria-expanded={aperto}><Freccia aperto={aperto} /></span></td>
           <td colSpan={3}><b>{z.nome}</b><div className="sub">sottocliente · {int(items.length)} campagne, {int(accese)} accese</div></td>
           <td className="r">{eur0(g.sp)}</td>
           <td className="r">{g.imp ? pctv(g.ctrLink) : "—"}</td>
@@ -10973,7 +10986,7 @@ Regole:
                   <>
                     <button className="btn ghost mini" data-on={filtriAperti ? "1" : "0"}
                       onClick={() => setFiltriAperti(!filtriAperti)} aria-expanded={filtriAperti}>
-                      {filtriAperti ? "▾" : "▸"} Filtri{attiviF ? ` · ${attiviF}` : ""}
+                      <Freccia aperto={filtriAperti} /> Filtri{attiviF ? ` · ${attiviF}` : ""}
                     </button>
                     <span className="sub" style={{ fontSize: 12 }}>
                       {base.length} campagne · {etOrd}{etVista ? ` · ${etVista}` : ""}
@@ -12047,7 +12060,7 @@ Regole:
           });
           return (
             <section className="card">
-              <header><h2>Chiusure per cliente</h2><span className="sp eyebrow">totali · ▸ apre i sottoclienti · le singole schede sono dentro ogni cliente</span></header>
+              <header><h2>Chiusure per cliente</h2><span className="sp eyebrow">totali · › apre i sottoclienti · le singole schede sono dentro ogni cliente</span></header>
               <div className="wrap"><table className="tbl">
                 <thead><tr><th>Account</th><th className="r">Chiusure</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Residuo</th><th className="r">Ultimo mese</th></tr></thead>
                 <tbody>
@@ -12459,7 +12472,7 @@ Regole:
           });
           return (
             <section className="card">
-              <header><h2>Ciclo di vendita per cliente</h2><span className="sp eyebrow">totali dei mesi registrati · ▸ apre i sottoclienti · il dettaglio è dentro ogni cliente</span></header>
+              <header><h2>Ciclo di vendita per cliente</h2><span className="sp eyebrow">totali dei mesi registrati · › apre i sottoclienti · il dettaglio è dentro ogni cliente</span></header>
               <div className="wrap"><table className="tbl">
                 <thead><tr><th>Cliente</th><th className="r">Mesi</th><th className="r">Lead</th><th className="r">Demo svolte</th><th className="r">Chiusure</th><th className="r">Chiusura</th><th className="r">Contratto</th><th className="r">Incassato</th><th className="r">Costo/chiusura</th></tr></thead>
                 <tbody>
@@ -12766,7 +12779,7 @@ Regole:
                   }}>
                   <i><IcoNav id={n.id} /></i>
                   <span className="etichetta">{T(n.l)}</span>
-                  <ChevronDown className="navfreccia" size={14} />
+                  <span className="navfreccia"><Freccia aperto={aperto} /></span>
                 </button>
                 {aperto && n.sub.map((x) => (
                   <button key={x.id} className="navb navsub" title={T(x.l)} data-on={vista === x.id ? "1" : "0"}
@@ -13021,7 +13034,7 @@ Regole:
                   <section className="card">
                     <header>
                       <h2>Performance dei clienti</h2>
-                      <span className="sp eyebrow">clienti principali · ▸ apre i sottoclienti · ultimo mese con dati, per spesa e per vendite</span>
+                      <span className="sp eyebrow">clienti principali · › apre i sottoclienti · ultimo mese con dati, per spesa e per vendite</span>
                       <button className="btn ghost mini" onClick={() => setVista("mesi")}>Riepilogo mensile</button>
                     </header>
                     <div className="wrap">
@@ -13270,7 +13283,7 @@ Regole:
                         <header className="clic" onClick={() => setApertiCli((x) => ({ ...x, ["sotto:" + z.id]: !x["sotto:" + z.id] }))}>
                           {frecciaCli("sotto", z.id, suoi.length)}
                           <h2>{z.nome}</h2>
-                          <span className="sp eyebrow">{suoi.length} {suoi.length === 1 ? "sottocliente" : "sottoclienti"}{apertoCli("sotto", z.id) ? " · in ordine di cognome" : " · ▸ per vederli"}</span>
+                          <span className="sp eyebrow">{suoi.length} {suoi.length === 1 ? "sottocliente" : "sottoclienti"}{apertoCli("sotto", z.id) ? " · in ordine di cognome" : " · › per vederli"}</span>
                           <button className="btn ghost mini" onClick={(e) => { e.stopPropagation(); cambiaAccount(z.id); }}>Apri il cliente</button>
                           <button className="btn ghost mini" onClick={(e) => { e.stopPropagation(); apri("clienti", { padreId: z.id }, true); }}>+ Sottocliente</button>
                         </header>
