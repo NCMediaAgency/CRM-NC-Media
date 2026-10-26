@@ -3041,6 +3041,8 @@ background:#C2445F;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www
 .navgruppo{display:flex;flex-direction:column;gap:2px;width:100%}
 .navfreccia{margin-left:auto;opacity:.5;transition:transform .15s;flex:none}
 .navgruppo[data-aperto="0"] .navfreccia{transform:rotate(-90deg)}
+.navb[data-dentro="1"]:not([data-on="1"]){box-shadow:inset 0 0 0 1px #8E2039;color:var(--ink)}
+.navb[data-dentro="1"]:not([data-on="1"]) i{color:#8E2039}
 .navb.navsub{padding-left:22px;font-size:13px}
 .rail[data-compatto="1"] .navb.navsub{padding-left:10px}
 .rail[data-compatto="1"] .navfreccia{display:none}
@@ -12742,37 +12744,41 @@ Regole:
               )
             )}
           </div>
-          {NAV.map((n) => n.sub ? (
-            /* Voce con sottomenu (Darwin box): si apre e chiude, ed è aperta quando ci sei dentro */
-            <div key={n.id} className="navgruppo" data-aperto={navAperti[n.id] || n.sub.some((x) => x.id === vista) ? "1" : "0"}>
-              <button className="navb" title={T(n.l)} data-on={n.sub.some((x) => x.id === vista) && compatto ? "1" : "0"}
-                aria-expanded={!!(navAperti[n.id] || n.sub.some((x) => x.id === vista))}
-                onClick={() => {
-                  const dentro = n.sub.some((x) => x.id === vista);
-                  if (!dentro) { setVista(n.sub[0].id); setQ(""); setNavAperti((a) => ({ ...a, [n.id]: true })); }
-                  else setNavAperti((a) => ({ ...a, [n.id]: !(a[n.id] ?? true) }));
-                }}>
+          {NAV.map((n) => {
+            if (!n.sub) return (
+              <button key={n.id} className="navb" title={T(n.l)} data-on={vista === n.id ? "1" : "0"}
+                data-badge={n.al ? "1" : "0"} onClick={() => { setVista(n.id); setQ(""); }}>
                 <i><IcoNav id={n.id} /></i>
                 <span className="etichetta">{T(n.l)}</span>
-                <ChevronDown className="navfreccia" size={14} />
+                {n.n !== undefined && <u data-al={n.al ? "1" : "0"}>{n.n}</u>}
               </button>
-              {(navAperti[n.id] ?? n.sub.some((x) => x.id === vista)) && n.sub.map((x) => (
-                <button key={x.id} className="navb navsub" title={T(x.l)} data-on={vista === x.id ? "1" : "0"}
-                  onClick={() => { setVista(x.id); setQ(""); }}>
-                  <i><IcoNav id={x.id} /></i>
-                  <span className="etichetta">{T(x.l)}</span>
-                  {x.n ? <u>{x.n}</u> : null}
+            );
+            /* Voce con sottomenu (Darwin box): si apre e chiude; quando ci sei dentro ha il contorno bordeaux */
+            const dentro = n.sub.some((x) => x.id === vista);
+            const aperto = navAperti[n.id] ?? dentro;
+            return (
+              <div key={n.id} className="navgruppo" data-aperto={aperto ? "1" : "0"}>
+                <button className="navb" title={T(n.l)} data-on={dentro && compatto ? "1" : "0"} data-dentro={dentro ? "1" : "0"}
+                  aria-expanded={aperto}
+                  onClick={() => {
+                    if (!dentro) { setVista(n.sub[0].id); setQ(""); setNavAperti((a) => ({ ...a, [n.id]: true })); }
+                    else setNavAperti((a) => ({ ...a, [n.id]: !aperto }));
+                  }}>
+                  <i><IcoNav id={n.id} /></i>
+                  <span className="etichetta">{T(n.l)}</span>
+                  <ChevronDown className="navfreccia" size={14} />
                 </button>
-              ))}
-            </div>
-          ) : (
-            <button key={n.id} className="navb" title={T(n.l)} data-on={vista === n.id ? "1" : "0"}
-              data-badge={n.al ? "1" : "0"} onClick={() => { setVista(n.id); setQ(""); }}>
-              <i><IcoNav id={n.id} /></i>
-              <span className="etichetta">{T(n.l)}</span>
-              {n.n !== undefined && <u data-al={n.al ? "1" : "0"}>{n.n}</u>}
-            </button>
-          ))}
+                {aperto && n.sub.map((x) => (
+                  <button key={x.id} className="navb navsub" title={T(x.l)} data-on={vista === x.id ? "1" : "0"}
+                    onClick={() => { setVista(x.id); setQ(""); }}>
+                    <i><IcoNav id={x.id} /></i>
+                    <span className="etichetta">{T(x.l)}</span>
+                    {x.n ? <u>{x.n}</u> : null}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
           <div className="railfine">
             <div className="railfoot">
               <span>I dati sono salvati nel cloud, nel tuo spazio di lavoro.</span>
